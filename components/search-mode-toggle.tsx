@@ -10,15 +10,14 @@ export function SearchModeToggle() {
   const [isSearchMode, setIsSearchMode] = useState(true)
 
   useEffect(() => {
-    const savedMode = getCookie('search-mode')
-    if (savedMode !== null) {
-      setIsSearchMode(savedMode === 'true')
-    } else {
-      setCookie('search-mode', 'true')
-    }
+    // For HermesAI, force search mode to be enabled by default
+    console.log('🔧 [SearchModeToggle] Forcing search-mode to true for HermesAI')
+    setIsSearchMode(true)
+    setCookie('search-mode', 'true')
   }, [])
 
   const handleSearchModeChange = (pressed: boolean) => {
+    console.log('🔧 [SearchModeToggle] Search mode changed to:', pressed)
     setIsSearchMode(pressed)
     setCookie('search-mode', pressed.toString())
   }

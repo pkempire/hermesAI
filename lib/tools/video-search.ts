@@ -1,13 +1,15 @@
 import { getSearchSchemaForModel } from '@/lib/schema/search'
 import { tool } from 'ai'
+import { z } from 'zod'
 
 /**
  * Creates a video search tool with the appropriate schema for the model.
  */
 export function createVideoSearchTool(fullModel: string) {
+  const schema = getSearchSchemaForModel(fullModel) || z.object({})
   return tool({
     description: 'Search for videos from YouTube',
-    parameters: getSearchSchemaForModel(fullModel),
+    inputSchema: schema,
     execute: async ({ query }) => {
       try {
         const response = await fetch('https://google.serper.dev/videos', {

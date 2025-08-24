@@ -1,6 +1,6 @@
-import { tool } from 'ai'
 import { retrieveSchema } from '@/lib/schema/retrieve'
 import { SearchResults as SearchResultsType } from '@/lib/types'
+import { tool } from 'ai'
 
 const CONTENT_CHARACTER_LIMIT = 10000
 
@@ -78,7 +78,7 @@ async function fetchTavilyExtractData(
 
 export const retrieveTool = tool({
   description: 'Retrieve content from the web',
-  parameters: retrieveSchema,
+  inputSchema: retrieveSchema,
   execute: async ({ url }) => {
     let results: SearchResultsType | null
 

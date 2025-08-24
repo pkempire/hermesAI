@@ -1,4 +1,4 @@
-import { Message } from 'ai'
+import type { UIMessage as Message } from 'ai'
 import { Model } from '../types/models'
 
 export interface BaseStreamConfig {

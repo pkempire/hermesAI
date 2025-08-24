@@ -23,10 +23,7 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
         'w-full'
       )}
     >
-      {/* This div can be used for a logo or title on the left if needed */}
-      <div></div>
-
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 ml-auto">
         {user ? <UserMenu user={user} /> : <GuestMenu />}
       </div>
     </header>

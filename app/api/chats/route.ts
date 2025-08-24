@@ -21,8 +21,16 @@ export async function GET(request: NextRequest) {
   const userId = await getCurrentUserId()
 
   try {
-    const result = await getChatsPage(userId, limit, offset)
-    return NextResponse.json<ChatPageResponse>(result)
+    const page = Math.floor(offset / limit)
+    const result = await getChatsPage(page, userId)
+    
+    // Convert to API response format
+    const response: ChatPageResponse = {
+      chats: result.chats,
+      nextOffset: result.hasMore ? offset + limit : null
+    }
+    
+    return NextResponse.json<ChatPageResponse>(response)
   } catch (error) {
     console.error('API route error fetching chats:', error)
     return NextResponse.json<ChatPageResponse>(

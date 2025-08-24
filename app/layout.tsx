@@ -1,45 +1,56 @@
+import { Analytics } from '@vercel/analytics/react'
+import type { Metadata, Viewport } from 'next'
+import { Geist, Geist_Mono } from 'next/font/google'
+
 import AppSidebar from '@/components/app-sidebar'
 import ArtifactRoot from '@/components/artifact/artifact-root'
-import Header from '@/components/header'
+import { Header } from '@/components/header'
 import { ThemeProvider } from '@/components/theme-provider'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
 import { createClient } from '@/lib/supabase/server'
 import { cn } from '@/lib/utils'
-import { Analytics } from '@vercel/analytics/next'
-import type { Metadata, Viewport } from 'next'
-import { Inter as FontSans } from 'next/font/google'
+
 import './globals.css'
 
-const fontSans = FontSans({
+const geistSans = Geist({
   subsets: ['latin'],
-  variable: '--font-sans'
+  variable: '--font-geist-sans'
 })
 
-const title = 'Morphic'
-const description =
-  'A fully open-source AI-powered answer engine with a generative UI.'
+const geistMono = Geist_Mono({
+  subsets: ['latin'],
+  variable: '--font-geist-mono'
+})
+
+const title = 'HermesAI - AI-Powered Cold Email Prospecting'
+const description = 'Stop juggling 7 tools for cold email. Just talk to Hermes. Find prospects, research backgrounds, write personalized emails, and track results - all in one AI-powered platform.'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://morphic.sh'),
+  metadataBase: new URL('https://hermesai.com'),
   title,
   description,
   openGraph: {
     title,
-    description
+    description,
+    images: [
+      {
+        url: '/opengraph-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'HermesAI - AI-Powered Cold Email Prospecting'
+      }
+    ]
   },
   twitter: {
+    card: 'summary_large_image',
     title,
     description,
-    card: 'summary_large_image',
-    creator: '@miiura'
+    images: ['/opengraph-image.png']
   }
 }
 
 export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  minimumScale: 1,
   maximumScale: 1
 }
 
@@ -65,8 +76,10 @@ export default async function RootLayout({
       <body
         className={cn(
           'min-h-screen flex flex-col font-sans antialiased',
-          fontSans.variable
+          geistSans.variable,
+          geistMono.variable
         )}
+        suppressHydrationWarning
       >
         <ThemeProvider
           attribute="class"

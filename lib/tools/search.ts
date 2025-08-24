@@ -2,15 +2,17 @@ import { getSearchSchemaForModel } from '@/lib/schema/search'
 import { SearchResults } from '@/lib/types'
 import { getBaseUrlString } from '@/lib/utils/url'
 import { tool } from 'ai'
+import { z } from 'zod'
 import { DEFAULT_PROVIDER, SearchProviderType, createSearchProvider } from './search/providers'
 
 /**
  * Creates a search tool with the appropriate schema for the given model.
  */
 export function createSearchTool(fullModel: string) {
+  const schema = getSearchSchemaForModel(fullModel) || z.object({})
   return tool({
     description: 'Search the web for information',
-    parameters: getSearchSchemaForModel(fullModel),
+    inputSchema: schema ?? ({} as any),
     execute: async ({
       query,
       max_results = 20,

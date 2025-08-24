@@ -1,7 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import { ChatRequestOptions, JSONValue, Message } from 'ai'
+import { ChatRequestOptions, JSONValue, type UIMessage as Message } from 'ai'
 import { useEffect, useMemo, useState } from 'react'
 import { RenderMessage } from './render-message'
 import { ToolSection } from './tool-section'

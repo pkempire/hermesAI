@@ -22,13 +22,7 @@ export async function DELETE(
   const userId = await getCurrentUserId()
 
   try {
-    const result = await deleteChat(chatId, userId)
-
-    if (result.error) {
-      const statusCode = result.error === 'Chat not found' ? 404 : 500
-      return NextResponse.json({ error: result.error }, { status: statusCode })
-    }
-
+    await deleteChat(chatId, userId)
     return NextResponse.json({ ok: true })
   } catch (error) {
     console.error(`API route error deleting chat ${chatId}:`, error)

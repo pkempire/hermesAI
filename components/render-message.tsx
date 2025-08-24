@@ -1,4 +1,4 @@
-import { ChatRequestOptions, JSONValue, Message, ToolInvocation } from 'ai'
+import { ChatRequestOptions, JSONValue, type UIMessage as Message, ToolInvocation } from 'ai'
 import { useMemo } from 'react'
 import { AnswerSection } from './answer-section'
 import { ReasoningSection } from './reasoning-section'
@@ -42,6 +42,7 @@ export function RenderMessage({
 
   // Render for manual tool call
   const toolData = useMemo(() => {
+    console.log('🔧 [RenderMessage] Processing message annotations:', message.annotations)
     const toolAnnotations =
       (message.annotations?.filter(
         annotation =>
@@ -56,7 +57,9 @@ export function RenderMessage({
         }
       }>) || []
 
+    console.log('🔧 [RenderMessage] Found tool annotations:', toolAnnotations.length)
     const toolDataMap = toolAnnotations.reduce((acc, annotation) => {
+      console.log('🔧 [RenderMessage] Processing tool annotation:', annotation.data)
       const existing = acc.get(annotation.data.toolCallId)
       if (!existing || annotation.data.state === 'result') {
         acc.set(annotation.data.toolCallId, {
@@ -71,7 +74,9 @@ export function RenderMessage({
       return acc
     }, new Map<string, ToolInvocation>())
 
-    return Array.from(toolDataMap.values())
+    const result = Array.from(toolDataMap.values())
+    console.log('🔧 [RenderMessage] Final tool data:', result)
+    return result
   }, [message.annotations])
 
   // Extract the unified reasoning annotation directly.

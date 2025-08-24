@@ -1,13 +1,12 @@
 import {
-  convertToCoreMessages,
-  createDataStreamResponse,
-  DataStreamWriter,
-  JSONValue,
-  streamText
+    convertToCoreMessages,
+    createDataStreamResponse,
+    DataStreamWriter,
+    JSONValue,
+    streamText
 } from 'ai'
 import { manualResearcher } from '../agents/manual-researcher'
 import { ExtendedCoreMessage } from '../types'
-import { getMaxAllowedTokens, truncateMessages } from '../utils/context-window'
 import { handleStreamFinish } from './handle-stream-finish'
 import { executeToolCall } from './tool-execution'
 import { BaseStreamConfig } from './types'
@@ -22,22 +21,18 @@ export function createManualToolStreamResponse(config: BaseStreamConfig) {
         : modelId
 
       try {
-        const coreMessages = convertToCoreMessages(messages)
-        const truncatedMessages = truncateMessages(
-          coreMessages,
-          getMaxAllowedTokens(model)
-        )
+        const modelMessages = convertToCoreMessages(messages)
 
         const { toolCallDataAnnotation, toolCallMessages } =
           await executeToolCall(
-            truncatedMessages,
+            modelMessages,
             dataStream,
             toolCallModelId,
             searchMode
           )
 
         const researcherConfig = manualResearcher({
-          messages: [...truncatedMessages, ...toolCallMessages],
+          messages: [...modelMessages, ...toolCallMessages],
           model: modelId,
           isSearchEnabled: searchMode
         })

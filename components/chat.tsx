@@ -4,10 +4,10 @@ import { CHAT_ID } from '@/lib/constants'
 import { Model } from '@/lib/types/models'
 import { cn } from '@/lib/utils'
 import { useChat } from '@ai-sdk/react'
-import { ChatRequestOptions } from 'ai'
-import { Message } from 'ai/react'
+import { ChatRequestOptions, type UIMessage as Message } from 'ai'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { CampaignProgressTracker } from './campaign-progress-tracker'
 import { ChatMessages } from './chat-messages'
 import { ChatPanel } from './chat-panel'
 
@@ -31,6 +31,8 @@ export function Chat({
 }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [isAtBottom, setIsAtBottom] = useState(true)
+  const [showProgressTracker, setShowProgressTracker] = useState(false)
+  const [currentCampaignStep, setCurrentCampaignStep] = useState(1)
 
   const {
     messages,
@@ -63,6 +65,22 @@ export function Chat({
   })
 
   const isLoading = status === 'submitted' || status === 'streaming'
+
+  // Detect when prospect search tool is being used
+  useEffect(() => {
+    const hasProspectSearchTool = messages.some(message => 
+      message.role === 'assistant' && 
+      message.annotations?.some((annotation: any) => 
+        annotation?.type === 'tool_call' && 
+        annotation?.data?.toolName === 'prospect_search'
+      )
+    )
+    
+    if (hasProspectSearchTool && !showProgressTracker) {
+      setShowProgressTracker(true)
+      setCurrentCampaignStep(1)
+    }
+  }, [messages, showProgressTracker])
 
   // Convert messages array to sections array
   const sections = useMemo<ChatSection[]>(() => {
@@ -195,6 +213,9 @@ export function Chat({
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    console.log('🔧 [Frontend] =================== USER SUBMITTED MESSAGE ===================')
+    console.log('🔧 [Frontend] Input value:', input)
+    console.log('🔧 [Frontend] Current messages count:', messages.length)
     setData(undefined)
     handleSubmit(e)
   }
@@ -202,36 +223,78 @@ export function Chat({
   return (
     <div
       className={cn(
-        'relative flex h-full min-w-0 flex-1 flex-col',
+        'relative flex h-full min-w-0 flex-1 hermes-bg',
         messages.length === 0 ? 'items-center justify-center' : ''
       )}
       data-testid="full-chat"
     >
-      <ChatMessages
-        sections={sections}
-        data={data}
-        onQuerySelect={onQuerySelect}
-        isLoading={isLoading}
-        chatId={id}
-        addToolResult={addToolResult}
-        scrollContainerRef={scrollContainerRef}
-        onUpdateMessage={handleUpdateAndReloadMessage}
-        reload={handleReloadFrom}
-      />
-      <ChatPanel
-        input={input}
-        handleInputChange={handleInputChange}
-        handleSubmit={onSubmit}
-        isLoading={isLoading}
-        messages={messages}
-        setMessages={setMessages}
-        stop={stop}
-        query={query}
-        append={append}
-        models={models}
-        showScrollToBottomButton={!isAtBottom}
-        scrollContainerRef={scrollContainerRef}
-      />
+      {showProgressTracker ? (
+        // Campaign layout with progress tracker
+        <div className="flex h-full">
+          <div className="w-80 border-r border-border bg-muted/10 p-4 overflow-y-auto">
+            <CampaignProgressTracker 
+              currentStep={currentCampaignStep}
+              campaignTitle="Cold Email Campaign"
+            />
+          </div>
+          <div className="flex-1 flex flex-col">
+            <ChatMessages
+              sections={sections}
+              data={data}
+              onQuerySelect={onQuerySelect}
+              isLoading={isLoading}
+              chatId={id}
+              addToolResult={addToolResult}
+              scrollContainerRef={scrollContainerRef}
+              onUpdateMessage={handleUpdateAndReloadMessage}
+              reload={handleReloadFrom}
+            />
+            <ChatPanel
+              input={input}
+              handleInputChange={handleInputChange}
+              handleSubmit={onSubmit}
+              isLoading={isLoading}
+              messages={messages}
+              setMessages={setMessages}
+              stop={stop}
+              query={query}
+              append={append}
+              models={models}
+              showScrollToBottomButton={!isAtBottom}
+              scrollContainerRef={scrollContainerRef}
+            />
+          </div>
+        </div>
+      ) : (
+        // Default layout
+        <div className="flex flex-col flex-1">
+          <ChatMessages
+            sections={sections}
+            data={data}
+            onQuerySelect={onQuerySelect}
+            isLoading={isLoading}
+            chatId={id}
+            addToolResult={addToolResult}
+            scrollContainerRef={scrollContainerRef}
+            onUpdateMessage={handleUpdateAndReloadMessage}
+            reload={handleReloadFrom}
+          />
+          <ChatPanel
+            input={input}
+            handleInputChange={handleInputChange}
+            handleSubmit={onSubmit}
+            isLoading={isLoading}
+            messages={messages}
+            setMessages={setMessages}
+            stop={stop}
+            query={query}
+            append={append}
+            models={models}
+            showScrollToBottomButton={!isAtBottom}
+            scrollContainerRef={scrollContainerRef}
+          />
+        </div>
+      )}
     </div>
   )
 }

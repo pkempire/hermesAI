@@ -1,40 +1,20 @@
-import { Chat } from '@/components/chat'
-import { getSharedChat } from '@/lib/actions/chat'
-import { getModels } from '@/lib/config/models'
-import { convertToUIMessages } from '@/lib/utils'
+import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 
-export async function generateMetadata(props: {
-  params: Promise<{ id: string }>
-}) {
-  const { id } = await props.params
-  const chat = await getSharedChat(id)
-
-  if (!chat || !chat.sharePath) {
-    return notFound()
-  }
-
-  return {
-    title: chat?.title.toString().slice(0, 50) || 'Search'
-  }
+interface SharePageProps {
+  params: Promise<{
+    id: string
+  }>
 }
 
-export default async function SharePage(props: {
-  params: Promise<{ id: string }>
-}) {
-  const { id } = await props.params
-  const chat = await getSharedChat(id)
+export async function generateMetadata(
+  props: SharePageProps
+): Promise<Metadata> {
+  // Chat sharing is disabled in HermesAI
+  return notFound()
+}
 
-  if (!chat || !chat.sharePath) {
-    return notFound()
-  }
-
-  const models = await getModels()
-  return (
-    <Chat
-      id={chat.id}
-      savedMessages={convertToUIMessages(chat.messages)}
-      models={models}
-    />
-  )
+export default async function SharePage(props: SharePageProps) {
+  // Chat sharing is disabled in HermesAI
+  return notFound()
 }

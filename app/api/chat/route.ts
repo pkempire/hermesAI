@@ -8,8 +8,8 @@ import { cookies } from 'next/headers'
 export const maxDuration = 30
 
 const DEFAULT_MODEL: Model = {
-  id: 'gpt-4o-mini',
-  name: 'GPT-4o mini',
+  id: 'gpt-4o',
+  name: 'GPT-4o',
   provider: 'OpenAI',
   providerId: 'openai',
   enabled: true,
@@ -22,6 +22,12 @@ export async function POST(req: Request) {
     const referer = req.headers.get('referer')
     const isSharePage = referer?.includes('/share/')
     const userId = await getCurrentUserId()
+
+    console.log('🔧 [API] =================== CHAT API REQUEST ===================')
+    console.log('🔧 [API] Chat ID:', chatId)
+    console.log('🔧 [API] Messages count:', messages.length)
+    console.log('🔧 [API] Last message:', messages[messages.length - 1]?.content)
+    console.log('🔧 [API] User ID:', userId)
 
     if (isSharePage) {
       return new Response('Chat API is not available on share pages', {
@@ -58,6 +64,10 @@ export async function POST(req: Request) {
     }
 
     const supportsToolCalling = selectedModel.toolCallType === 'native'
+
+    console.log('🔧 [API] Selected model:', selectedModel.name)
+    console.log('🔧 [API] Search mode:', searchMode)
+    console.log('🔧 [API] Supports tool calling:', supportsToolCalling)
 
     return supportsToolCalling
       ? createToolCallingStreamResponse({

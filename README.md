@@ -1,227 +1,138 @@
-# Morphic
+# HermesAI: Prospecting & Outreach Engine - Implementation Plan
 
-An AI-powered search engine with a generative UI.
+This document outlines the step-by-step plan to transform the existing AI chat boilerplate into a powerful, automated sales prospecting and outreach tool. We will build this iteratively, with clear verification steps to ensure each component is working correctly before moving to the next.
 
-![capture](/public/screenshot-2025-05-04.png)
+---
 
-## 🗂️ Overview
+## Phase 1: Core Prospecting Engine
 
-- 🛠 [Features](#-features)
-- 🧱 [Stack](#-stack)
-- 🚀 [Quickstart](#-quickstart)
-- 🌐 [Deploy](#-deploy)
-- 🔎 [Search Engine](#-search-engine)
-- 💙 [Sponsors](#-sponsors)
-- 👥 [Contributing](#-contributing)
-- 📄 [License](#-license)
+**Goal:** Implement the backend logic and UI to find prospects using Exa Websets and display them in a real-time grid.
+
+### Step 1.1: Database Schema for Campaigns
 
-📝 Explore AI-generated documentation on [DeepWiki](https://deepwiki.com/miurla/morphic)
+**Objective:** Create the necessary database tables to store campaign data.
 
-## 🛠 Features
+**Files to Create:**
+*   `supabase/migrations/YYYYMMDDHHMMSS_create_campaign_schema.sql`
 
-### Core Features
+**Implementation:**
+*   Write a SQL migration to create three tables:
+    *   `campaigns`: To store high-level campaign details (`id`, `user_id`, `created_at`, `prompt`, `status`).
+    *   `prospects`: To store found prospects (`id`, `campaign_id`, `exa_item_id`, `properties` (jsonb), `enrichments` (jsonb)).
+    *   `draft_emails`: To store generated emails (`id`, `prospect_id`, `subject`, `body`, `status`).
 
-- AI-powered search with GenerativeUI
-- Natural language question understanding
-- Multiple search providers support (Tavily, SearXNG, Exa)
-- Model selection from UI (switch between available AI models)
-  - Reasoning models with visible thought process
-
-### Authentication
-
-- User authentication powered by [Supabase Auth](https://supabase.com/docs/guides/auth)
-- Supports Email/Password sign-up and sign-in
-- Supports Social Login with Google
-
-### Chat & History
-
-- Chat history functionality (Optional)
-- Share search results (Optional)
-- Redis support (Local/Upstash)
-
-### AI Providers
-
-The following AI providers are supported:
-
-- OpenAI (Default)
-- Google Generative AI
-- Azure OpenAI
-- Anthropic
-- Ollama
-- Groq
-- DeepSeek
-- Fireworks
-- xAI (Grok)
-- OpenAI Compatible
-
-Models are configured in `public/config/models.json`. Each model requires its corresponding API key to be set in the environment variables. See [Configuration Guide](docs/CONFIGURATION.md) for details.
-
-### Search Capabilities
-
-- URL-specific search
-- Video search support (Optional)
-- SearXNG integration with:
-  - Customizable search depth (basic/advanced)
-  - Configurable engines
-  - Adjustable results limit
-  - Safe search options
-  - Custom time range filtering
-
-### Additional Features
-
-- Docker deployment ready
-- Browser search engine integration
-
-## 🧱 Stack
-
-### Core Framework
-
-- [Next.js](https://nextjs.org/) - App Router, React Server Components
-- [TypeScript](https://www.typescriptlang.org/) - Type safety
-- [Vercel AI SDK](https://sdk.vercel.ai/docs) - Text streaming / Generative UI
-
-### Authentication & Authorization (Updated Category)
-
-- [Supabase](https://supabase.com/) - User authentication and backend services
-
-### AI & Search
-
-- [OpenAI](https://openai.com/) - Default AI provider (Optional: Google AI, Anthropic, Groq, Ollama, Azure OpenAI, DeepSeek, Fireworks)
-- [Tavily AI](https://tavily.com/) - Default search provider
-- Alternative providers:
-  - [SearXNG](https://docs.searxng.org/) - Self-hosted search
-  - [Exa](https://exa.ai/) - Neural search
-
-### Data Storage
-
-- [Upstash](https://upstash.com/) - Serverless Redis
-- [Redis](https://redis.io/) - Local Redis option
-
-### UI & Styling
-
-- [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS framework
-- [shadcn/ui](https://ui.shadcn.com/) - Re-usable components
-- [Radix UI](https://www.radix-ui.com/) - Unstyled, accessible components
-- [Lucide Icons](https://lucide.dev/) - Beautiful & consistent icons
-
-## 🚀 Quickstart
-
-### 1. Fork and Clone repo
-
-Fork the repo to your Github account, then run the following command to clone the repo:
-
-```bash
-git clone git@github.com:[YOUR_GITHUB_ACCOUNT]/morphic.git
-```
-
-### 2. Install dependencies
-
-```bash
-cd morphic
-bun install
-```
-
-### 3. Configure environment variables
-
-```bash
-cp .env.local.example .env.local
-```
-
-Fill in the required environment variables in `.env.local`:
-
-```bash
-# Required for Core Functionality
-OPENAI_API_KEY=     # Get from https://platform.openai.com/api-keys
-TAVILY_API_KEY=     # Get from https://app.tavily.com/home
-```
-
-For optional features configuration (Redis, SearXNG, etc.), see [CONFIGURATION.md](./docs/CONFIGURATION.md)
-
-### 4. Run app locally
-
-#### Using Bun
-
-```bash
-bun dev
-```
-
-#### Using Docker
-
-```bash
-docker compose up -d
-```
-
-Visit http://localhost:3000 in your browser.
-
-## 🌐 Deploy
-
-Host your own live version of Morphic with Vercel, Cloudflare Pages, or Docker.
-
-### Vercel
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmiurla%2Fmorphic&env=OPENAI_API_KEY,TAVILY_API_KEY,UPSTASH_REDIS_REST_URL,UPSTASH_REDIS_REST_TOKEN)
-
-### Docker Prebuilt Image
-
-Prebuilt Docker images are available on GitHub Container Registry:
-
-```bash
-docker pull ghcr.io/miurla/morphic:latest
-```
-
-You can use it with docker-compose:
-
-```yaml
-services:
-  morphic:
-    image: ghcr.io/miurla/morphic:latest
-    env_file: .env.local
-    ports:
-      - '3000:3000'
-    volumes:
-      - ./models.json:/app/public/config/models.json # Optional: Override default model configuration
-```
-
-The default model configuration is located at `public/config/models.json`. For Docker deployment, you can create `models.json` alongside `.env.local` to override the default configuration.
-
-## 🔎 Search Engine
-
-### Setting up the Search Engine in Your Browser
-
-If you want to use Morphic as a search engine in your browser, follow these steps:
-
-1. Open your browser settings.
-2. Navigate to the search engine settings section.
-3. Select "Manage search engines and site search".
-4. Under "Site search", click on "Add".
-5. Fill in the fields as follows:
-   - **Search engine**: Morphic
-   - **Shortcut**: morphic
-   - **URL with %s in place of query**: `https://morphic.sh/search?q=%s`
-6. Click "Add" to save the new search engine.
-7. Find "Morphic" in the list of site search, click on the three dots next to it, and select "Make default".
-
-This will allow you to use Morphic as your default search engine in the browser.
-
-## 💙 Sponsors
-
-This project is proudly supported by:
-
-<a href="https://vercel.com/oss">
-  <img alt="Vercel OSS Program" src="https://vercel.com/oss/program-badge.svg" />
-</a>
-
-## 👥 Contributing
-
-We welcome contributions to Morphic! Whether it's bug reports, feature requests, or pull requests, all contributions are appreciated.
-
-Please see our [Contributing Guide](CONTRIBUTING.md) for details on:
-
-- How to submit issues
-- How to submit pull requests
-- Commit message conventions
-- Development setup
-
-## 📄 License
-
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+**Verification:**
+1.  Run `supabase db reset` locally to apply the migration.
+2.  Use the Supabase Studio (Table Editor) to confirm the `campaigns`, `prospects`, and `draft_emails` tables exist with the correct columns.
+3.  Manually insert a row into each table to ensure there are no constraint violations.
+
+### Step 1.2: Implement the Campaign Builder UI
+
+**Objective:** Create the user-facing form to define and launch a new prospecting campaign.
+
+**Files to Create/Modify:**
+*   Create `components/campaign-builder.tsx`
+*   Modify `app/page.tsx`
+
+**Implementation:**
+1.  Create the `CampaignBuilder` component exactly as you designed it, with state management for all inputs (query, entity type, enrichments, filters, count).
+2.  Replace the content of `app/page.tsx` to render the `CampaignBuilder` component as the main feature of the home page.
+3.  The `onCreateCampaign` prop will trigger the `startProspectSearch` action.
+
+**Verification:**
+1.  Run the app and navigate to the homepage.
+2.  Verify the `CampaignBuilder` UI renders correctly with all toggles, inputs, and sliders.
+3.  Interact with all form elements and check that their state updates correctly (e.g., using React DevTools).
+4.  Clicking the "Start Search" button should trigger a console log or a placeholder action for now.
+
+### Step 1.3: Enhance Exa to support Websets & Create the Agent
+
+**Objective:** Create a new agent that uses an enhanced Exa tool to initiate a Webset search and stream UI updates.
+
+**Files to Create/Modify:**
+*   Create `lib/agents/prospect-researcher.ts`
+*   Create `components/prospect-grid.tsx`
+*   Modify `lib/actions/chat.ts` (or wherever the `createAI` actions are defined).
+
+**Implementation:**
+1.  Create the `prospect-researcher.ts` file. Implement the `prospectResearcher` function as you outlined. This will involve:
+    *   Accepting structured `searchParams`.
+    *   Calling `exa.websets.create(...)` with the structured query, criteria, and enrichments.
+    *   Streaming initial status updates to the UI (`createStreamableUI`).
+    *   Initiating the polling mechanism (`streamWebsetResults`) to check for results.
+2.  Create the `ProspectGrid.tsx` component. This component will receive the list of `prospects` and render them in a grid using the `ProspectCard` sub-component. It must handle the `isComplete` state to show/hide the loading indicators.
+3.  In `lib/actions/chat.ts`, define the `startProspectSearch` server action. This action will:
+    *   Receive the `searchParams` from the `CampaignBuilder` UI.
+    *   Initialize a `createStreamableUI` instance.
+    *   Call the `prospectResearcher` agent function.
+    *   Return the `streamableUI.value` as part of the AI message.
+
+**Verification:**
+1.  Fill out the `CampaignBuilder` form and click "Start Search".
+2.  Check the browser's network tab to confirm the `startProspectSearch` action is called.
+3.  In your terminal logs, confirm that the `prospect-researcher` is called and that it makes an API request to Exa's Webset endpoint.
+4.  The UI should update in real-time, first showing "Creating intelligent search agents...", then "Finding prospects...", and finally rendering the `ProspectGrid` component.
+5.  As the polling runs, new prospect cards should appear in the grid one by one, animated with `framer-motion`.
+
+---
+
+## Phase 2: Email Integration and Sending
+
+**Goal:** Allow users to connect their Gmail account and send the generated emails.
+
+### Step 2.1: Update Supabase Auth to Include Gmail Scopes
+
+**Objective:** Modify the existing Google OAuth flow to request permissions for sending emails.
+
+**Files to Modify:**
+*   `lib/auth/get-current-user.ts` or wherever `signInWithOAuth` is called.
+*   We'll also need a new table/column for the refresh token.
+
+**Implementation:**
+1.  Locate the `supabase.auth.signInWithOAuth` call for the 'google' provider.
+2.  Add the `scopes` and `queryParams` to the options object as you defined:
+    ```javascript
+    options: {
+      scopes: 'openid email profile https://www.googleapis.com/auth/gmail.send',
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'consent',
+      },
+    }
+    ```
+3.  **Crucially**, we must also store the `provider_refresh_token`. Modify the `users` table in Supabase (or create a new `user_tokens` table) to store an encrypted version of the refresh token. After a user logs in, we'll need a server-side function to grab this token from the session and save it to our database.
+
+**Verification:**
+1.  Log out of the application.
+2.  Log back in using the Google provider.
+3.  You should be prompted by Google's consent screen to grant permission for "Send email on your behalf."
+4.  After logging in, inspect the user's session data (e.g., via `supabase.auth.getSession()`) and confirm that `provider_token` and `provider_refresh_token` are present.
+5.  Check your database to ensure the refresh token was saved correctly.
+
+### Step 2.2: Create the "Generate Emails" and "Send Emails" Logic
+
+**Objective:** Implement the functionality to draft and send emails for a completed campaign.
+
+**Files to Create/Modify:**
+*   Modify `lib/agents/prospect-researcher.ts`
+*   Create `app/api/send-emails/route.ts`
+*   Modify `components/prospect-grid.tsx`
+
+**Implementation:**
+1.  Add a "Generate Emails" button to the `ProspectGrid` component, which appears when `isComplete` is true.
+2.  When clicked, this button will call a new server action (e.g., `generateEmailsForCampaign`).
+3.  The `generateEmailsForCampaign` action will:
+    *   Fetch all prospects for the campaign from the DB.
+    *   For each prospect, call the LLM with their enriched data and the original pitch to generate a personalized subject and body.
+    *   Save these drafts to the `draft_emails` table.
+4.  Create the `/api/send-emails/route.ts` API route as you specified. This route will:
+    *   Fetch the user's `access_token` (using the `refresh_token` to get a new one if necessary).
+    *   Use the `googleapis` library to send the emails.
+    *   Update the status of each email in the `draft_emails` table.
+
+**Verification:**
+1.  After a prospect search is complete, click the "Generate Emails" button.
+2.  Check the database to confirm that the `draft_emails` table is populated with personalized content.
+3.  Implement a "Send" button. When clicked, it should call the `/api/send-emails` endpoint.
+4.  Confirm in your own Gmail "Sent" folder that the emails were actually sent.
+5.  Check the `draft_emails` table to see their status updated to 'sent'.

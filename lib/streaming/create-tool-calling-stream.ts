@@ -6,7 +6,6 @@ import {
   DataStreamWriter,
   streamText
 } from 'ai'
-import { getMaxAllowedTokens, truncateMessages } from '../utils/context-window'
 import { isReasoningModel } from '../utils/registry'
 import { handleStreamFinish } from './handle-stream-finish'
 import { BaseStreamConfig } from './types'
@@ -30,21 +29,31 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
       const { messages, model, chatId, searchMode, userId } = config
       const modelId = `${model.providerId}:${model.id}`
 
+      console.log('🔧 [createToolCallingStreamResponse] =================== STREAM STARTING ===================')
+      console.log('🔧 [createToolCallingStreamResponse] Model ID:', modelId)
+      console.log('🔧 [createToolCallingStreamResponse] Search Mode:', searchMode)
+      console.log('🔧 [createToolCallingStreamResponse] Messages:', messages.length)
+
       try {
-        const coreMessages = convertToCoreMessages(messages)
-        const truncatedMessages = truncateMessages(
-          coreMessages,
-          getMaxAllowedTokens(model)
-        )
+        // Convert UI messages to core/model-compatible messages
+        const modelMessages = convertToCoreMessages(messages)
 
         let researcherConfig = await researcher({
-          messages: truncatedMessages,
+          messages: modelMessages,
           model: modelId,
           searchMode
         })
 
+        console.log('🔧 [createToolCallingStreamResponse] About to call streamText with tools:', Object.keys(researcherConfig.tools || {}))
+        console.log('🔧 [createToolCallingStreamResponse] Active tools:', researcherConfig.experimental_activeTools)
+
         const result = streamText({
           ...researcherConfig,
+          onStepFinish: (step) => {
+            console.log('🔧 [streamText] Step finished:', step.stepType)
+            // Note: AI SDK v5 uses different step types - check documentation for exact types
+            console.log('🔧 [streamText] Step details:', step)
+          },
           onFinish: async result => {
             // Check if the last message contains an ask_question tool invocation
             const shouldSkipRelatedQuestions =

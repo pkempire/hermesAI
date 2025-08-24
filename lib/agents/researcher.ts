@@ -1,39 +1,42 @@
 import { CoreMessage, smoothStream, streamText } from 'ai'
+import { createProspectSearchTool } from '../tools/prospect-search'
 import { createQuestionTool } from '../tools/question'
-import { retrieveTool } from '../tools/retrieve'
 import { createSearchTool } from '../tools/search'
-import { createVideoSearchTool } from '../tools/video-search'
 import { getModel } from '../utils/registry'
 
-const SYSTEM_PROMPT = `
-Instructions:
+const SYSTEM_PROMPT = `You are HermesAI, an AI-powered cold email campaign assistant that helps B2B sales teams find qualified prospects and create personalized outreach campaigns.
 
-You are a helpful AI assistant with access to real-time web search, content retrieval, video search capabilities, and the ability to ask clarifying questions.
+## Your Core Mission:
+Transform natural language prospect requests into structured searches, find qualified leads, enrich their data, and help draft personalized emails that convert.
 
-When asked a question, you should:
-1. First, determine if you need more information to properly understand the user's query
-2. **If the query is ambiguous or lacks specific details, use the ask_question tool to create a structured question with relevant options**
-3. If you have enough information, search for relevant information using the search tool when needed
-4. Use the retrieve tool to get detailed content from specific URLs
-5. Use the video search tool when looking for video content
-6. Analyze all search results to provide accurate, up-to-date information
-7. Always cite sources using the [number](url) format, matching the order of search results. If multiple sources are relevant, include all of them, and comma separate them. Only use information that has a URL available for citation.
-8. If results are not relevant or helpful, rely on your general knowledge
-9. Provide comprehensive and detailed responses based on search results, ensuring thorough coverage of the user's question
-10. Use markdown to structure your responses. Use headings to break up the content into sections.
-11. **Use the retrieve tool only with user-provided URLs.**
+## When to use prospect_search tool:
+- User mentions finding, searching, locating, or targeting specific types of people/companies
+- User describes a campaign objective ("I want to sell X to Y type of companies")
+- User provides job titles, company types, industries, or other targeting criteria
+- Any request related to lead generation, prospecting, or building contact lists
 
-When using the ask_question tool:
-- Create clear, concise questions
-- Provide relevant predefined options
-- Enable free-form input when appropriate
-- Match the language to the user's language (except option values which must be in English)
+## Tool Execution Protocol:
+1. **IMMEDIATELY** call prospect_search when prospects are requested - no text response first
+2. Extract target count (look for "10", "25", "100 prospects" etc.) - default to 25 if not specified
+3. Use the complete user query as the search parameter
+4. Always set interactive: true to show the search builder UI
+5. Let the tool handle the complexity - don't try to parse criteria yourself
 
-Citation Format:
-[number](url)
-`
+## Examples of Trigger Phrases:
+- "Find CTOs at fintech companies" → prospect_search(query="CTOs at fintech companies", targetCount=25, interactive=true)
+- "I need marketing directors at e-commerce brands" → prospect_search(query="marketing directors at e-commerce brands", targetCount=25, interactive=true)
+- "Get me 50 prospects who posted about AI" → prospect_search(query="prospects who posted about AI", targetCount=50, interactive=true)
+- "Target VPs at SaaS companies raising Series A" → prospect_search(query="VPs at SaaS companies raising Series A", targetCount=25, interactive=true)
 
-type ResearcherReturn = Parameters<typeof streamText>[0]
+## Available Tools:
+- **prospect_search**: Your primary tool for finding qualified prospects using Exa's Websets API
+- **search**: General web research for market intelligence, company research, or news
+- **ask_question**: Clarify campaign objectives or targeting criteria when unclear
+
+## Response Style:
+When not using tools, be direct, actionable, and focused on campaign success. Speak like a sales ops expert who understands B2B outreach.
+
+REMEMBER: Speed matters in sales. Call prospect_search immediately when users want to find prospects - don't waste time with explanatory text first.`
 
 export function researcher({
   messages,
@@ -45,31 +48,59 @@ export function researcher({
   searchMode: boolean
 }): ResearcherReturn {
   try {
+    console.log('🔧 [researcher] =================== RESEARCHER INITIALIZATION ===================')
+    console.log('🔧 [researcher] Creating researcher with model:', model)
+    console.log('🔧 [researcher] Search mode:', searchMode)
+    console.log('🔧 [researcher] Messages count:', messages.length)
+    console.log('🔧 [researcher] Last message:', messages[messages.length - 1]?.content)
+    
     const currentDate = new Date().toLocaleString()
 
     // Create model-specific tools
+    console.log('🔧 [researcher] Creating search tool...')
     const searchTool = createSearchTool(model)
-    const videoSearchTool = createVideoSearchTool(model)
+    
+    console.log('🔧 [researcher] Creating ask question tool...')
     const askQuestionTool = createQuestionTool(model)
-
+    
+    console.log('🔧 [researcher] Creating prospect search tool...')
+    const prospectSearchTool = createProspectSearchTool(model)
+    
+    console.log('✅ [researcher] All tools created successfully')
+    // Debug tool schemas (AI SDK v5 expects Zod schemas)
+    try {
+      // @ts-ignore
+      console.log('🔍 [researcher] search.inputSchema defined:', !!searchTool?.inputSchema)
+      // @ts-ignore
+      console.log('🔍 [researcher] ask_question.inputSchema defined:', !!askQuestionTool?.inputSchema)
+      // @ts-ignore
+      console.log('🔍 [researcher] prospect_search.inputSchema defined:', !!prospectSearchTool?.inputSchema)
+    } catch (e) {
+      console.warn('⚠️ [researcher] Tool schema debug failed:', e)
+    }
+    console.log('🔧 [researcher] Available tools:', Object.keys({
+      search: searchTool,
+      ask_question: askQuestionTool,
+      prospect_search: prospectSearchTool
+    }))
+    
+    // TEMP: Narrow tools to prospect_search only to isolate schema issues
     return {
       model: getModel(model),
-      system: `${SYSTEM_PROMPT}\nCurrent date and time: ${currentDate}`,
+      system: `${SYSTEM_PROMPT}\n\nCurrent date and time: ${currentDate}`,
       messages,
       tools: {
-        search: searchTool,
-        retrieve: retrieveTool,
-        videoSearch: videoSearchTool,
-        ask_question: askQuestionTool
+        // search: searchTool,
+        // ask_question: askQuestionTool,
+        prospect_search: prospectSearchTool
       },
-      experimental_activeTools: searchMode
-        ? ['search', 'retrieve', 'videoSearch', 'ask_question']
-        : [],
-      maxSteps: searchMode ? 5 : 1,
+      maxSteps: 5,
       experimental_transform: smoothStream()
     }
   } catch (error) {
-    console.error('Error in chatResearcher:', error)
+    console.error('💥 [researcher] Error in chatResearcher:', error)
     throw error
   }
 }
+
+type ResearcherReturn = Parameters<typeof streamText>[0]

@@ -1,6 +1,7 @@
 'use client'
 
-import { ToolInvocation } from 'ai'
+import type { ToolInvocation } from 'ai'
+import { ProspectSearchSection } from './prospect-search-section'
 import { QuestionConfirmation } from './question-confirmation'
 import RetrieveSection from './retrieve-section'
 import { SearchSection } from './search-section'
@@ -19,8 +20,11 @@ export function ToolSection({
   onOpenChange,
   addToolResult
 }: ToolSectionProps) {
+  console.log('🔧 [ToolSection] Processing tool:', tool.toolName, 'state:', tool.state)
+  
   // Special handling for ask_question tool
   if (tool.toolName === 'ask_question') {
+    console.log('🔧 [ToolSection] Processing ask_question tool')
     // When waiting for user input
     if (tool.state === 'call' && addToolResult) {
       return (
@@ -56,6 +60,7 @@ export function ToolSection({
 
   switch (tool.toolName) {
     case 'search':
+      console.log('🔧 [ToolSection] Rendering SearchSection')
       return (
         <SearchSection
           tool={tool}
@@ -64,6 +69,7 @@ export function ToolSection({
         />
       )
     case 'videoSearch':
+      console.log('🔧 [ToolSection] Rendering VideoSearchSection')
       return (
         <VideoSearchSection
           tool={tool}
@@ -72,6 +78,7 @@ export function ToolSection({
         />
       )
     case 'retrieve':
+      console.log('🔧 [ToolSection] Rendering RetrieveSection')
       return (
         <RetrieveSection
           tool={tool}
@@ -79,7 +86,17 @@ export function ToolSection({
           onOpenChange={onOpenChange}
         />
       )
+    case 'prospect_search':
+      console.log('🔧 [ToolSection] Rendering ProspectSearchSection')
+      return (
+        <ProspectSearchSection
+          tool={tool}
+          isOpen={isOpen}
+          onOpenChange={onOpenChange}
+        />
+      )
     default:
+      console.log('❌ [ToolSection] No handler for tool:', tool.toolName)
       return null
   }
 }

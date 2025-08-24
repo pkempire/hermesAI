@@ -8,13 +8,13 @@ import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { Button } from './ui/button'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger
 } from './ui/dialog'
 import { Spinner } from './ui/spinner'
 
@@ -34,18 +34,10 @@ export function ChatShare({ chatId, className }: ChatShareProps) {
       setOpen(true)
     })
     const result = await shareChat(chatId)
-    if (!result) {
-      toast.error('Failed to share chat')
+    if (!result || !result.success) {
+      toast.error('Chat sharing is not available in HermesAI')
       return
     }
-
-    if (!result.sharePath) {
-      toast.error('Could not copy link to clipboard')
-      return
-    }
-
-    const url = new URL(result.sharePath, window.location.href)
-    setShareUrl(url.toString())
   }
 
   const handleCopy = () => {
