@@ -14,7 +14,8 @@ import { Mail } from 'lucide-react'
 
 interface ChatPanelProps {
   input: string
-  handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void
+  handleInputChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void
+  setInput?: (value: string) => void
   handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void
   isLoading: boolean
   messages: Message[]
@@ -32,6 +33,7 @@ interface ChatPanelProps {
 export function ChatPanel({
   input,
   handleInputChange,
+  setInput,
   handleSubmit,
   isLoading,
   messages,
@@ -177,7 +179,11 @@ export function ChatPanel({
                 disabled={isLoading || isToolInvocationInProgress()}
                 className="resize-none w-full min-h-16 bg-transparent border-0 px-6 pt-6 pb-4 text-base placeholder:text-slate-400 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200"
                 onChange={e => {
-                  handleInputChange(e)
+                  if (handleInputChange) {
+                    handleInputChange(e)
+                  } else if (setInput) {
+                    setInput(e.target.value)
+                  }
                   setShowEmptyScreen(e.target.value.length === 0)
                 }}
                 onKeyDown={e => {
@@ -271,9 +277,13 @@ export function ChatPanel({
           <div className="mt-8">
             <EmptyScreen
               submitMessage={message => {
-                handleInputChange({
-                  target: { value: message }
-                } as React.ChangeEvent<HTMLTextAreaElement>)
+                if (handleInputChange) {
+                  handleInputChange({
+                    target: { value: message }
+                  } as React.ChangeEvent<HTMLTextAreaElement>)
+                } else if (setInput) {
+                  setInput(message)
+                }
               }}
               className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-500"
             />

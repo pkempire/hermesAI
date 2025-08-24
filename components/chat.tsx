@@ -38,6 +38,7 @@ export function Chat({
     messages,
     input,
     handleInputChange,
+    setInput,
     handleSubmit,
     status,
     setMessages,
@@ -262,6 +263,7 @@ export function Chat({
             <ChatPanel
               input={input}
               handleInputChange={handleInputChange}
+              setInput={setInput}
               handleSubmit={onSubmit}
               isLoading={isLoading}
               messages={messages}
@@ -295,6 +297,7 @@ export function Chat({
             <ChatPanel
               input={input}
               handleInputChange={handleInputChange}
+              setInput={setInput}
               handleSubmit={onSubmit}
               isLoading={isLoading}
               messages={messages}
