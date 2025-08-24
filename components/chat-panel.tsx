@@ -187,7 +187,7 @@ export function ChatPanel({
                     !isComposing &&
                     !enterDisabled
                   ) {
-                    if (input.trim().length === 0) {
+                    if (!input || input.trim().length === 0) {
                       e.preventDefault()
                       return
                     }
@@ -213,7 +213,7 @@ export function ChatPanel({
                       <span>Thinking...</span>
                     </div>
                   )}
-                  {!isLoading && input.length > 0 && (
+                  {!isLoading && input && input.length > 0 && (
                     <span className="animate-in fade-in slide-in-from-left-2 duration-200">
                       Press Enter to send • Shift+Enter for new line
                     </span>
@@ -241,10 +241,10 @@ export function ChatPanel({
                     className={cn(
                       'rounded-full px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200',
                       isLoading && 'animate-pulse',
-                      (input.length === 0 && !isLoading) && 'opacity-50 cursor-not-allowed hover:scale-100'
+                      (!input || input.length === 0) && !isLoading && 'opacity-50 cursor-not-allowed hover:scale-100'
                     )}
                     disabled={
-                      (input.length === 0 && !isLoading) ||
+                      ((!input || input.length === 0) && !isLoading) ||
                       isToolInvocationInProgress()
                     }
                     onClick={isLoading ? stop : undefined}
