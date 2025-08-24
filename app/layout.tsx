@@ -63,12 +63,18 @@ export default async function RootLayout({
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  if (supabaseUrl && supabaseAnonKey) {
-    const supabase = await createClient()
-    const {
-      data: { user: supabaseUser }
-    } = await supabase.auth.getUser()
-    user = supabaseUser
+  // Only initialize Supabase if both URL and key are available and valid
+  if (supabaseUrl && supabaseAnonKey && supabaseUrl.includes('supabase.co')) {
+    try {
+      const supabase = await createClient()
+      const {
+        data: { user: supabaseUser }
+      } = await supabase.auth.getUser()
+      user = supabaseUser
+    } catch (error) {
+      console.warn('Supabase connection failed, continuing without auth:', error)
+      user = null
+    }
   }
 
   return (

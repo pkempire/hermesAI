@@ -108,117 +108,176 @@ export function ChatPanel({
   return (
     <div
       className={cn(
-        'w-full bg-background group/form-container shrink-0',
-        messages.length > 0 ? 'sticky bottom-0 px-2 pb-4' : 'px-6'
+        'w-full group/form-container shrink-0 relative',
+        messages.length > 0 ? 'px-4 pb-4' : 'px-8 pb-8'
       )}
     >
       {messages.length === 0 && (
-        <div className="mb-10 flex flex-col items-center gap-4">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-            <Mail className="w-6 h-6 text-white" />
+        <div className="mb-16 flex flex-col items-center gap-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+          <div className="relative">
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-purple-500/25 transform rotate-3 hover:rotate-0 transition-transform duration-500">
+              <Mail className="w-8 h-8 text-white" />
+            </div>
+            <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full animate-bounce delay-1000 shadow-lg"></div>
           </div>
-          <p className="text-center text-3xl font-semibold">
-            Better copy
-          </p>
+          <div className="text-center space-y-4 max-w-2xl">
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-slate-900 via-blue-800 to-purple-800 bg-clip-text text-transparent leading-tight">
+              Find Your Next Customer
+            </h1>
+            <p className="text-xl text-slate-600 leading-relaxed">
+              AI-powered prospect discovery and personalized outreach. Just tell me who you're looking for.
+            </p>
+          </div>
         </div>
       )}
+      
       <form
         onSubmit={handleSubmit}
-        className={cn('max-w-3xl w-full mx-auto relative')}
+        className={cn('max-w-4xl w-full mx-auto relative group/form')}
       >
-        {/* Scroll to bottom button - only shown when showScrollToBottomButton is true */}
+        {/* Enhanced scroll to bottom button */}
         {showScrollToBottomButton && messages.length > 0 && (
           <Button
             type="button"
             variant="outline"
             size="icon"
-            className="absolute -top-10 right-4 z-20 size-8 rounded-full shadow-md"
+            className="absolute -top-16 right-6 z-20 size-10 rounded-full shadow-lg bg-white/80 backdrop-blur-sm border-slate-200/60 hover:bg-white hover:scale-105 transition-all duration-200"
             onClick={handleScrollToBottom}
             title="Scroll to bottom"
           >
-            <ChevronDown size={16} />
+            <ChevronDown size={18} className="text-slate-600" />
           </Button>
         )}
 
-        <div className="relative flex flex-col w-full gap-2 bg-muted rounded-3xl border border-input">
-          <Textarea
-            ref={inputRef}
-            name="input"
-            rows={2}
-            maxRows={5}
-            tabIndex={0}
-            onCompositionStart={handleCompositionStart}
-            onCompositionEnd={handleCompositionEnd}
-            placeholder="Ask a question..."
-            spellCheck={false}
-            value={input}
-            disabled={isLoading || isToolInvocationInProgress()}
-            className="resize-none w-full min-h-12 bg-transparent border-0 p-4 text-sm placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-            onChange={e => {
-              handleInputChange(e)
-              setShowEmptyScreen(e.target.value.length === 0)
-            }}
-            onKeyDown={e => {
-              if (
-                e.key === 'Enter' &&
-                !e.shiftKey &&
-                !isComposing &&
-                !enterDisabled
-              ) {
-                if (input.trim().length === 0) {
-                  e.preventDefault()
-                  return
-                }
-                e.preventDefault()
-                const textarea = e.target as HTMLTextAreaElement
-                textarea.form?.requestSubmit()
-              }
-            }}
-            onFocus={() => setShowEmptyScreen(true)}
-            onBlur={() => setShowEmptyScreen(false)}
-          />
+        <div className="relative">
+          {/* Input container with enhanced styling */}
+          <div className={cn(
+            'relative flex flex-col w-full bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl shadow-slate-200/50 border border-slate-200/50 transition-all duration-300',
+            'group-focus-within/form:shadow-2xl group-focus-within/form:shadow-blue-500/20 group-focus-within/form:border-blue-300/50',
+            'hover:shadow-xl hover:shadow-slate-300/50'
+          )}>
+            {/* Typing indicator background glow */}
+            <div className={cn(
+              'absolute -inset-1 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-pink-600/20 rounded-3xl blur-xl transition-opacity duration-300',
+              isLoading ? 'opacity-100 animate-pulse' : 'opacity-0'
+            )} />
+            
+            <div className="relative">
+              <Textarea
+                ref={inputRef}
+                name="input"
+                rows={1}
+                maxRows={8}
+                tabIndex={0}
+                onCompositionStart={handleCompositionStart}
+                onCompositionEnd={handleCompositionEnd}
+                placeholder={messages.length === 0 ? "Find prospects at Series A SaaS companies in San Francisco..." : "Ask a follow-up question..."}
+                spellCheck={false}
+                value={input}
+                disabled={isLoading || isToolInvocationInProgress()}
+                className="resize-none w-full min-h-16 bg-transparent border-0 px-6 pt-6 pb-4 text-base placeholder:text-slate-400 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200"
+                onChange={e => {
+                  handleInputChange(e)
+                  setShowEmptyScreen(e.target.value.length === 0)
+                }}
+                onKeyDown={e => {
+                  if (
+                    e.key === 'Enter' &&
+                    !e.shiftKey &&
+                    !isComposing &&
+                    !enterDisabled
+                  ) {
+                    if (input.trim().length === 0) {
+                      e.preventDefault()
+                      return
+                    }
+                    e.preventDefault()
+                    const textarea = e.target as HTMLTextAreaElement
+                    textarea.form?.requestSubmit()
+                  }
+                }}
+                onFocus={() => setShowEmptyScreen(true)}
+                onBlur={() => setShowEmptyScreen(false)}
+              />
 
-          {/* Bottom action buttons */}
-          <div className="flex items-center justify-end p-4">
-            <div className="flex items-center gap-2">
-              {messages.length > 0 && (
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleNewChat}
-                  className="shrink-0 rounded-full group"
-                  type="button"
-                  disabled={isLoading || isToolInvocationInProgress()}
-                >
-                  <MessageCirclePlus className="size-4 group-hover:rotate-12 transition-all" />
-                </Button>
-              )}
-              <Button
-                type={isLoading ? 'button' : 'submit'}
-                size={'icon'}
-                variant={'outline'}
-                className={cn(isLoading && 'animate-pulse', 'rounded-full')}
-                disabled={
-                  (input.length === 0 && !isLoading) ||
-                  isToolInvocationInProgress()
-                }
-                onClick={isLoading ? stop : undefined}
-              >
-                {isLoading ? <Square size={20} /> : <ArrowUp size={20} />}
-              </Button>
+              {/* Enhanced action buttons */}
+              <div className="flex items-center justify-between px-4 pb-4">
+                <div className="flex items-center gap-2 text-xs text-slate-400">
+                  {isLoading && (
+                    <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
+                      <div className="flex space-x-1">
+                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce"></div>
+                        <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce delay-100"></div>
+                        <div className="w-1.5 h-1.5 bg-pink-500 rounded-full animate-bounce delay-200"></div>
+                      </div>
+                      <span>Thinking...</span>
+                    </div>
+                  )}
+                  {!isLoading && input.length > 0 && (
+                    <span className="animate-in fade-in slide-in-from-left-2 duration-200">
+                      Press Enter to send • Shift+Enter for new line
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {messages.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleNewChat}
+                      className="shrink-0 rounded-full group hover:bg-slate-100 transition-all duration-200"
+                      type="button"
+                      disabled={isLoading || isToolInvocationInProgress()}
+                    >
+                      <MessageCirclePlus className="size-4 group-hover:rotate-12 transition-transform duration-200 mr-2" />
+                      <span className="text-sm">New chat</span>
+                    </Button>
+                  )}
+                  
+                  <Button
+                    type={isLoading ? 'button' : 'submit'}
+                    size="default"
+                    className={cn(
+                      'rounded-full px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200',
+                      isLoading && 'animate-pulse',
+                      (input.length === 0 && !isLoading) && 'opacity-50 cursor-not-allowed hover:scale-100'
+                    )}
+                    disabled={
+                      (input.length === 0 && !isLoading) ||
+                      isToolInvocationInProgress()
+                    }
+                    onClick={isLoading ? stop : undefined}
+                  >
+                    {isLoading ? (
+                      <div className="flex items-center gap-2">
+                        <Square size={16} className="animate-pulse" />
+                        <span>Stop</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <ArrowUp size={16} />
+                        <span>Send</span>
+                      </div>
+                    )}
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         {messages.length === 0 && (
-          <EmptyScreen
-            submitMessage={message => {
-              handleInputChange({
-                target: { value: message }
-              } as React.ChangeEvent<HTMLTextAreaElement>)
-            }}
-            className="visible"
-          />
+          <div className="mt-8">
+            <EmptyScreen
+              submitMessage={message => {
+                handleInputChange({
+                  target: { value: message }
+                } as React.ChangeEvent<HTMLTextAreaElement>)
+              }}
+              className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-500"
+            />
+          </div>
         )}
       </form>
     </div>

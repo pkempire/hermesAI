@@ -223,21 +223,31 @@ export function Chat({
   return (
     <div
       className={cn(
-        'relative flex h-full min-w-0 flex-1 hermes-bg',
+        'relative flex h-full min-w-0 flex-1 bg-gradient-to-br from-slate-50 via-white to-blue-50/30 overflow-hidden',
         messages.length === 0 ? 'items-center justify-center' : ''
       )}
       data-testid="full-chat"
     >
+      {/* Ambient background effects */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.15),rgba(255,255,255,0))]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_80%_20%,rgba(120,200,219,0.1),rgba(255,255,255,0))]" />
+      
       {showProgressTracker ? (
-        // Campaign layout with progress tracker
-        <div className="flex h-full">
-          <div className="w-80 border-r border-border bg-muted/10 p-4 overflow-y-auto">
-            <CampaignProgressTracker 
-              currentStep={currentCampaignStep}
-              campaignTitle="Cold Email Campaign"
-            />
+        // Campaign layout with enhanced visual hierarchy
+        <div className="flex h-full relative z-10">
+          <div className="w-80 bg-white/80 backdrop-blur-xl border-r border-slate-200/60 shadow-xl shadow-slate-200/20">
+            <div className="p-6 border-b border-slate-200/60 bg-gradient-to-b from-white/90 to-white/60">
+              <h3 className="font-semibold text-slate-900 mb-1">Campaign Builder</h3>
+              <p className="text-xs text-slate-600">AI-powered prospect discovery</p>
+            </div>
+            <div className="p-4 overflow-y-auto h-[calc(100%-5rem)]">
+              <CampaignProgressTracker 
+                currentStep={currentCampaignStep}
+                campaignTitle="Cold Email Campaign"
+              />
+            </div>
           </div>
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col bg-white/20 backdrop-blur-sm">
             <ChatMessages
               sections={sections}
               data={data}
@@ -266,33 +276,37 @@ export function Chat({
           </div>
         </div>
       ) : (
-        // Default layout
-        <div className="flex flex-col flex-1">
-          <ChatMessages
-            sections={sections}
-            data={data}
-            onQuerySelect={onQuerySelect}
-            isLoading={isLoading}
-            chatId={id}
-            addToolResult={addToolResult}
-            scrollContainerRef={scrollContainerRef}
-            onUpdateMessage={handleUpdateAndReloadMessage}
-            reload={handleReloadFrom}
-          />
-          <ChatPanel
-            input={input}
-            handleInputChange={handleInputChange}
-            handleSubmit={onSubmit}
-            isLoading={isLoading}
-            messages={messages}
-            setMessages={setMessages}
-            stop={stop}
-            query={query}
-            append={append}
-            models={models}
-            showScrollToBottomButton={!isAtBottom}
-            scrollContainerRef={scrollContainerRef}
-          />
+        // Enhanced default layout with spatial depth
+        <div className="flex flex-col flex-1 relative z-10">
+          <div className="flex-1 relative overflow-hidden">
+            <ChatMessages
+              sections={sections}
+              data={data}
+              onQuerySelect={onQuerySelect}
+              isLoading={isLoading}
+              chatId={id}
+              addToolResult={addToolResult}
+              scrollContainerRef={scrollContainerRef}
+              onUpdateMessage={handleUpdateAndReloadMessage}
+              reload={handleReloadFrom}
+            />
+          </div>
+          <div className="relative bg-white/60 backdrop-blur-xl border-t border-slate-200/50 shadow-lg shadow-slate-200/10">
+            <ChatPanel
+              input={input}
+              handleInputChange={handleInputChange}
+              handleSubmit={onSubmit}
+              isLoading={isLoading}
+              messages={messages}
+              setMessages={setMessages}
+              stop={stop}
+              query={query}
+              append={append}
+              models={models}
+              showScrollToBottomButton={!isAtBottom}
+              scrollContainerRef={scrollContainerRef}
+            />
+          </div>
         </div>
       )}
     </div>
