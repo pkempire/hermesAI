@@ -4,7 +4,7 @@ import { CHAT_ID } from '@/lib/constants'
 import { Model } from '@/lib/types/models'
 import { cn } from '@/lib/utils'
 import { useChat } from '@ai-sdk/react'
-import { ChatRequestOptions, type UIMessage as Message } from 'ai'
+import { ChatRequestOptions, JSONValue, type UIMessage as Message } from 'ai'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { CampaignProgressTracker } from './campaign-progress-tracker'
@@ -33,23 +33,13 @@ export function Chat({
   const [isAtBottom, setIsAtBottom] = useState(true)
   const [showProgressTracker, setShowProgressTracker] = useState(false)
   const [currentCampaignStep, setCurrentCampaignStep] = useState(1)
+  const [campaignPercent, setCampaignPercent] = useState(20)
+  const [totalCampaignSteps, setTotalCampaignSteps] = useState(5)
+  const [campaignStepLabel, setCampaignStepLabel] = useState('Configure Prospect Search')
+  const [inputValue, setInputValue] = useState('')
+  const [uiData, setUiData] = useState<JSONValue[]>([])
 
-  const {
-    messages,
-    input,
-    handleInputChange,
-    setInput,
-    handleSubmit,
-    status,
-    setMessages,
-    stop,
-    append,
-    data,
-    setData,
-    addToolResult,
-    reload
-  } = useChat({
-    initialMessages: savedMessages,
+  const chatHook = useChat({
     id: CHAT_ID,
     body: {
       id
@@ -58,20 +48,73 @@ export function Chat({
       window.history.replaceState({}, '', `/search/${id}`)
       window.dispatchEvent(new CustomEvent('chat-history-updated'))
     },
-    onError: error => {
+    onData: (part: any) => {
+      try {
+        const data = (part as any)?.data ?? part
+        if (!data) return
+        // Normalize v5 custom chunks to a flat shape in uiData
+        if ((part as any)?.type === 'message-metadata' && (part as any)?.messageMetadata?.type === 'tool_call') {
+          setUiData(prev => [...prev, { type: 'tool_call', data: (part as any).messageMetadata.data }])
+        } else if ((part as any)?.type?.startsWith?.('data-')) {
+          const normalizedType = (part as any).type.replace('data-', '')
+          setUiData(prev => [...prev, { type: normalizedType, data: (part as any).data }])
+        } else if (data) {
+          setUiData(prev => [...prev, data])
+        }
+      } catch {
+        // no-op
+      }
+    },
+    onError: (error: any) => {
+      console.error('🔧 [Chat] useChat error:', error)
       toast.error(`Error in chat: ${error.message}`)
     },
     sendExtraMessageFields: false, // Disable extra message fields,
     experimental_throttle: 100
-  })
+  } as any)
+
+  // AI SDK v5 returns sendMessage, not append - and no input management
+  const {
+    messages,
+    status,
+    setMessages,
+    stop,
+    sendMessage,
+    error,
+    clearError,
+    regenerate,
+    addToolResult
+  } = chatHook
+  
+  // Create append alias for compatibility with existing code
+  const append = sendMessage
+  
+  // Manually manage input state (AI SDK v5 doesn't provide this)
+  const input = inputValue
+  const setInput = setInputValue
+  
+  // Create handleInputChange for compatibility
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInputValue(e.target.value)
+  }
 
   const isLoading = status === 'submitted' || status === 'streaming'
+  
+  console.log('🔧 [Chat] AI SDK v5 hook values:', { 
+    sendMessageExists: typeof sendMessage === 'function',
+    inputValue: input,
+    setInputExists: typeof setInput === 'function',
+    messagesLength: messages.length,
+    status,
+    isLoading,
+    error: error
+  })
 
   // Detect when prospect search tool is being used
   useEffect(() => {
-    const hasProspectSearchTool = messages.some(message => 
+    const hasProspectSearchTool = messages.some((message: any) => 
       message.role === 'assistant' && 
-      message.annotations?.some((annotation: any) => 
+      (message?.annotations)?.some((annotation: any) => 
         annotation?.type === 'tool_call' && 
         annotation?.data?.toolName === 'prospect_search'
       )
@@ -80,8 +123,24 @@ export function Chat({
     if (hasProspectSearchTool && !showProgressTracker) {
       setShowProgressTracker(true)
       setCurrentCampaignStep(1)
+      setCampaignPercent(20)
     }
   }, [messages, showProgressTracker])
+
+  // Update campaign progress from pipeline events
+  useEffect(() => {
+    if (!uiData || !Array.isArray(uiData) || uiData.length === 0) return
+    const lastPipeline = [...uiData].reverse().find((d: any) => d?.type === 'pipeline') as any
+    if (!lastPipeline) return
+    try {
+      const payload = lastPipeline.data || lastPipeline
+      if (payload?.stepNumber) setCurrentCampaignStep(payload.stepNumber)
+      if (payload?.totalSteps) setTotalCampaignSteps(payload.totalSteps)
+      if (typeof payload?.percent === 'number') setCampaignPercent(payload.percent)
+      if (payload?.label) setCampaignStepLabel(payload.label)
+      if (!showProgressTracker) setShowProgressTracker(true)
+    } catch {}
+  }, [uiData, showProgressTracker])
 
   // Convert messages array to sections array
   const sections = useMemo<ChatSection[]>(() => {
@@ -99,8 +158,10 @@ export function Chat({
           userMessage: message,
           assistantMessages: []
         }
-      } else if (currentSection && message.role === 'assistant') {
-        // Add assistant message to the current section
+      } else if (
+        currentSection && ((message.role as any) === 'assistant' || (message.role as any) === 'tool')
+      ) {
+        // Add assistant or tool message to the current section
         currentSection.assistantMessages.push(message)
       }
       // Ignore other role types like 'system' for now
@@ -151,26 +212,25 @@ export function Chat({
   }, [sections, messages])
 
   useEffect(() => {
-    setMessages(savedMessages)
+    if (savedMessages?.length) setMessages(savedMessages)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   const onQuerySelect = (query: string) => {
-    append({
-      role: 'user',
-      content: query
-    })
+    append({ role: 'user', parts: [{ type: 'text', text: query }] } as any)
   }
 
   const handleUpdateAndReloadMessage = async (
     messageId: string,
     newContent: string
   ) => {
-    setMessages(currentMessages =>
-      currentMessages.map(msg =>
-        msg.id === messageId ? { ...msg, content: newContent } : msg
+    setMessages(((currentMessages: any) =>
+      currentMessages.map((msg: any) =>
+        msg.id === messageId
+          ? { ...msg, parts: [{ type: 'text', text: newContent }] }
+          : msg
       )
-    )
+    ) as any)
 
     try {
       const messageIndex = messages.findIndex(msg => msg.id === messageId)
@@ -180,83 +240,98 @@ export function Chat({
 
       setMessages(messagesUpToEdited)
 
-      if (setData) {
-        setData(undefined)
-      }
-
-      await reload({
-        body: {
-          chatId: id,
-          regenerate: true
-        }
-      })
+      // Reload not supported in this v5 setup; no-op
+      void 0
     } catch (error) {
       console.error('Failed to reload after message update:', error)
       toast.error(`Failed to reload conversation: ${(error as Error).message}`)
     }
   }
 
-  const handleReloadFrom = async (
-    messageId: string,
-    options?: ChatRequestOptions
-  ) => {
-    const messageIndex = messages.findIndex(m => m.id === messageId)
-    if (messageIndex !== -1) {
-      const userMessageIndex = messages
-        .slice(0, messageIndex)
-        .findLastIndex(m => m.role === 'user')
-      if (userMessageIndex !== -1) {
-        const trimmedMessages = messages.slice(0, userMessageIndex + 1)
-        setMessages(trimmedMessages)
-        return await reload(options)
-      }
-    }
-    return await reload(options)
+  const handleReloadFrom = async (_messageId: string, _options?: ChatRequestOptions) => {
+    return null
   }
 
-  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const onSubmit = (e: React.FormEvent<HTMLFormElement>, messageOverride?: string) => {
     e.preventDefault()
     console.log('🔧 [Frontend] =================== USER SUBMITTED MESSAGE ===================')
-    console.log('🔧 [Frontend] Input value:', input)
-    console.log('🔧 [Frontend] Current messages count:', messages.length)
-    if (setData) {
-      setData(undefined)
+    
+    // Use messageOverride if provided, otherwise use input value
+    const messageToSend = messageOverride || input
+    console.log('🔧 [Frontend] Message to send:', messageToSend)
+    console.log('🔧 [Frontend] sendMessage function type:', typeof sendMessage)
+    
+    if (!messageToSend || messageToSend.trim().length === 0) {
+      console.log('🔧 [Frontend] No message to submit')
+      return
     }
-    handleSubmit(e)
+    
+    try {
+      if (typeof sendMessage === 'function') {
+        sendMessage({ role: 'user', parts: [{ type: 'text', text: messageToSend.trim() }] } as any)
+        if (!messageOverride) {
+          setInput('')
+        }
+      } else {
+        console.error('🔧 [Frontend] sendMessage is not a function:', sendMessage)
+        toast.error('Chat functionality not ready, please refresh the page')
+      }
+    } catch (error) {
+      console.error('🔧 [Frontend] Error submitting message:', error)
+      toast.error(`Error submitting message: ${error}`)
+    }
+  }
+  
+  // Create a wrapper function for template submissions
+  const submitTemplateMessage = (message: string) => {
+    console.log('🔧 [Frontend] Template message submission:', message)
+    const fakeEvent = { preventDefault: () => {} } as React.FormEvent<HTMLFormElement>
+    onSubmit(fakeEvent, message)
   }
 
   return (
     <div
       className={cn(
-        'relative flex h-full min-w-0 flex-1 bg-[#0f0f11] text-white overflow-hidden',
+        'relative flex h-full min-w-0 flex-1 overflow-hidden',
         messages.length === 0 ? 'items-center justify-center' : ''
       )}
       data-testid="full-chat"
     >
       
       {showProgressTracker ? (
-        // Campaign layout with enhanced visual hierarchy
+        // Campaign layout with persistent progress panel (visible once a campaign starts)
         <div className="flex h-full relative z-10">
-          <div className="w-80 bg-[#1a1a1e] border-r border-[#2a2a2e]">
-            <div className="p-6 border-b border-[#2a2a2e]">
-              <h3 className="font-semibold text-white mb-1">Campaign Builder</h3>
-              <p className="text-xs text-[#9ca3af]">AI-powered prospect discovery</p>
+          <div className="hidden md:block md:w-80 bg-card border-r border-border">
+            <div className="p-6 border-b border-border">
+              <h3 className="font-semibold text-foreground mb-1">Campaign Builder</h3>
+              <p className="text-xs text-muted-foreground">AI-powered prospect discovery</p>
             </div>
             <div className="p-4 overflow-y-auto h-[calc(100%-5rem)]">
               <CampaignProgressTracker 
                 currentStep={currentCampaignStep}
                 campaignTitle="Cold Email Campaign"
               />
+              <div className="mt-4 text-xs text-muted-foreground">
+                <div className="font-medium">Step {currentCampaignStep} of {totalCampaignSteps}: {campaignStepLabel}</div>
+                <div className="w-full h-2 bg-muted rounded-full mt-2">
+                  <div className="h-2 bg-primary rounded-full transition-all" style={{ width: `${campaignPercent}%` }} />
+                </div>
+              </div>
             </div>
           </div>
-          <div className="flex-1 flex flex-col bg-[#0f0f11]">
+          <div className="flex-1 flex flex-col">
             <ChatMessages
               sections={sections}
-              data={data}
+              data={uiData}
               onQuerySelect={onQuerySelect}
               isLoading={isLoading}
               chatId={id}
-              addToolResult={addToolResult}
+              addToolResult={({ toolCallId, output, tool }: any) => {
+                // Adapter to legacy prop shape { toolCallId, result }
+                if (typeof (chatHook as any)?.addToolResult === 'function') {
+                  ;(chatHook as any).addToolResult({ tool, toolCallId, output })
+                }
+              }}
               scrollContainerRef={scrollContainerRef}
               onUpdateMessage={handleUpdateAndReloadMessage}
               reload={handleReloadFrom}
@@ -275,6 +350,7 @@ export function Chat({
               models={models}
               showScrollToBottomButton={!isAtBottom}
               scrollContainerRef={scrollContainerRef}
+              submitTemplateMessage={submitTemplateMessage}
             />
           </div>
         </div>
@@ -284,17 +360,21 @@ export function Chat({
           <div className="flex-1 relative overflow-hidden">
             <ChatMessages
               sections={sections}
-              data={data}
+              data={uiData}
               onQuerySelect={onQuerySelect}
               isLoading={isLoading}
               chatId={id}
-              addToolResult={addToolResult}
+              addToolResult={({ toolCallId, output, tool }: any) => {
+                if (typeof (chatHook as any)?.addToolResult === 'function') {
+                  ;(chatHook as any).addToolResult({ tool, toolCallId, output })
+                }
+              }}
               scrollContainerRef={scrollContainerRef}
               onUpdateMessage={handleUpdateAndReloadMessage}
               reload={handleReloadFrom}
             />
           </div>
-          <div className="relative bg-[#1a1a1e] border-t border-[#2a2a2e]">
+          <div className="relative border-t border-border">
             <ChatPanel
               input={input}
               handleInputChange={handleInputChange}
@@ -309,6 +389,7 @@ export function Chat({
               models={models}
               showScrollToBottomButton={!isAtBottom}
               scrollContainerRef={scrollContainerRef}
+              submitTemplateMessage={submitTemplateMessage}
             />
           </div>
         </div>

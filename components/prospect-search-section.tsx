@@ -3,17 +3,16 @@
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { ToolInvocation } from 'ai'
 import { motion } from 'framer-motion'
 import { AlertCircle, CheckCircle, ChevronDown, ChevronRight, Search, Users } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { DraftEmail } from './draft-email'
+import { EnhancedProspectSearchBuilder } from './enhanced-prospect-search-builder'
 import { Prospect, ProspectGrid } from './prospect-grid'
 import { ProspectPreviewCard } from './prospect-preview-card'
-import { SimpleProspectSearchBuilder } from './simple-prospect-search-builder'
 
 interface ProspectSearchSectionProps {
-  tool: ToolInvocation
+  tool: any
   isOpen: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -38,6 +37,7 @@ export function ProspectSearchSection({
   const [uiType, setUiType] = useState<'idle' | 'interactive' | 'streaming' | 'results' | 'error'>('idle')
   const [streamingWebsetId, setStreamingWebsetId] = useState<string | null>(null)
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null)
+  const [lastStatus, setLastStatus] = useState<'idle' | 'running' | 'completed' | 'failed'>('idle')
 
   // Parse the tool result to determine UI type and handle different response formats
   const parseToolResult = useCallback(() => {
@@ -102,7 +102,7 @@ export function ProspectSearchSection({
   }, [tool])  // Add dependencies for useCallback
 
   // Start polling for streaming search updates
-  const startStreamingPolling = useCallback((websetId: string) => {
+  const startStreamingPolling = useCallback((websetId: string, target?: number) => {
     if (pollingInterval) {
       clearInterval(pollingInterval)
     }
@@ -116,13 +116,15 @@ export function ProspectSearchSection({
         console.log(`📡 [ProspectSearchSection] Polling streaming search status (${pollCount}/${maxPolls})...`)
         
         // Use the server-side API to get status
-        const response = await fetch(`/api/prospect-search/status?websetId=${websetId}`)
+        const targetParam = target ? `&target=${target}` : ''
+        const response = await fetch(`/api/prospect-search/status?websetId=${websetId}${targetParam}`)
         if (!response.ok) {
           throw new Error(`API call failed: ${response.status}`)
         }
         
         const data = await response.json()
         console.log(`📊 [ProspectSearchSection] Poll ${pollCount}: Status=${data.status}, Prospects=${data.prospects?.length || 0}, Found=${data.found}, Analyzed=${data.analyzed}`)
+        setLastStatus(data.status as any)
         
         // Update progress messages
         if (data.found > 0 || data.analyzed > 0) {
@@ -132,9 +134,15 @@ export function ProspectSearchSection({
         }
         
         // Update prospects if available
-        if (data.prospects && Array.isArray(data.prospects)) {
+        if (data.prospects && Array.isArray(data.prospects) && data.prospects.length > 0) {
           console.log('📊 [ProspectSearchSection] Updating prospects list:', data.prospects.length)
-          setProspects(data.prospects)
+          setProspects(prev => {
+            // Merge by unique id to allow incremental growth without flicker
+            const byId = new Map<string, Prospect>()
+            for (const p of prev) byId.set(p.id, p)
+            for (const p of data.prospects) byId.set(p.id, p)
+            return Array.from(byId.values())
+          })
         }
         
         // Handle timeout
@@ -215,26 +223,30 @@ export function ProspectSearchSection({
     
     if (!result) return
     
-    // Only update state if result type is different to prevent infinite loops
-    if (result.type === 'interactive' && uiType !== 'interactive') {
+    // IMPORTANT: Only let tool result set UI when we haven't started a local run
+    if (uiType !== 'idle') return
+
+    // Initialize UI from tool result on first mount only
+    if (result.type === 'interactive') {
       setUiType('interactive')
       setSearchStatus('idle')
       setSearchMessage(result.message || 'Interactive search builder ready')
-    } else if (result.type === 'streaming' && uiType !== 'streaming') {
+      // notify global progress (optional: could be elevated to context)
+    } else if (result.type === 'streaming') {
       setUiType('streaming')
       setSearchStatus('running')
       setSearchMessage(result.message || 'Search started...')
       if (result.websetId) {
         setStreamingWebsetId(result.websetId)
-        startStreamingPolling(result.websetId)
+        startStreamingPolling(result.websetId, currentSearchCriteria.targetCount)
       }
-    } else if (result.type === 'results' && uiType !== 'results') {
+    } else if (result.type === 'results') {
       setUiType('results')
       setSearchStatus('completed')
       setProspects(result.prospects || [])
       setSearchMessage(result.message || `Found ${result.prospects?.length || 0} prospects`)
       setSearchSummary(result.summary)
-    } else if (result.type === 'error' && uiType !== 'error') {
+    } else if (result.type === 'error') {
       setUiType('error')
       setSearchStatus('failed')
       setSearchMessage(result.message || 'Search failed')
@@ -248,6 +260,14 @@ export function ProspectSearchSection({
 
   const toolResult = useMemo(() => parseToolResult(), [parseToolResult])
   console.log('🔍 [ProspectSearchSection] Tool result parsed:', toolResult)
+
+  // If we have no prospects yet but status shows counts, synthesize placeholders (optional)
+  useEffect(() => {
+    if (uiType === 'streaming' && prospects.length === 0 && lastStatus !== 'failed') {
+      // Keep the UI in streaming mode until data arrives
+      setSearchStatus('running')
+    }
+  }, [uiType, prospects.length, lastStatus])
 
   // Extract search criteria from tool arguments for display
   const getSearchCriteria = () => {
@@ -396,14 +416,17 @@ export function ProspectSearchSection({
                 <CardContent className="space-y-4 px-4 pb-4 pt-2">
                   {/* Interactive UI Component */}
                   {uiType === 'interactive' && toolResult?.props && (
-                    <SimpleProspectSearchBuilder
+                    <EnhancedProspectSearchBuilder
                       initialCriteria={toolResult.props.initialCriteria || []}
+                      initialEnrichments={toolResult.props.initialEnrichments || []}
+                      initialCustomEnrichments={toolResult.props.initialCustomEnrichments || []}
+                      initialEntityType={toolResult.props.initialEntityType || 'person'}
                       initialCount={toolResult.props.initialCount || 25}
                       originalQuery={toolResult.props.originalQuery || ''}
                       step={toolResult.props.step || 1}
                       totalSteps={toolResult.props.totalSteps || 5}
-                      onSearchExecute={async (criteria, count, entityType, selectedEnrichments) => {
-                        console.log('🚀 [ProspectSearchSection] Starting search with:', { criteria, count, entityType, selectedEnrichments })
+                      onSearchExecute={async (searchParams) => {
+                        console.log('🚀 [ProspectSearchSection] Starting search with:', searchParams)
                         
                         // Immediately transition to streaming UI
                         setUiType('streaming')
@@ -412,19 +435,10 @@ export function ProspectSearchSection({
                         setProspects([]) // Clear any existing prospects
                         
                         try {
-                          const params = {
-                            criteria,
-                            enrichments: selectedEnrichments || [],
-                            entityType: entityType || 'person',
-                            targetCount: count,
-                            originalQuery: toolResult.props.originalQuery || '',
-                            preview: false
-                          }
-                        
                           const response = await fetch('/api/prospect-search/execute', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(params)
+                            body: JSON.stringify({ ...(searchParams || {}), preview: false })
                           })
                           
                           if (!response.ok) {
@@ -437,7 +451,7 @@ export function ProspectSearchSection({
                           if (result.type === 'streaming_search') {
                             setStreamingWebsetId(result.websetId)
                             setSearchMessage(result.message || 'Search started, finding prospects...')
-                            startStreamingPolling(result.websetId)
+                            startStreamingPolling(result.websetId, (searchParams as any)?.targetCount ?? currentSearchCriteria.targetCount)
                           } else if (result.type === 'error') {
                             setUiType('error')
                             setSearchStatus('failed')
@@ -450,8 +464,8 @@ export function ProspectSearchSection({
                           setSearchMessage(`Search failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
                         }
                       }}
-                      onPreviewExecute={async (criteria, count, entityType, selectedEnrichments) => {
-                        console.log('👁️ [ProspectSearchSection] Starting preview with:', { criteria, count, entityType, selectedEnrichments })
+                      onPreviewExecute={async (previewParams) => {
+                        console.log('👁️ [ProspectSearchSection] Starting preview with:', previewParams)
                         
                         // Show loading state for preview
                         setUiType('streaming')
@@ -460,19 +474,10 @@ export function ProspectSearchSection({
                         setProspects([])
                         
                         try {
-                          const params = {
-                            criteria,
-                            enrichments: selectedEnrichments || [],
-                            entityType: entityType || 'person',
-                            targetCount: 1,
-                            originalQuery: toolResult.props.originalQuery || '',
-                            preview: true
-                          }
-                        
                           const response = await fetch('/api/prospect-search/execute', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(params)
+                            body: JSON.stringify({ ...(previewParams || {}), preview: true, targetCount: 1 })
                           })
                           
                           if (!response.ok) {
@@ -511,7 +516,7 @@ export function ProspectSearchSection({
                   {console.log('🎨 [ProspectSearchSection] Render check - uiType:', uiType, 'searchStatus:', searchStatus, 'prospects:', prospects.length)}
                   
                   {/* Streaming Search Progress */}
-                  {uiType === 'streaming' && (searchStatus === 'running' || searchStatus === 'completed') && (
+                  {uiType === 'streaming' && (
                     <div className="space-y-4">
                       {/* Real-time Progress Bar */}
                       <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4">
@@ -519,7 +524,7 @@ export function ProspectSearchSection({
                           <div className="flex items-center space-x-2">
                             <Search className="h-5 w-5 text-blue-600 animate-pulse" />
                             <p className="text-sm font-medium text-blue-800">
-                              {searchStatus === 'completed' ? 'Search Completed!' : 'Searching LinkedIn profiles...'}
+                              {searchStatus === 'completed' ? 'Search Completed!' : lastStatus === 'running' ? 'Searching and analyzing sources…' : 'Initializing search…'}
                             </p>
                           </div>
                           <div className="text-xs text-blue-600 font-mono">
@@ -531,7 +536,7 @@ export function ProspectSearchSection({
                         <div className="space-y-2">
                           <div className="flex justify-between text-xs text-blue-600">
                             <span>Progress</span>
-                            <span>{searchMessage}</span>
+                            <span>{searchMessage || (lastStatus === 'running' ? 'Working…' : 'Starting…')}</span>
                           </div>
                           <div className="w-full bg-blue-100 rounded-full h-2">
                             <div 
@@ -553,10 +558,10 @@ export function ProspectSearchSection({
                             <Search className="h-5 w-5 text-yellow-600 animate-pulse" />
                             <div>
                               <p className="text-sm font-medium text-yellow-800">
-                                Scanning LinkedIn profiles...
+                                {lastStatus === 'running' ? 'Scanning sources and enriching…' : 'Starting the pipeline…'}
                               </p>
                               <p className="text-xs text-yellow-600 mt-1">
-                                This might take a moment. We're finding the best matches for your criteria.
+                                This might take a moment. We’ll stream results as soon as we verify matches.
                               </p>
                             </div>
                           </div>
@@ -596,7 +601,19 @@ export function ProspectSearchSection({
                                 <div className="w-1 h-1 bg-pink-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
                               </div>
                             </div>
-                            <ProspectGrid prospects={prospects} />
+                            <ProspectGrid 
+                              prospects={prospects}
+                              onSelectionChange={(ids) => {
+                                // Could be used to enable CTA or next step
+                                console.log('📝 Selected prospects:', ids.length)
+                              }}
+                              onReviewComplete={() => {
+                                // Transition to next step: drafting emails
+                                setUiType('results')
+                                setSearchStatus('completed')
+                                setSearchMessage('Prospect review complete! Moving to email drafting…')
+                              }}
+                            />
                           </div>
                         </div>
                       )}
@@ -724,5 +741,4 @@ export function ProspectSearchSection({
   )
 }
 
-export { ProspectSearchSection }
 export default ProspectSearchSection

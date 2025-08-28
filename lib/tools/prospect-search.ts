@@ -14,7 +14,7 @@ export function createProspectSearchTool(model: string) {
   
   const prospectSearchTool = tool({
     description: 'Search for qualified prospects using AI-powered research. Extract search criteria and enrichments from user campaign descriptions. ALWAYS use interactive: true to show the detailed interactive UI with individual search criteria, enrichments, and preview option.',
-    parameters: prospectSearchSchema,
+    inputSchema: prospectSearchSchema,
     execute: async ({
       query,
       targetCount = 25,
@@ -101,35 +101,80 @@ export function createProspectSearchTool(model: string) {
           }
         }
 
-        const extracted = await extractParametersFromQuery(query)
-        initialCriteria = extracted.criteria
-
-        // Try to get Exa preview to refine our extraction
+        // Use the same GPT-4o generation for interactive mode
         try {
-          const exa = createExaWebsetsClient()
-          const preview = await exa.previewWebset(query, initialEntityType)
-          if (preview?.search?.entity?.type) {
-            initialEntityType = preview.search.entity.type
-          }
-          if (preview?.search?.criteria?.length) {
-            // Merge with our extracted criteria
-            const exaCriteria = preview.search.criteria.map(c => ({
-              label: c.description,
-              value: c.description,
-              type: 'other' as const
-            }))
-            initialCriteria = [...initialCriteria, ...exaCriteria]
-          }
-          if (preview?.enrichments?.length) {
-            const exaEnrichments = preview.enrichments.map(e => ({
-              label: e.description || 'Enrichment',
-              value: (e.description || 'enrichment').toLowerCase().replace(/\s+/g, '_'),
-              required: true
-            }))
-            initialEnrichments = [...initialEnrichments, ...exaEnrichments]
-          }
-        } catch (e) {
-          console.warn('⚠️ [prospectSearchTool] Exa Preview failed, using extracted parameters:', e)
+          const { generateObject } = await import('ai')
+          const { getModel } = await import('@/lib/utils/registry')
+          const { z } = await import('zod')
+          
+          const model = getModel('openai:gpt-4o')
+          
+          const websetPlanSchema = z.object({
+            entityType: z.enum(['person', 'company']).describe('Whether searching for people or companies'),
+            searchCriteria: z.array(z.object({
+              description: z.string().describe('Specific verification criterion'),
+              type: z.enum(['job_title', 'company_type', 'industry', 'location', 'technology', 'activity', 'other']).describe('Criterion category'),
+              successRate: z.number().min(50).max(95).describe('Expected success rate %')
+            })).max(5).describe('Up to 5 search criteria for Exa Websets'),
+            enrichments: z.array(z.object({
+              name: z.string().describe('Human-readable field name'),
+              description: z.string().describe('What data to extract'),
+              required: z.boolean().describe('Is this field essential?')
+            })).describe('Data enrichment fields to extract')
+          })
+          
+          console.log('🤖 [prospectSearchTool] Generating interactive webset plan with GPT-4o...')
+          const websetPlan = await generateObject({
+            model,
+            schema: websetPlanSchema,
+            prompt: `Create an Exa Websets plan for the interactive UI: "${query}"
+            
+            Generate:
+            1. Entity type (person or company)
+            2. Up to 5 categorized search criteria with types (job_title, company_type, industry, location, technology, activity, other)
+            3. Enrichment fields with clear names and required status (MUST include the required boolean field)
+            
+            IMPORTANT: Each enrichment MUST have a "required" boolean field set to true or false.
+            
+            Example for "VPs of Engineering at fintech companies":
+            - Criteria: [
+                {description: "Person holds VP of Engineering or similar title", type: "job_title", successRate: 90},
+                {description: "Person works at a fintech company", type: "company_type", successRate: 85},
+                {description: "Company has 50-500 employees", type: "company_type", successRate: 75}
+              ]
+            - Enrichments: [
+                {name: "Full Name", description: "Person's complete name", required: true},
+                {name: "Email", description: "Contact email address", required: true},
+                {name: "LinkedIn", description: "LinkedIn profile URL", required: false},
+                {name: "Job Title", description: "Current job title", required: true},
+                {name: "Company", description: "Current company name", required: true}
+              ]
+            
+            Make sure EVERY enrichment object includes the "required" boolean field.`,
+            temperature: 0.3
+          })
+          
+          console.log('✅ [prospectSearchTool] Generated interactive webset plan:', websetPlan.object)
+          
+          // Convert to UI format
+          initialEntityType = websetPlan.object.entityType
+          initialCriteria = websetPlan.object.searchCriteria.map(c => ({
+            label: c.description,
+            value: c.description,
+            type: c.type
+          }))
+          initialEnrichments = websetPlan.object.enrichments.map(e => ({
+            label: e.name,
+            value: e.name.toLowerCase().replace(/\s+/g, '_'),
+            required: e.required
+          }))
+          
+        } catch (error) {
+          console.error('❌ [prospectSearchTool] Error generating interactive webset plan:', error)
+          
+          // Fallback to simple extraction
+          const extracted = await extractParametersFromQuery(query)
+          initialCriteria = extracted.criteria
         }
 
         // Ensure our core enrichments are present
@@ -177,19 +222,77 @@ export function createProspectSearchTool(model: string) {
         // Create the Exa client
         const exaClient = createExaWebsetsClient()
         
-        // Create webset search configuration - just use the natural language query
+        // Generate intelligent criteria and enrichments using GPT-4o
+        const { generateObject } = await import('ai')
+        const { getModel } = await import('@/lib/utils/registry')
+        const { z } = await import('zod')
+        
+        const model = getModel('openai:gpt-4o')
+        
+        const websetPlanSchema = z.object({
+          entityType: z.enum(['person', 'company']).describe('Whether searching for people or companies'),
+          searchCriteria: z.array(z.object({
+            description: z.string().describe('Specific verification criterion'),
+            successRate: z.number().min(50).max(95).describe('Expected success rate %')
+          })).max(5).describe('Up to 5 search criteria for Exa Websets'),
+          enrichments: z.array(z.object({
+            name: z.string().describe('Human-readable field name'),
+            description: z.string().describe('What data to extract from each prospect'),
+            format: z.enum(['text', 'json', 'number']).describe('Data format'),
+            instructions: z.string().describe('Detailed extraction instructions'),
+            required: z.boolean().default(false).describe('Is this field essential?')
+          })).describe('Data enrichment fields to extract')
+        })
+        
+        console.log('🤖 [prospectSearchTool] Generating webset plan with GPT-4o...')
+        const websetPlan = await generateObject({
+          model,
+          schema: websetPlanSchema,
+          prompt: `Create a comprehensive Exa Websets search plan for: "${query}"
+          
+          Generate:
+          1. Entity type (person or company)
+          2. Up to 5 specific search criteria that prospects must match
+          3. Data enrichments to extract for each found prospect with names and required status
+          
+          Example for "VPs of Engineering at fintech companies":
+          - Entity: person
+          - Criteria: ["Person holds VP of Engineering title", "Person works at a fintech company", "Company has 50-500 employees"]
+          - Enrichments: [
+              {name: "Full Name", description: "Person's complete name", format: "text", instructions: "Extract first and last name", required: true},
+              {name: "Email", description: "Contact email address", format: "text", instructions: "Find professional email", required: true},
+              {name: "LinkedIn", description: "LinkedIn profile URL", format: "text", instructions: "Extract LinkedIn profile link", required: false}
+            ]
+          
+          Be specific and actionable. Focus on criteria that can be verified from web content.`,
+          temperature: 0.3
+        })
+        
+        console.log('✅ [prospectSearchTool] Generated webset plan:', websetPlan.object)
+        
+        // Create webset search configuration with AI-generated criteria
         const websetSearchConfig = {
           query: query,
           count: Math.min(targetCount, 1000), // Respect API limits
-          entity: { type: 'person' as const }, // Default to person search
+          entity: { type: websetPlan.object.entityType },
+          criteria: websetPlan.object.searchCriteria,
           behavior: 'override' as const
         }
         
-        const websetEnrichments = createProspectEnrichments()
+        // Convert our enrichments to Exa API format
+        const websetEnrichments = websetPlan.object.enrichments.map(enrichment => ({
+          title: enrichment.name,
+          description: enrichment.description,
+          format: enrichment.format || 'text',
+          instructions: enrichment.instructions
+        }))
         
-        console.log('🔧 [prospectSearchTool] Creating webset with config:', websetSearchConfig)
+        console.log('🔧 [prospectSearchTool] Creating webset with AI-generated config:', {
+          searchConfig: websetSearchConfig,
+          enrichmentsCount: websetEnrichments.length
+        })
         
-        // Create the webset
+        // Create the webset with both search and enrichments
         const webset = await exaClient.createWebset({
           title: `Prospect Search: ${query}`,
           search: websetSearchConfig,

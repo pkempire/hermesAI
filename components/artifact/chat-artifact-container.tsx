@@ -44,6 +44,7 @@ export function ChatArtifactContainer({
           className="flex flex-1 min-w-0 h-full" // Responsive classes removed
         >
           <ResizablePanel
+            defaultSize={state.isOpen ? 60 : 100}
             className={cn(
               'min-w-0',
               state.isOpen && 'transition-[flex-basis] duration-200 ease-out'

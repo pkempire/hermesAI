@@ -1,12 +1,11 @@
 import { type Model } from '@/lib/types/models'
 import {
-    convertToCoreMessages,
-    CoreMessage,
-    CoreToolMessage,
-    generateId,
-    JSONValue,
-    type UIMessage as Message,
-    ToolInvocation
+  CoreMessage,
+  CoreToolMessage,
+  generateId,
+  JSONValue,
+  type UIMessage as Message,
+  ToolInvocation
 } from 'ai'
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
@@ -248,9 +247,19 @@ export function convertToExtendedCoreMessages(
       })
     }
 
-    // Convert current message
-    const converted = convertToCoreMessages([message])
-    result.push(...converted)
+    // Convert current message: push minimal CoreMessage without converter
+    if (message && typeof message === 'object' && message.role) {
+      const minimal = {
+        role: (message as any).role,
+        content:
+          typeof (message as any).content === 'string'
+            ? (message as any).content
+            : Array.isArray((message as any).content)
+            ? (message as any).content
+            : ''
+      }
+      result.push(minimal as any)
+    }
   }
 
   return result

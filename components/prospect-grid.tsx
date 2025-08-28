@@ -1,10 +1,10 @@
 "use client";
-import { AnimatePresence, motion } from 'framer-motion';
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Grid3x3, List, Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { ProspectCard } from './prospect-card';
 
 // Prospect interface definition
@@ -23,9 +23,11 @@ export interface Prospect {
   website?: string
   enrichments?: Record<string, any>
   note?: string
+  avatarUrl?: string
+  companyLogoUrl?: string
 }
 
-export function ProspectGrid({ prospects }: { prospects: Prospect[] }) {
+export function ProspectGrid({ prospects, onSelectionChange, onReviewComplete }: { prospects: Prospect[]; onSelectionChange?: (ids: string[]) => void; onReviewComplete?: () => void }) {
   const [current, setCurrent] = useState(0);
   const [feedback, setFeedback] = useState<{ [id: string]: 'good' | 'bad' }>({});
   const [notes, setNotes] = useState<{ [id: string]: string }>({});
@@ -67,6 +69,7 @@ export function ProspectGrid({ prospects }: { prospects: Prospect[] }) {
       newSelected.delete(prospectId);
     }
     setSelectedProspects(newSelected);
+    onSelectionChange?.(Array.from(newSelected));
   };
 
   const navigateProspect = (direction: 'prev' | 'next') => {
@@ -76,6 +79,21 @@ export function ProspectGrid({ prospects }: { prospects: Prospect[] }) {
       setCurrent(current + 1);
     }
   };
+
+  // Notify parent when selection changes (good fits)
+  useEffect(() => {
+    const goodIds = Object.entries(feedback)
+      .filter(([, val]) => val === 'good')
+      .map(([id]) => id)
+    onSelectionChange?.(goodIds)
+  }, [feedback, onSelectionChange])
+
+  // Notify parent when review is complete
+  useEffect(() => {
+    if (reviewedCount === prospects.length && prospects.length > 0) {
+      onReviewComplete?.()
+    }
+  }, [reviewedCount, prospects.length, onReviewComplete])
 
   if (viewMode === 'grid') {
     return (

@@ -136,3 +136,44 @@ This document outlines the step-by-step plan to transform the existing AI chat b
 3.  Implement a "Send" button. When clicked, it should call the `/api/send-emails` endpoint.
 4.  Confirm in your own Gmail "Sent" folder that the emails were actually sent.
 5.  Check the `draft_emails` table to see their status updated to 'sent'.
+
+## Launch Readiness (Checklist)
+
+- Landing page: product promise, screenshots, pricing, CTA (waitlist or signup)
+- Auth: Supabase or email OTP (sign up, login, forgot password)
+- Usage limits: env flags + simple rate limit (Upstash Redis)
+- Observability: basic server logs in Vercel + error boundaries
+- Billing (optional for v1): Stripe Checkout link or manual onboarding
+- Data: .env variables set (OpenAI/Anthropic, EXA_API_KEY)
+- CI: GitHub Actions (Node 20) lint + build
+- Hosting: Vercel (Next 15) on Node >= 18.18
+
+## GitHub Setup
+
+1. Create a new repo on GitHub.
+2. In this project, run:
+
+```bash
+git init
+git remote add origin <your-repo-url>
+git checkout -b dev
+git add -A
+git commit -m "feat: streaming prospect search + Hermes prompt + UI improvements"
+git push -u origin dev
+```
+
+3. Open a PR to `main`. CI will run via `.github/workflows/ci.yml`.
+4. Add repository secrets (Settings → Secrets → Actions):
+   - `OPENAI_API_KEY`
+   - `ANTHROPIC_API_KEY` (if used)
+   - `EXA_API_KEY`
+   - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (if using auth)
+
+## Running Locally
+
+```bash
+# Node >= 18.18 required for Next.js 15
+nvm use 20
+npm i
+npm run dev
+```

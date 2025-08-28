@@ -1,9 +1,8 @@
 import {
-    convertToCoreMessages,
-    createDataStreamResponse,
-    DataStreamWriter,
-    JSONValue,
-    streamText
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  JSONValue,
+  streamText
 } from 'ai'
 import { manualResearcher } from '../agents/manual-researcher'
 import { ExtendedCoreMessage } from '../types'
@@ -12,8 +11,9 @@ import { executeToolCall } from './tool-execution'
 import { BaseStreamConfig } from './types'
 
 export function createManualToolStreamResponse(config: BaseStreamConfig) {
-  return createDataStreamResponse({
-    execute: async (dataStream: DataStreamWriter) => {
+  return createUIMessageStreamResponse({
+    stream: createUIMessageStream({
+      async execute({ writer }) {
       const { messages, model, chatId, searchMode, userId } = config
       const modelId = `${model.providerId}:${model.id}`
       let toolCallModelId = model.toolCallModel
@@ -21,12 +21,21 @@ export function createManualToolStreamResponse(config: BaseStreamConfig) {
         : modelId
 
       try {
-        const modelMessages = convertToCoreMessages(messages)
+        // Convert UI messages to minimal CoreMessage for model
+        const modelMessages = messages.map((msg: any) => ({
+          role: msg.role,
+          content:
+            typeof msg.content === 'string'
+              ? msg.content
+              : Array.isArray(msg.content)
+              ? msg.content
+              : ''
+        })) as any
 
         const { toolCallDataAnnotation, toolCallMessages } =
           await executeToolCall(
             modelMessages,
-            dataStream,
+            writer,
             toolCallModelId,
             searchMode
           )
@@ -63,7 +72,7 @@ export function createManualToolStreamResponse(config: BaseStreamConfig) {
               originalMessages: messages,
               model: modelId,
               chatId,
-              dataStream,
+              dataStream: writer,
               userId,
               skipRelatedQuestions: true,
               annotations
@@ -80,19 +89,22 @@ export function createManualToolStreamResponse(config: BaseStreamConfig) {
               if (reasoningStartTime !== null) {
                 const elapsedTime = Date.now() - reasoningStartTime
                 reasoningDuration = elapsedTime
-                dataStream.writeMessageAnnotation({
-                  type: 'reasoning',
-                  data: { time: elapsedTime }
-                } as JSONValue)
+                writer.write({
+                  type: 'data',
+                  value: {
+                    type: 'reasoning',
+                    data: { time: elapsedTime }
+                  } as JSONValue
+                })
                 reasoningStartTime = null
               }
             }
           }
         })
 
-        result.mergeIntoDataStream(dataStream, {
+        writer.merge(result.toUIMessageStream({
           sendReasoning: true
-        })
+        }))
       } catch (error) {
         console.error('Stream execution error:', error)
       }
@@ -101,5 +113,6 @@ export function createManualToolStreamResponse(config: BaseStreamConfig) {
       console.error('Stream error:', error)
       return error instanceof Error ? error.message : String(error)
     }
+    })
   })
 }

@@ -1,0 +1,19 @@
+{
+  "name": "hermesai-remotion",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "render": "npx remotion render src/index.tsx hermes-launch out/hermes-launch.mp4 --frames-per-second=30 --codec=h264 --pixel-format=yuv420p --concurrency=2",
+    "preview": "npx remotion preview src/index.tsx"
+  },
+  "dependencies": {
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "remotion": "^4.0.340"
+  },
+  "devDependencies": {
+    "@remotion/cli": "^4.0.340",
+    "typescript": "^5.4.5"
+  }
+}

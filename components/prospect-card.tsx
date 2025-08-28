@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { CheckCircle2, Building2, Mail, Phone, MapPin, ExternalLink, User, CheckCircle, XCircle, MessageSquare } from 'lucide-react';
+import { Building2, CheckCircle, CheckCircle2, ExternalLink, Mail, MapPin, MessageSquare, Phone, User, XCircle } from 'lucide-react';
 import { Prospect } from './prospect-grid';
 
 export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, onNoteChange }: {
@@ -29,6 +29,14 @@ export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, o
     <Card className={`group relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-[1.02] ${
       selected ? 'ring-2 ring-blue-500 bg-blue-50/50' : 'bg-gradient-to-br from-white to-gray-50/50'
     }`}>
+      {/* Avatar / Company logo */}
+      {(prospect.avatarUrl || prospect.companyLogoUrl) && (
+        <img
+          src={prospect.avatarUrl || prospect.companyLogoUrl!}
+          alt="Profile"
+          className="absolute -top-8 -right-8 w-24 h-24 rounded-full opacity-10"
+        />
+      )}
       {/* Quality Score Badge */}
       <div className="absolute top-4 right-4 z-10">
         <Badge variant={qualityScore >= 80 ? "default" : qualityScore >= 60 ? "secondary" : "destructive"}>

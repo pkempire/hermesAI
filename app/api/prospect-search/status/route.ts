@@ -1,4 +1,3 @@
-import { convertToProspect } from '@/lib/clients/exa-websets';
 import Exa from 'exa-js';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -6,6 +5,8 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url!);
     const websetId = searchParams.get('websetId');
+    const targetParam = searchParams.get('target');
+    const targetCount = targetParam ? Number(targetParam) : undefined;
     if (!websetId) return NextResponse.json({ error: 'Missing websetId' }, { status: 400 });
     
     const exa = new Exa(process.env.EXA_API_KEY!);
@@ -62,7 +63,7 @@ export async function GET(req: NextRequest) {
               const urlPath = item.url.split('/in/')[1]?.split('/')[0];
               if (urlPath) {
                 // Convert linkedin URL slug to readable name (basic attempt)
-                extractedName = urlPath.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                extractedName = urlPath.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
               }
             }
             
@@ -83,7 +84,7 @@ export async function GET(req: NextRequest) {
             }
             
             // Create prospect with available data
-            const prospect = {
+            const prospect: any = {
               id: item.id,
               exaItemId: item.id,
               fullName: extractedName,
@@ -95,7 +96,9 @@ export async function GET(req: NextRequest) {
               location: undefined,
               industry: undefined,
               companySize: undefined,
-              enrichments: item.enrichments || []
+              enrichments: item.enrichments || [],
+              avatarUrl: item.metadata?.image || item.metadata?.avatar || undefined,
+              companyLogoUrl: item.metadata?.logo || undefined
             };
             
             // Try to extract enriched data if available
@@ -116,6 +119,32 @@ export async function GET(req: NextRequest) {
                       const enrichmentId = enrichment.enrichmentId || '';
                       
                       console.log(`[GET /api/prospect-search/status] Enrichment ${index} completed with value:`, value, 'ID:', enrichmentId);
+                      
+                      const valueStr = typeof value === 'string' ? value : String(value ?? '');
+                      const lower = valueStr.toLowerCase();
+                      const fmt = enrichment.format as string | undefined;
+                      const isEmail = fmt === 'email' || valueStr.includes('@');
+                      const isLinkedIn = valueStr.includes('linkedin.com');
+                      const isJobTitle = /(founder|ceo|chief|director|manager|head|vp|president|admissions|strategist|consultant|teacher)/i.test(valueStr) || valueStr.includes(' at ');
+                      const isCompany = /(inc\.|inc\b|llc\b|corp\b|corporation|company|academy|school|counseling|education|consulting|group|partners)/i.test(lower);
+                      const looksLikeName = valueStr.split(' ').length <= 4 && valueStr.split(' ').every(w => /^(?:[A-Z][a-z'-]+|&|of|and)$/.test(w)) && !isJobTitle && !isCompany;
+                      
+                      if (isEmail) {
+                        prospect.email = valueStr;
+                        console.log(`[GET /api/prospect-search/status] Set email to:`, valueStr);
+                      } else if (isLinkedIn) {
+                        prospect.linkedinUrl = valueStr;
+                        console.log(`[GET /api/prospect-search/status] Set LinkedIn to:`, valueStr);
+                      } else if (isJobTitle) {
+                        prospect.jobTitle = valueStr;
+                        console.log(`[GET /api/prospect-search/status] Set jobTitle to:`, valueStr);
+                      } else if (looksLikeName) {
+                        prospect.fullName = valueStr;
+                        console.log(`[GET /api/prospect-search/status] Set fullName to:`, valueStr);
+                      } else if (isCompany) {
+                        prospect.company = valueStr;
+                        console.log(`[GET /api/prospect-search/status] Set company to:`, valueStr);
+                      }
                     } else if (enrichment.status === 'canceled' || enrichment.status === 'failed') {
                       console.log(`[GET /api/prospect-search/status] Enrichment ${index} ${enrichment.status}, may retry later`);
                       // For canceled/failed enrichments, we continue processing other data
@@ -132,20 +161,20 @@ export async function GET(req: NextRequest) {
                         // Map by enrichmentId patterns or value content
                         if (enrichmentId.includes('cjr01') || (typeof value === 'string' && !value.includes('@') && !value.includes('http') && !value.includes('United States') && value.length < 50)) {
                           // Company name enrichment
-                          prospect.company = value;
+                          prospect.company = value as string | undefined;
                           console.log(`[GET /api/prospect-search/status] Set company to:`, value);
                         } else if (enrichmentId.includes('ajr01') || (typeof value === 'string' && value.includes('@'))) {
                           // Email enrichment
-                          prospect.email = value;
+                          prospect.email = value as string | undefined;
                           console.log(`[GET /api/prospect-search/status] Set email to:`, value);
                         } else if (enrichmentId.includes('bjr01') || (typeof value === 'string' && value.includes('linkedin.com'))) {
                           // LinkedIn URL enrichment
-                          prospect.linkedinUrl = value;
+                          prospect.linkedinUrl = value as string | undefined;
                           console.log(`[GET /api/prospect-search/status] Set LinkedIn to:`, value);
                           
                           // Extract name from LinkedIn URL if we don't have a better name
-                          if (prospect.fullName === 'Profile Found' && value.includes('/in/')) {
-                            const urlPart = value.split('/in/')[1]?.split('/')[0];
+                          if (prospect.fullName === 'Profile Found' && (value as string).includes('/in/')) {
+                            const urlPart = (value as string).split('/in/')[1]?.split('/')[0];
                             if (urlPart) {
                               const extractedName = urlPart
                                 .replace(/-/g, ' ')
@@ -158,13 +187,13 @@ export async function GET(req: NextRequest) {
                               }
                             }
                           }
-                        } else if (enrichmentId.includes('djr01') || (typeof value === 'string' && (value.includes('United States') || value.includes('California') || value.includes('Ohio')))) {
+                        } else if (enrichmentId.includes('djr01') || (typeof value === 'string' && ((value as string).includes('United States') || (value as string).includes('California') || (value as string).includes('Ohio')))) {
                           // Location enrichment
-                          prospect.location = value;
+                          prospect.location = value as string | undefined;
                           console.log(`[GET /api/prospect-search/status] Set location to:`, value);
-                        } else if (enrichmentId.includes('ejr01') || (typeof value === 'string' && (value.includes('Director') || value.includes('Manager') || value.includes('VP') || value.includes('Head of')))) {
+                        } else if (enrichmentId.includes('ejr01') || (typeof value === 'string' && ((value as string).includes('Director') || (value as string).includes('Manager') || (value as string).includes('VP') || (value as string).includes('Head of')))) {
                           // Job title enrichment
-                          prospect.jobTitle = value;
+                          prospect.jobTitle = value as string | undefined;
                           console.log(`[GET /api/prospect-search/status] Set jobTitle to:`, value);
                         }
                       }
@@ -278,6 +307,17 @@ export async function GET(req: NextRequest) {
       found: Math.max(found, prospects.length), // Use actual prospect count if higher
       status: webset.status
     };
+    
+    // Early stop condition if target reached
+    if (targetCount && prospects.length >= targetCount) {
+      try {
+        await exa.websets.cancel(websetId);
+        (response as any).status = 'completed';
+        console.log(`[GET /api/prospect-search/status] Target reached (${targetCount}). Canceled webset.`);
+      } catch (e) {
+        console.warn('[GET /api/prospect-search/status] Failed to cancel webset:', e);
+      }
+    }
     
     console.log(`[GET /api/prospect-search/status] Returning response:`, {
       prospectsCount: response.prospects.length,

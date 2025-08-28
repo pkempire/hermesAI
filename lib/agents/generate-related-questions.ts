@@ -1,5 +1,5 @@
 import { relatedSchema } from '@/lib/schema/related'
-import { CoreMessage, generateObject } from 'ai'
+import { generateObject } from 'ai'
 import {
   getModel,
   getToolCallModel,
@@ -7,13 +7,9 @@ import {
 } from '../utils/registry'
 
 export async function generateRelatedQuestions(
-  messages: CoreMessage[],
+  prompt: string,
   model: string
 ) {
-  const lastMessages = messages.slice(-1).map(message => ({
-    ...message,
-    role: 'user'
-  })) as CoreMessage[]
 
   const supportedModel = isToolCallSupported(model)
   const currentModel = supportedModel
@@ -28,7 +24,7 @@ export async function generateRelatedQuestions(
 
     Aim to create queries that progressively delve into more specific aspects, implications, or adjacent topics related to the initial query. The goal is to anticipate the user's potential information needs and guide them towards a more comprehensive understanding of the subject matter.
     Please match the language of the response to the user's language.`,
-    messages: lastMessages,
+    prompt,
     schema: relatedSchema
   })
 

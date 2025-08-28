@@ -58,7 +58,10 @@ export function ChatMessages({
   const lastToolData = useMemo(() => {
     if (!data || !Array.isArray(data) || data.length === 0) return null
 
-    const lastItem = data[data.length - 1] as {
+    // Find last tool_call item from the data stream
+    const lastItem = [...data]
+      .reverse()
+      .find((d: any) => d && typeof d === 'object' && (d as any).type === 'tool_call') as {
       type: 'tool_call'
       data: {
         toolCallId: string
@@ -66,9 +69,9 @@ export function ChatMessages({
         toolName: string
         args: string
       }
-    }
+    } | undefined
 
-    if (lastItem.type !== 'tool_call') return null
+    if (!lastItem || lastItem.type !== 'tool_call' || !lastItem.data) return null
 
     const toolData = lastItem.data
     return {
@@ -78,6 +81,23 @@ export function ChatMessages({
       args: toolData.args ? JSON.parse(toolData.args) : undefined
     }
   }, [data])
+
+  // Check if loading indicator should be shown (compute early to avoid conditional hooks)
+  const showLoading =
+    isLoading &&
+    sections.length > 0 &&
+    sections[sections.length - 1].assistantMessages.length === 0
+
+  // Progressive loading steps while waiting for first assistant message
+  const [loadingStep, setLoadingStep] = useState(0)
+  useEffect(() => {
+    if (!showLoading) return
+    setLoadingStep(0)
+    const id = setInterval(() => {
+      setLoadingStep(prev => (prev + 1) % 3)
+    }, 1400)
+    return () => clearInterval(id)
+  }, [showLoading])
 
   if (!sections.length) return null
 
@@ -91,12 +111,6 @@ export function ChatMessages({
     allMessages.length -
     1 -
     [...allMessages].reverse().findIndex(msg => msg.role === 'user')
-
-  // Check if loading indicator should be shown
-  const showLoading =
-    isLoading &&
-    sections.length > 0 &&
-    sections[sections.length - 1].assistantMessages.length === 0
 
   const getIsOpen = (id: string) => {
     if (id.includes('call')) {

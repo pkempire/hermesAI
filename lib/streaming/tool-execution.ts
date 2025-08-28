@@ -1,10 +1,4 @@
-import {
-  CoreMessage,
-  DataStreamWriter,
-  generateId,
-  generateText,
-  JSONValue
-} from 'ai'
+import { CoreMessage, generateId, generateText, JSONValue } from 'ai'
 import { z } from 'zod'
 import { searchSchema } from '../schema/search'
 import { search } from '../tools/search'
@@ -19,7 +13,7 @@ interface ToolExecutionResult {
 
 export async function executeToolCall(
   coreMessages: CoreMessage[],
-  dataStream: DataStreamWriter,
+  dataStream: any,
   model: string,
   searchMode: boolean
 ): Promise<ToolExecutionResult> {
@@ -83,7 +77,7 @@ export async function executeToolCall(
       args: JSON.stringify(toolCall.parameters)
     }
   }
-  dataStream.writeData(toolCallAnnotation)
+  dataStream.write({ type: 'data', data: toolCallAnnotation })
 
   // Support for search tool only for now
   const searchResults = await search(
@@ -102,7 +96,8 @@ export async function executeToolCall(
       state: 'result'
     }
   }
-  dataStream.writeMessageAnnotation(updatedToolCallAnnotation)
+  // Emit updated tool call annotation
+  dataStream.write({ type: 'data', data: updatedToolCallAnnotation })
 
   const toolCallDataAnnotation: ExtendedCoreMessage = {
     role: 'data',

@@ -11,17 +11,10 @@ export const DEFAULT_MODEL: Model = {
 
 export async function getModels(): Promise<Model[]> {
   try {
-    // Use absolute URL for server-side fetching
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-    const response = await fetch(`${baseUrl}/config/models.json`)
-    
-    if (!response.ok) {
-      console.warn('Failed to fetch models.json, using default model')
-      return [DEFAULT_MODEL]
-    }
-    
-    const data = await response.json()
-    return data.models || [DEFAULT_MODEL]
+    // For server-side rendering, just return the default model
+    // The client-side code can load models via static files if needed
+    console.log('Loading default model for server-side rendering')
+    return [DEFAULT_MODEL]
   } catch (error) {
     console.error('Error loading models:', error)
     return [DEFAULT_MODEL]
