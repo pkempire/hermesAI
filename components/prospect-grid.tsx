@@ -82,20 +82,7 @@ export function ProspectGrid({ prospects, onSelectionChange, onReviewComplete }:
     }
   };
 
-  // Notify parent when selection changes (good fits)
-  useEffect(() => {
-    const goodIds = Object.entries(feedback)
-      .filter(([, val]) => val === 'good')
-      .map(([id]) => id)
-    onSelectionChange?.(goodIds)
-  }, [feedback, onSelectionChange])
-
-  // Notify parent when review is complete
-  useEffect(() => {
-    if (reviewedCount === prospects.length && prospects.length > 0) {
-      onReviewComplete?.()
-    }
-  }, [reviewedCount, prospects.length, onReviewComplete])
+  // effects defined above. do not duplicate
 
   if (viewMode === 'grid') {
     return (
