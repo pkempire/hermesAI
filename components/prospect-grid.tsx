@@ -34,6 +34,26 @@ export function ProspectGrid({ prospects, onSelectionChange, onReviewComplete }:
   const [viewMode, setViewMode] = useState<'single' | 'grid'>('single');
   const [selectedProspects, setSelectedProspects] = useState<Set<string>>(new Set());
 
+  // Calculate stats (must be before any early return to keep hooks order stable)
+  const reviewedCount = Object.keys(feedback).length;
+  const goodCount = Object.values(feedback).filter(f => f === 'good').length;
+  const badCount = Object.values(feedback).filter(f => f === 'bad').length;
+
+  // Notify parent when selection changes (good fits)
+  useEffect(() => {
+    const goodIds = Object.entries(feedback)
+      .filter(([, val]) => val === 'good')
+      .map(([id]) => id)
+    onSelectionChange?.(goodIds)
+  }, [feedback, onSelectionChange])
+
+  // Notify parent when review is complete
+  useEffect(() => {
+    if (reviewedCount === prospects.length && prospects.length > 0) {
+      onReviewComplete?.()
+    }
+  }, [reviewedCount, prospects.length, onReviewComplete])
+
   if (!prospects || prospects.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-gray-500">
@@ -46,11 +66,6 @@ export function ProspectGrid({ prospects, onSelectionChange, onReviewComplete }:
 
   const prospect = prospects[current];
   const progressPercentage = ((current + 1) / prospects.length) * 100;
-  
-  // Calculate stats
-  const reviewedCount = Object.keys(feedback).length;
-  const goodCount = Object.values(feedback).filter(f => f === 'good').length;
-  const badCount = Object.values(feedback).filter(f => f === 'bad').length;
 
   const handleFeedback = (type: 'good' | 'bad') => {
     setFeedback({ ...feedback, [prospect.id]: type });
