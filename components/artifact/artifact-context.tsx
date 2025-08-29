@@ -1,6 +1,4 @@
 'use client'
-
-import type { ToolInvocation } from 'ai'
 import {
   createContext,
   ReactNode,
@@ -24,7 +22,7 @@ export type ReasoningPart = {
 
 export type ToolInvocationPart = {
   type: 'tool-invocation'
-  toolInvocation: ToolInvocation
+  toolInvocation: any
 }
 
 export type Part = TextPart | ReasoningPart | ToolInvocationPart
