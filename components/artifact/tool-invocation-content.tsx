@@ -3,12 +3,11 @@
 import { RetrieveArtifactContent } from '@/components/artifact/retrieve-artifact-content'
 import { SearchArtifactContent } from '@/components/artifact/search-artifact-content'
 import { VideoSearchArtifactContent } from '@/components/artifact/video-search-artifact-content'
-import type { ToolInvocation } from 'ai'
 
 export function ToolInvocationContent({
   toolInvocation
 }: {
-  toolInvocation: ToolInvocation
+  toolInvocation: any
 }) {
   switch (toolInvocation.toolName) {
     case 'search':

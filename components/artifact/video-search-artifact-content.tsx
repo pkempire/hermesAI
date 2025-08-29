@@ -6,7 +6,8 @@ import {
   type SerperSearchResultItem,
   type SerperSearchResults
 } from '@/lib/types'
-import type { ToolInvocation } from 'ai'
+
+type ToolInvocation = any
 
 export function VideoSearchArtifactContent({ tool }: { tool: ToolInvocation }) {
   const videoResults: SerperSearchResults | undefined =

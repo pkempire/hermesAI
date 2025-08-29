@@ -1,6 +1,5 @@
 'use client'
 
-import type { ToolInvocation } from 'ai'
 import { ProspectSearchSection } from './prospect-search-section'
 import { QuestionConfirmation } from './question-confirmation'
 import RetrieveSection from './retrieve-section'
@@ -8,7 +7,7 @@ import { SearchSection } from './search-section'
 import { VideoSearchSection } from './video-search-section'
 
 interface ToolSectionProps {
-  tool: ToolInvocation
+  tool: any
   isOpen: boolean
   onOpenChange: (open: boolean) => void
   addToolResult?: (params: { toolCallId: string; result: any }) => void
