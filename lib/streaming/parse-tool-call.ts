@@ -37,7 +37,7 @@ export function parseToolCallXml<T>(
     }
 
     // Parse parameters using the provided schema
-    const parameters = schema.parse({
+    const parsed = schema.parse({
       ...rawParameters,
       // Convert comma-separated strings to arrays for array fields with default empty arrays
       include_domains:
@@ -54,9 +54,9 @@ export function parseToolCallXml<T>(
       max_results: rawParameters.max_results
         ? parseInt(rawParameters.max_results, 10)
         : undefined
-    })
+    }) as unknown as T
 
-    return { tool, parameters }
+    return { tool, parameters: parsed }
   } catch (error) {
     console.error('Failed to parse parameters:', error)
     return { tool }
