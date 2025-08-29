@@ -4,11 +4,13 @@ import { useArtifact } from '@/components/artifact/artifact-context'
 import { CHAT_ID } from '@/lib/constants'
 import type { SerperSearchResults } from '@/lib/types'
 import { useChat } from '@ai-sdk/react'
-import { ToolInvocation } from 'ai'
+// import { ToolInvocation } from 'ai'
 import { CollapsibleMessage } from './collapsible-message'
 import { DefaultSkeleton } from './default-skeleton'
 import { Section, ToolArgsSection } from './section'
 import { VideoSearchResults } from './video-search-results'
+
+type ToolInvocation = any
 
 interface VideoSearchSectionProps {
   tool: ToolInvocation
