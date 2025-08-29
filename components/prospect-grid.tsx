@@ -39,20 +39,7 @@ export function ProspectGrid({ prospects, onSelectionChange, onReviewComplete }:
   const goodCount = Object.values(feedback).filter(f => f === 'good').length;
   const badCount = Object.values(feedback).filter(f => f === 'bad').length;
 
-  // Notify parent when selection changes (good fits)
-  useEffect(() => {
-    const goodIds = Object.entries(feedback)
-      .filter(([, val]) => val === 'good')
-      .map(([id]) => id)
-    onSelectionChange?.(goodIds)
-  }, [feedback, onSelectionChange])
-
-  // Notify parent when review is complete
-  useEffect(() => {
-    if (reviewedCount === prospects.length && prospects.length > 0) {
-      onReviewComplete?.()
-    }
-  }, [reviewedCount, prospects.length, onReviewComplete])
+  // (effects defined once above; ensure no duplicates below)
 
   if (!prospects || prospects.length === 0) {
     return (
