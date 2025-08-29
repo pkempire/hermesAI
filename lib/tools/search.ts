@@ -106,7 +106,7 @@ export async function search(
   includeDomains: string[] = [],
   excludeDomains: string[] = []
 ): Promise<SearchResults> {
-  return searchTool.execute(
+  const result = await searchTool.execute(
     {
       query,
       max_results: maxResults,
@@ -118,5 +118,23 @@ export async function search(
       toolCallId: 'search',
       messages: []
     }
-  )
+  ) as SearchResults | AsyncIterable<SearchResults>
+
+  // If the tool yielded a stream, consume and return the last value
+  if (result && typeof (result as any)[Symbol.asyncIterator] === 'function') {
+    let last: SearchResults | undefined
+    for await (const chunk of result as AsyncIterable<SearchResults>) {
+      last = chunk
+    }
+    return (
+      last ?? {
+        results: [],
+        images: [],
+        query,
+        number_of_results: 0
+      }
+    )
+  }
+
+  return result as SearchResults
 }
