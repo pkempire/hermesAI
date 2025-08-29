@@ -3,9 +3,9 @@
 import { CampaignSettings, EmailSequence, ProspectCriteria } from '@/components/campaign-builder'
 import { Prospect } from '@/components/prospect-grid'
 import {
-  createProspectEnrichments,
-  createProspectSearchCriteria,
-  getExaWebsetsClient
+    createProspectEnrichments,
+    createProspectSearchCriteria,
+    getExaWebsetsClient
 } from '@/lib/clients/exa-websets'
 import { optimizeProspectSearchQuery } from '@/lib/clients/openai-query-optimizer'
 import { createClient } from '@/lib/supabase/server'

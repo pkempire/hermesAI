@@ -1,4 +1,4 @@
-import { createExaWebsetsClient, createProspectEnrichments } from '@/lib/clients/exa-websets'
+import { createExaWebsetsClient } from '@/lib/clients/exa-websets'
 import { tool } from 'ai'
 import { z } from 'zod'
 

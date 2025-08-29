@@ -106,7 +106,12 @@ export async function search(
   includeDomains: string[] = [],
   excludeDomains: string[] = []
 ): Promise<SearchResults> {
-  const result = await searchTool.execute(
+  const exec = (searchTool as any)?.execute
+  if (typeof exec !== 'function') {
+    throw new Error('search tool execute is unavailable')
+  }
+
+  const result = await exec(
     {
       query,
       max_results: maxResults,
