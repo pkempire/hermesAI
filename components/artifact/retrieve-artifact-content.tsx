@@ -6,7 +6,7 @@ import type {
   SearchResultItem,
   SearchResults as TypeSearchResults
 } from '@/lib/types/index'
-import type { ToolInvocation } from 'ai'
+type ToolInvocation = any
 import { MemoizedReactMarkdown } from '../ui/markdown'
 
 const MAX_CONTENT_LENGTH = 1000
