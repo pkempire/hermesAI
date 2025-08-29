@@ -4,8 +4,7 @@ import {
   CoreToolMessage,
   generateId,
   JSONValue,
-  type UIMessage as Message,
-  ToolInvocation
+  type UIMessage as Message
 } from 'ai'
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
@@ -63,10 +62,10 @@ function addToolMessageToChat({
   messages: Array<Message>
 }): Array<Message> {
   return messages.map(message => {
-    if (message.toolInvocations) {
+    if ((message as any).toolInvocations) {
       return {
         ...message,
-        toolInvocations: message.toolInvocations.map(toolInvocation => {
+        toolInvocations: (message as any).toolInvocations.map((toolInvocation: any) => {
           const toolResult = toolMessage.content.find(
             tool => tool.toolCallId === toolInvocation.toolCallId
           )
@@ -75,13 +74,13 @@ function addToolMessageToChat({
             return {
               ...toolInvocation,
               state: 'result',
-              result: toolResult.result
+              result: (toolResult as any).output ?? (toolResult as any).result
             }
           }
 
           return toolInvocation
         })
-      }
+      } as any
     }
 
     return message
@@ -138,7 +137,7 @@ export function convertToUIMessages(
 
     // Build the text content and tool invocations from message.content.
     let textContent = ''
-    let toolInvocations: Array<ToolInvocation> = []
+    let toolInvocations: Array<any> = []
 
     if (message.content) {
       if (typeof message.content === 'string') {
@@ -147,7 +146,7 @@ export function convertToUIMessages(
         for (const content of message.content) {
           if (content && typeof content === 'object' && 'type' in content) {
             if (content.type === 'text' && 'text' in content) {
-              textContent += content.text
+              textContent += (content as any).text
             } else if (
               content.type === 'tool-call' &&
               'toolCallId' in content &&
@@ -156,10 +155,10 @@ export function convertToUIMessages(
             ) {
               toolInvocations.push({
                 state: 'call',
-                toolCallId: content.toolCallId,
-                toolName: content.toolName,
-                args: content.args
-              } as ToolInvocation)
+                toolCallId: (content as any).toolCallId,
+                toolName: (content as any).toolName,
+                args: (content as any).args
+              })
             }
           }
         }
@@ -192,9 +191,9 @@ export function convertToUIMessages(
       id: generateId(),
       role: message.role,
       content: textContent,
-      toolInvocations: toolInvocations.length > 0 ? toolInvocations : undefined,
+      toolInvocations: toolInvocations.length > 0 ? (toolInvocations as any) : undefined,
       annotations: annotations
-    }
+    } as any
 
     chatMessages.push(newMessage)
 
@@ -216,8 +215,8 @@ export function convertToExtendedCoreMessages(
 
   for (const message of messages) {
     // Convert annotations to data messages
-    if (message.annotations && message.annotations.length > 0) {
-      message.annotations.forEach(annotation => {
+    if ((message as any).annotations && (message as any).annotations.length > 0) {
+      ;(message as any).annotations.forEach((annotation: JSONValue) => {
         result.push({
           role: 'data',
           content: annotation
@@ -226,16 +225,16 @@ export function convertToExtendedCoreMessages(
     }
 
     // Convert reasoning to data message with unified structure (including time)
-    if (message.reasoning) {
+    if ((message as any).reasoning) {
       const reasoningTime = (message as any).reasoningTime ?? 0
       const reasoningData =
-        typeof message.reasoning === 'string'
-          ? { reasoning: message.reasoning, time: reasoningTime }
+        typeof (message as any).reasoning === 'string'
+          ? { reasoning: (message as any).reasoning, time: reasoningTime }
           : {
-              ...(message.reasoning as Record<string, unknown>),
+              ...((message as any).reasoning as Record<string, unknown>),
               time:
                 (message as any).reasoningTime ??
-                (message.reasoning as any).time ??
+                ((message as any).reasoning as any).time ??
                 0
             }
       result.push({
@@ -248,7 +247,7 @@ export function convertToExtendedCoreMessages(
     }
 
     // Convert current message: push minimal CoreMessage without converter
-    if (message && typeof message === 'object' && message.role) {
+    if (message && typeof message === 'object' && (message as any).role) {
       const minimal = {
         role: (message as any).role,
         content:
