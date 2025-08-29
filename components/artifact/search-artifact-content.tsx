@@ -4,7 +4,7 @@ import { SearchResults } from '@/components/search-results'
 import { SearchResultsImageSection } from '@/components/search-results-image'
 import { Section, ToolArgsSection } from '@/components/section'
 import type { SearchResults as TypeSearchResults } from '@/lib/types'
-import type { ToolInvocation } from 'ai'
+type ToolInvocation = any
 
 export function SearchArtifactContent({ tool }: { tool: ToolInvocation }) {
   const searchResults: TypeSearchResults =
