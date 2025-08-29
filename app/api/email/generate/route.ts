@@ -78,8 +78,7 @@ Return ONLY a JSON object with "subject" and "body" fields. Use placeholder vari
           model: model,
           system: systemPrompt,
           prompt: userPrompt,
-          temperature: 0.7, // GPT-4 supports temperature parameter
-          maxTokens: 500
+          temperature: 0.7 // GPT-4 supports temperature parameter
         })
 
         let emailContent
