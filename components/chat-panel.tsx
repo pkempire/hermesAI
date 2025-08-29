@@ -76,15 +76,20 @@ export function ChatPanel({
     if (!messages.length) return false
 
     const lastMessage = messages[messages.length - 1]
-    if (lastMessage.role !== 'assistant' || !lastMessage.parts) return false
+    if (lastMessage.role !== 'assistant' || !(lastMessage as any).parts) return false
 
-    const parts = lastMessage.parts
+    const parts = (lastMessage as any).parts as any[]
     const lastPart = parts[parts.length - 1]
 
-    return (
-      lastPart?.type === 'tool-invocation' &&
-      lastPart?.toolInvocation?.state === 'call'
-    )
+    // Support both legacy and v5 shapes
+    if (lastPart?.type === 'tool-invocation') {
+      const inv = (lastPart as any).toolInvocation || lastPart
+      return inv?.state === 'call'
+    }
+    if (lastPart?.type === 'tool-call') {
+      return true
+    }
+    return false
   }
 
   // if query is not empty, submit the query
