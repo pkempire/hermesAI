@@ -79,7 +79,6 @@ export async function startProspectSearch(
     
     console.log('📡 [startProspectSearch] Creating Webset with Exa API...')
     const webset = await exaClient.createWebset({
-      title: `HermesAI Campaign: ${settings.name}`,
       externalId: `campaign_${Date.now()}`,
       search: searchConfig,
       enrichments: enrichments,

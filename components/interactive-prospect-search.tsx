@@ -83,7 +83,6 @@ export function InteractiveProspectSearch({
 
       // Create the webset
       const webset = await exaClientRef.current.createWebset({
-        title: `Prospect Search: ${query}`,
         search: websetSearchConfig,
         enrichments: websetEnrichments
       })

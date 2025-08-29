@@ -77,7 +77,7 @@ export function createProspectSearchTool(model: string) {
             const criteria = result.object.criteria.map(c => ({
               label: c.description,
               value: c.description,
-              type: 'criterion' as const
+              type: 'other' as const
             }))
             
             initialEntityType = result.object.entityType
@@ -94,7 +94,7 @@ export function createProspectSearchTool(model: string) {
               criteria: [{
                 label: queryText,
                 value: queryText,
-                type: 'criterion' as const
+                type: 'other' as const
               }],
               enrichments: []
             }
@@ -294,7 +294,6 @@ export function createProspectSearchTool(model: string) {
         
         // Create the webset with both search and enrichments
         const webset = await exaClient.createWebset({
-          title: `Prospect Search: ${query}`,
           search: websetSearchConfig,
           enrichments: websetEnrichments
         })
