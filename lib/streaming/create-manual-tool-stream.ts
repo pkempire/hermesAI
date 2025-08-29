@@ -57,13 +57,13 @@ export function createManualToolStreamResponse(config: BaseStreamConfig) {
               ...(toolCallDataAnnotation ? [toolCallDataAnnotation] : []),
               {
                 role: 'data',
-                content: {
+                content: ({
                   type: 'reasoning',
                   data: {
                     time: reasoningDuration ?? 0,
                     reasoning: result.reasoning
                   }
-                } as JSONValue
+                } as unknown) as JSONValue
               }
             ]
 
@@ -81,7 +81,7 @@ export function createManualToolStreamResponse(config: BaseStreamConfig) {
           onChunk(event) {
             const chunkType = event.chunk?.type
 
-            if (chunkType === 'reasoning') {
+            if (chunkType === 'reasoning-delta') {
               if (reasoningStartTime === null) {
                 reasoningStartTime = Date.now()
               }
@@ -90,11 +90,8 @@ export function createManualToolStreamResponse(config: BaseStreamConfig) {
                 const elapsedTime = Date.now() - reasoningStartTime
                 reasoningDuration = elapsedTime
                 writer.write({
-                  type: 'data',
-                  value: {
-                    type: 'reasoning',
-                    data: { time: elapsedTime }
-                  } as JSONValue
+                  type: 'data-reasoning',
+                  data: { time: elapsedTime }
                 })
                 reasoningStartTime = null
               }
