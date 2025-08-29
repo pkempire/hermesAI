@@ -39,11 +39,5 @@ next-env.d.ts
 # cursor
 .cursor/rules/private
 
-# remotion artifacts
-remotion/node_modules/
-remotion/out/
-remotion/.remotion/
-remotion/remotion/
-remotion/.cache/
-remotion/**/.cache/
-remotion/**/chrome-headless-shell*remotion/
+# remotion (ignore entire folder)
+remotion/
