@@ -55,10 +55,11 @@ export function LoginForm({
     setError(null)
 
     try {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || location.origin
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${location.origin}/auth/oauth`
+          redirectTo: `${baseUrl}/auth/oauth`
         }
       })
       if (error) throw error

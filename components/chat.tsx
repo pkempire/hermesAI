@@ -125,6 +125,11 @@ export function Chat({
       setCurrentCampaignStep(1)
       setCampaignPercent(20)
     }
+
+    // Proactive intro for first-time users
+    if (messages.length === 1 && messages[0]?.role === 'user') {
+      // no-op: rely on model system prompt to introduce; keep UI side-effects minimal
+    }
   }, [messages, showProgressTracker])
 
   // Update campaign progress from pipeline events
@@ -297,29 +302,28 @@ export function Chat({
       )}
       data-testid="full-chat"
     >
-      
+      {/* History disabled banner */}
+      {process.env.NEXT_PUBLIC_ENABLE_SAVE_CHAT_HISTORY !== 'true' && (
+        <div className="absolute top-0 left-0 right-0 z-20 bg-yellow-50 text-yellow-800 border-b border-yellow-200 px-4 py-2 text-xs text-center">
+          Chat history is disabled. Set ENABLE_SAVE_CHAT_HISTORY=true to enable saving.
+        </div>
+      )}
       {showProgressTracker ? (
-        // Campaign layout with persistent progress panel (visible once a campaign starts)
+        // Campaign layout with persistent progress panel on the RIGHT (visible once a campaign starts)
         <div className="flex h-full relative z-10">
-          <div className="hidden md:block md:w-80 bg-card border-r border-border">
-            <div className="p-6 border-b border-border">
-              <h3 className="font-semibold text-foreground mb-1">Campaign Builder</h3>
-              <p className="text-xs text-muted-foreground">AI-powered prospect discovery</p>
-            </div>
-            <div className="p-4 overflow-y-auto h-[calc(100%-5rem)]">
-              <CampaignProgressTracker 
-                currentStep={currentCampaignStep}
-                campaignTitle="Cold Email Campaign"
-              />
-              <div className="mt-4 text-xs text-muted-foreground">
-                <div className="font-medium">Step {currentCampaignStep} of {totalCampaignSteps}: {campaignStepLabel}</div>
-                <div className="w-full h-2 bg-muted rounded-full mt-2">
-                  <div className="h-2 bg-primary rounded-full transition-all" style={{ width: `${campaignPercent}%` }} />
+          <div className="flex-1 flex flex-col">
+            {/* Campaign overview strip */}
+            {showProgressTracker && (
+              <div className="border-b border-border px-4 py-2 text-xs flex items-center justify-between bg-card/60">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">Campaign</span>
+                  <span className="text-muted-foreground">Step {currentCampaignStep} of {totalCampaignSteps}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button className="px-2 py-1 border rounded">Refresh</button>
                 </div>
               </div>
-            </div>
-          </div>
-          <div className="flex-1 flex flex-col">
+            )}
             <ChatMessages
               sections={sections}
               data={uiData}
@@ -352,6 +356,25 @@ export function Chat({
               scrollContainerRef={scrollContainerRef}
               submitTemplateMessage={submitTemplateMessage}
             />
+          </div>
+          <div className="hidden md:block md:w-64 bg-card border-l border-border">
+            <div className="p-4 border-b border-border">
+              <h3 className="font-semibold text-foreground mb-1">Campaign Builder</h3>
+              <p className="text-xs text-muted-foreground">AI-powered prospect discovery</p>
+            </div>
+            <div className="p-3 overflow-y-auto h-[calc(100%-4rem)]">
+              <CampaignProgressTracker 
+                currentStep={currentCampaignStep}
+                campaignTitle="Cold Email Campaign"
+                className="text-sm"
+              />
+              <div className="mt-3 text-[11px] text-muted-foreground">
+                <div className="font-medium">Step {currentCampaignStep} of {totalCampaignSteps}: {campaignStepLabel}</div>
+                <div className="w-full h-1.5 bg-muted rounded-full mt-2">
+                  <div className="h-1.5 bg-primary rounded-full transition-all" style={{ width: `${campaignPercent}%` }} />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       ) : (

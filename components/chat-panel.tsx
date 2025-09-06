@@ -71,6 +71,18 @@ export function ChatPanel({
     router.push('/')
   }
 
+  // Quick auth check helper
+  async function ensureSignedIn(): Promise<boolean> {
+    try {
+      const res = await fetch('/api/auth/me', { cache: 'no-store' })
+      if (!res.ok) return false
+      const data = await res.json()
+      return !!data?.user?.id
+    } catch {
+      return false
+    }
+  }
+
   const isToolInvocationInProgress = () => {
     if (!messages.length) return false
 
@@ -122,17 +134,25 @@ export function ChatPanel({
       )}
     >
       {messages.length === 0 && (
-        <div className="mb-12 flex flex-col items-center gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-          <div className="text-center space-y-3 max-w-2xl">
-            <h1 className="text-3xl sm:text-4xl font-light text-foreground leading-tight">
-              Find your next customers
-            </h1>
-          </div>
+        <div className="mb-6 flex flex-col items-center gap-2">
+          <h1 className="text-3xl sm:text-4xl font-semibold">
+            Find your <span className="text-primary">AI sales engineer</span>
+          </h1>
+          <p className="text-sm text-muted-foreground">Ready-to-use templates from the community. Click to load into chat and edit before running.</p>
         </div>
       )}
       
       <form
-        onSubmit={handleSubmit}
+        onSubmit={async (e) => {
+          e.preventDefault()
+          // require sign-in before sending
+          const isAuthed = await ensureSignedIn()
+          if (!isAuthed) {
+            router.push('/auth/login')
+            return
+          }
+          handleSubmit(e)
+        }}
         className={cn('max-w-4xl w-full mx-auto relative group/form')}
       >
         {/* Enhanced scroll to bottom button */}
@@ -215,8 +235,13 @@ export function ChatPanel({
                       ((!input || input.length === 0) && !isLoading) ||
                       isToolInvocationInProgress()
                     }
-                    onClick={isLoading ? stop : () => {
+                    onClick={isLoading ? stop : async () => {
                       console.log('🔧 [ChatPanel] Send button clicked')
+                      const isAuthed = await ensureSignedIn()
+                      if (!isAuthed) {
+                        router.push('/auth/login')
+                        return
+                      }
                       const form = document.querySelector('form')
                       if (form) {
                         form.requestSubmit()

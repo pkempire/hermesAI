@@ -6,7 +6,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { motion } from 'framer-motion'
 import { AlertCircle, CheckCircle, ChevronDown, ChevronRight, Search, Users } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { DraftEmail } from './draft-email'
 import { EnhancedProspectSearchBuilder } from './enhanced-prospect-search-builder'
 import { Prospect, ProspectGrid } from './prospect-grid'
 import { ProspectPreviewCard } from './prospect-preview-card'
@@ -336,6 +335,22 @@ export function ProspectSearchSection({
     })
   }
 
+  // Suggest refinement based on prospect-feedback events
+  useEffect(() => {
+    const handler = (e: any) => {
+      try {
+        const detail = e?.detail
+        if (!detail) return
+        // For now, just surface a suggestion message
+        setSearchMessage(detail.type === 'good'
+          ? 'Noted good fit — I can prioritize similar titles/companies next.'
+          : 'Got it — I will down-rank similar profiles and suggest tighter criteria.')
+      } catch {}
+    }
+    window.addEventListener('prospect-feedback', handler as any)
+    return () => window.removeEventListener('prospect-feedback', handler as any)
+  }, [])
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -344,30 +359,7 @@ export function ProspectSearchSection({
       transition={{ duration: 0.3, ease: 'easeOut' }}
       className="w-full my-6 rounded-2xl bg-gradient-to-br from-white via-blue-50/30 to-purple-50/30 border border-blue-200/50 backdrop-blur-sm p-0 md:p-2 hermes-card-glow"
     >
-      {/* Step Progress - Always Visible */}
-      {(uiType === 'interactive' || searchStatus === 'running' || searchStatus === 'completed') && toolResult?.props && (
-        <div className="flex items-center justify-between px-6 py-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-t-2xl border-b border-blue-200/30">
-          <div className="flex items-center gap-3">
-            <div className="text-sm font-medium text-gray-700">
-              Campaign Step {toolResult.props.step || 1} of {toolResult.props.totalSteps || 5}
-            </div>
-            <div className="text-xs text-gray-500">•</div>
-            <div className="text-xs text-gray-600">Prospect Discovery</div>
-          </div>
-          <div className="flex gap-1">
-            {Array.from({ length: toolResult.props.totalSteps || 5 }).map((_, i) => (
-              <div
-                key={i}
-                className={`w-2 h-2 rounded-full transition-colors ${
-                  i < (toolResult.props.step || 1) ? 'bg-blue-600' : 
-                  i === (toolResult.props.step || 1) - 1 ? 'bg-blue-400' : 
-                  'bg-gray-200'
-                }`}
-              />
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Removed embedded step progress - handled by global campaign tracker */}
 
       <Collapsible open={isOpen} onOpenChange={onOpenChange}>
         <Card className="w-full border-none shadow-none bg-transparent">
@@ -385,7 +377,7 @@ export function ProspectSearchSection({
                     <Badge variant={getStatusBadgeVariant()} className="mt-1">
                       {searchStatus === 'completed' ? '✓ Complete' : 
                        searchStatus === 'running' ? '⏳ Searching...' : 
-                       searchStatus === 'failed' ? '✗ Failed' : '🚀 Ready'}
+                       searchStatus === 'failed' ? '✗ Failed' : 'Ready'}
                     </Badge>
                   </div>
                 </div>
@@ -687,11 +679,7 @@ export function ProspectSearchSection({
 
                       {/* Display prospects */}
                       <ProspectGrid prospects={prospects} />
-                      {/* Draft Email Component */}
-                      <DraftEmail 
-                        prospects={prospects}
-                        campaignContext={searchSummary?.query || ''}
-                      />
+                      {/* Drafting moved to dedicated step/component */}
                     </div>
                   )}
 

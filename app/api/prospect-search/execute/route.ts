@@ -1,4 +1,5 @@
 import { createExaWebsetsClient, createProspectSearchCriteria } from '@/lib/clients/exa-websets'
+import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
       'full_name': 'full name'
     }
 
-    const websetEnrichments = enrichments?.map((e: any) => {
+    const websetEnrichmentsUncapped = enrichments?.map((e: any) => {
       // Handle both string and object formats
       const enrichmentKey = typeof e === 'string' ? e : e.value || e.label?.toLowerCase()
       const enrichmentLabel = enrichmentMapping[enrichmentKey] || enrichmentKey
@@ -59,6 +60,17 @@ export async function POST(req: NextRequest) {
         instructions: `Look for and extract the ${enrichmentLabel} from the profile or page content.`
       }
     }).filter(Boolean) || []
+
+    // De-duplicate by description and cap at 10 per Exa limits
+    const seen = new Set<string>()
+    const websetEnrichments: { description: string; format: 'text'; instructions: string }[] = []
+    for (const e of websetEnrichmentsUncapped) {
+      if (!seen.has(e.description)) {
+        websetEnrichments.push(e)
+        seen.add(e.description)
+      }
+      if (websetEnrichments.length >= 10) break
+    }
 
     console.log('🔧 [POST /api/prospect-search/execute] Creating webset with config:', {
       search: websetSearchConfig,
@@ -72,6 +84,35 @@ export async function POST(req: NextRequest) {
     })
 
     console.log('✅ [POST /api/prospect-search/execute] Webset created:', webset.id)
+
+    // Persist minimal campaign record (best-effort)
+    try {
+      const supabase = await createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const name = (originalQuery || 'Prospect Campaign').slice(0, 80)
+        const { data: campaign } = await supabase
+          .from('campaigns')
+          .insert({
+            user_id: user.id,
+            name,
+            status: 'active',
+            prospect_query: { query: originalQuery, criteria },
+            entity_type: entityType || 'person',
+            enrichments: enrichments || [],
+            filters: searchCriteria.filters || {},
+            target_count: targetCount,
+            settings: { exa_webset_id: webset.id }
+          })
+          .select('id')
+          .single()
+        if (campaign) {
+          console.log('🗂️ [POST /api/prospect-search/execute] Campaign persisted:', campaign.id)
+        }
+      }
+    } catch (persistError) {
+      console.warn('⚠️ [POST /api/prospect-search/execute] Campaign persistence skipped:', persistError)
+    }
 
     if (preview) {
       // For preview, wait for completion and return results immediately

@@ -6,27 +6,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Progress } from '@/components/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Slider } from '@/components/ui/slider'
-import { Textarea } from '@/components/ui/textarea'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  Building, 
-  ChevronDown, 
-  ChevronUp, 
-  Eye, 
-  MapPin, 
-  Search, 
-  Target, 
-  User, 
-  Users, 
-  Zap,
-  Plus,
-  X,
+ 
+import {
+  AlertCircle,
+  Building,
   CheckCircle2,
-  AlertCircle
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  MapPin,
+  Plus,
+  Search,
+  Target,
+  User,
+  Users,
+  X,
+  Zap
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -90,6 +88,8 @@ export function EnhancedProspectSearchBuilder({
     initialEnrichments.map(e => ({ ...e, enabled: e.required }))
   )
   const [customEnrichments, setCustomEnrichments] = useState<CustomEnrichment[]>(initialCustomEnrichments)
+  const enabledEnrichmentCount = enrichments.filter(e => e.enabled).length + (customEnrichments?.length || 0)
+  const canEnableMore = enabledEnrichmentCount < 10
   const [entityType, setEntityType] = useState<'person' | 'company'>(initialEntityType)
   const [targetCount, setTargetCount] = useState(initialCount)
   const [showAdvanced, setShowAdvanced] = useState(false)
@@ -108,10 +108,16 @@ export function EnhancedProspectSearchBuilder({
     ))
   }
 
+  const updateCriterionLabel = (index: number, value: string) => {
+    setCriteria(prev => prev.map((c, i) => i === index ? { ...c, label: value, value } : c))
+  }
+
   const toggleEnrichment = (index: number) => {
-    setEnrichments(prev => prev.map((e, i) => 
-      i === index ? { ...e, enabled: !e.enabled } : e
-    ))
+    setEnrichments(prev => prev.map((e, i) => {
+      if (i !== index) return e
+      if (!e.enabled && !canEnableMore && !e.required) return e
+      return { ...e, enabled: !e.enabled }
+    }))
   }
 
   const addCustomEnrichment = () => {
@@ -185,17 +191,6 @@ export function EnhancedProspectSearchBuilder({
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      {/* Progress indicator */}
-      <div className="flex items-center space-x-4">
-        <div className="flex-1">
-          <div className="flex justify-between text-sm text-muted-foreground mb-2">
-            <span>Step {step} of {totalSteps}: Configure Prospect Search</span>
-            <span>{Math.round((step / totalSteps) * 100)}% Complete</span>
-          </div>
-          <Progress value={(step / totalSteps) * 100} className="w-full" />
-        </div>
-      </div>
-
       {/* Original query display */}
       <Card>
         <CardHeader className="pb-4">
@@ -212,15 +207,8 @@ export function EnhancedProspectSearchBuilder({
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="criteria" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="criteria">Search Criteria ({enabledCriteria.length})</TabsTrigger>
-          <TabsTrigger value="enrichments">Enrichments ({allEnabledEnrichments.length})</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
-        </TabsList>
-
-        {/* Search Criteria Tab */}
-        <TabsContent value="criteria" className="space-y-6">
+      {/* Single consolidated layout: Criteria, Enrichments, Settings */}
+      <div className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Search Criteria</CardTitle>
@@ -255,9 +243,11 @@ export function EnhancedProspectSearchBuilder({
                             className="mt-0.5"
                           />
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium break-words">
-                              {criterion.label}
-                            </p>
+                            <input
+                              value={criterion.label}
+                              onChange={(e) => updateCriterionLabel(globalIndex, e.target.value)}
+                              className="w-full text-sm font-medium bg-transparent outline-none border-b border-transparent focus:border-gray-400 transition-colors"
+                            />
                           </div>
                           {criterion.enabled && (
                             <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
@@ -278,49 +268,57 @@ export function EnhancedProspectSearchBuilder({
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-
-        {/* Enrichments Tab */}
-        <TabsContent value="enrichments" className="space-y-6">
+        
           <Card>
             <CardHeader>
               <CardTitle>Data Enrichments</CardTitle>
               <CardDescription>
-                Choose what data to extract for each prospect found.
+                Choose what data to extract for each prospect found. Selected {enabledEnrichmentCount}/10
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {enrichments.map((enrichment, index) => (
-                  <div
-                    key={index}
-                    className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
-                      enrichment.enabled 
-                        ? enrichment.required 
-                          ? 'bg-blue-50 border-blue-200' 
-                          : 'bg-green-50 border-green-200'
-                        : 'bg-gray-50 border-gray-200'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <Checkbox
-                        checked={enrichment.enabled}
-                        onCheckedChange={() => toggleEnrichment(index)}
-                        disabled={enrichment.required}
+              <div className="w-full overflow-x-auto">
+                <div className="grid grid-cols-12 gap-2 text-xs text-muted-foreground px-1">
+                  <div className="col-span-6">Field</div>
+                  <div className="col-span-2 text-center">Required</div>
+                  <div className="col-span-2 text-center">Enabled</div>
+                  <div className="col-span-2 text-right">Status</div>
+                </div>
+                <div className="divide-y">
+                  {enrichments.map((enrichment, index) => (
+                    <div key={index} className="grid grid-cols-12 gap-2 items-center py-2">
+                      <input
+                        className="col-span-6 bg-transparent text-sm border-b border-transparent focus:border-gray-300 outline-none px-1"
+                        value={enrichment.label}
+                        onChange={e => setEnrichments(prev => prev.map((en, i) => i === index ? { ...en, label: e.target.value } : en))}
                       />
-                      <div>
-                        <p className="font-medium text-sm">{enrichment.label}</p>
-                        {enrichment.required && (
-                          <Badge variant="secondary" className="text-xs mt-1">Required</Badge>
+                      <div className="col-span-2 flex items-center justify-center">
+                        <Checkbox
+                          checked={enrichment.required}
+                          onCheckedChange={() => setEnrichments(prev => prev.map((en, i) => i === index ? { ...en, required: !en.required, enabled: !en.required ? en.enabled : true } : en))}
+                        />
+                      </div>
+                      <div className="col-span-2 flex items-center justify-center">
+                        <Checkbox
+                          checked={enrichment.enabled}
+                          onCheckedChange={() => toggleEnrichment(index)}
+                          disabled={enrichment.required || (!enrichment.enabled && !canEnableMore)}
+                        />
+                      </div>
+                      <div className="col-span-2 text-right pr-2">
+                        {enrichment.enabled ? (
+                          <Badge variant="secondary">On</Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Off</span>
                         )}
                       </div>
                     </div>
-                    {enrichment.enabled && (
-                      <CheckCircle2 className="w-4 h-4 text-green-600" />
-                    )}
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
+              {!canEnableMore && (
+                <div className="text-xs text-muted-foreground">You’ve reached the 10-field enrichment limit. Disable a field to add another.</div>
+              )}
 
               {/* Custom Enrichments */}
               <Separator />
@@ -388,10 +386,7 @@ export function EnhancedProspectSearchBuilder({
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
 
-        {/* Settings Tab */}
-        <TabsContent value="settings" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Search Settings</CardTitle>
@@ -432,8 +427,7 @@ export function EnhancedProspectSearchBuilder({
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+      </div>
 
       {/* Action Buttons */}
       <div className="flex items-center justify-between p-6 border-t bg-muted/30">

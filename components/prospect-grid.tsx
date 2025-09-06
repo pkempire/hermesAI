@@ -56,6 +56,11 @@ export function ProspectGrid({ prospects, onSelectionChange, onReviewComplete }:
 
   const handleFeedback = (type: 'good' | 'bad') => {
     setFeedback({ ...feedback, [prospect.id]: type });
+    // Emit a custom event so the model/UI can adapt (e.g., refine criteria)
+    try {
+      const detail = { prospectId: prospect.id, type, prospect };
+      window.dispatchEvent(new CustomEvent('prospect-feedback', { detail }));
+    } catch {}
     if (current < prospects.length - 1) {
       setCurrent(current + 1);
     }

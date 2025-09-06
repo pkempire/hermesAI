@@ -41,11 +41,12 @@ export function SignUpForm({
     }
 
     try {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`
+          emailRedirectTo: `${baseUrl}/`
         }
       })
       if (error) throw error

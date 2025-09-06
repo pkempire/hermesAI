@@ -31,17 +31,15 @@ export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, o
       selected ? 'ring-2 ring-blue-500 bg-blue-50/50' : 'bg-gradient-to-br from-white to-gray-50/50'
     }`}>
       {/* Avatar / Company logo */}
-      {(prospect.avatarUrl || prospect.companyLogoUrl) && (
-        <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full opacity-10 overflow-hidden">
-          <Image
-            src={prospect.avatarUrl || prospect.companyLogoUrl!}
-            alt="Profile"
-            width={96}
-            height={96}
-            className="object-cover"
-          />
-        </div>
-      )}
+      <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full opacity-10 overflow-hidden">
+        <Image
+          src={prospect.avatarUrl || prospect.companyLogoUrl || '/images/placeholder-image.png'}
+          alt="Profile"
+          width={96}
+          height={96}
+          className="object-cover"
+        />
+      </div>
       {/* Quality Score Badge */}
       <div className="absolute top-4 right-4 z-10">
         <Badge variant={qualityScore >= 80 ? "default" : qualityScore >= 60 ? "secondary" : "destructive"}>
@@ -113,22 +111,21 @@ export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, o
           )}
 
           {/* LinkedIn */}
-          {prospect.linkedinUrl && (
-            <div className="flex items-center gap-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
-              <ExternalLink className="w-4 h-4 text-blue-600 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <a 
-                  href={prospect.linkedinUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm font-medium text-blue-700 hover:text-blue-800"
-                >
-                  LinkedIn Profile
-                </a>
-              </div>
-              <ExternalLink className="w-3 h-3 text-blue-400" />
+          <div className="flex items-center gap-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
+            <ExternalLink className="w-4 h-4 text-blue-600 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <a 
+                href={prospect.linkedinUrl || '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`text-sm font-medium ${prospect.linkedinUrl ? 'text-blue-700 hover:text-blue-800' : 'text-gray-400 cursor-not-allowed'}`}
+                aria-disabled={!prospect.linkedinUrl}
+              >
+                LinkedIn Profile
+              </a>
             </div>
-          )}
+            <ExternalLink className="w-3 h-3 text-blue-400" />
+          </div>
 
           {/* Phone */}
           {prospect.phone && (

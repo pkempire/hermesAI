@@ -1,6 +1,6 @@
 import { Analytics } from '@vercel/analytics/react'
 import type { Metadata, Viewport } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Inter, Playfair_Display } from 'next/font/google'
 
 import AppSidebar from '@/components/app-sidebar'
 import ArtifactRoot from '@/components/artifact/artifact-root'
@@ -13,14 +13,14 @@ import { cn } from '@/lib/utils'
 
 import './globals.css'
 
-const geistSans = Geist({
+const inter = Inter({
   subsets: ['latin'],
-  variable: '--font-geist-sans'
+  variable: '--font-sans'
 })
 
-const geistMono = Geist_Mono({
+const playfair = Playfair_Display({
   subsets: ['latin'],
-  variable: '--font-geist-mono'
+  variable: '--font-serif'
 })
 
 const title = 'HermesAI - AI-Powered Cold Email Prospecting'
@@ -30,6 +30,11 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://hermesai.com'),
   title,
   description,
+  icons: {
+    icon: '/favicon.png',
+    shortcut: '/favicon.png',
+    apple: '/favicon.png'
+  },
   openGraph: {
     title,
     description,
@@ -82,15 +87,15 @@ export default async function RootLayout({
       <body
         className={cn(
           'min-h-screen flex flex-col font-sans antialiased',
-          geistSans.variable,
-          geistMono.variable
+          inter.variable,
+          playfair.variable
         )}
         suppressHydrationWarning
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem
+          defaultTheme="light"
+          enableSystem={false}
           disableTransitionOnChange
         >
           <SidebarProvider defaultOpen>

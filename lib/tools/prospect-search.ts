@@ -163,11 +163,21 @@ export function createProspectSearchTool(model: string) {
             value: c.description,
             type: c.type
           }))
-          initialEnrichments = websetPlan.object.enrichments.map(e => ({
+          // Map, lowercase keys, de-duplicate, and cap to 10
+          const mapped = websetPlan.object.enrichments.map(e => ({
             label: e.name,
             value: e.name.toLowerCase().replace(/\s+/g, '_'),
             required: e.required
           }))
+          const seen = new Set<string>()
+          initialEnrichments = []
+          for (const e of mapped) {
+            if (!seen.has(e.value)) {
+              initialEnrichments.push(e)
+              seen.add(e.value)
+            }
+            if (initialEnrichments.length >= 10) break
+          }
           
         } catch (error) {
           console.error('❌ [prospectSearchTool] Error generating interactive webset plan:', error)
@@ -192,7 +202,11 @@ export function createProspectSearchTool(model: string) {
         ]
         const existing = new Set(initialEnrichments.map(e => e.value))
         for (const e of coreEnrichments) {
-          if (!existing.has(e.value)) initialEnrichments.push(e)
+          if (initialEnrichments.length >= 10) break
+          if (!existing.has(e.value)) {
+            initialEnrichments.push(e)
+            existing.add(e.value)
+          }
         }
 
         const result = {

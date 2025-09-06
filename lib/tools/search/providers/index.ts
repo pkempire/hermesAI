@@ -4,7 +4,7 @@ import { SearXNGSearchProvider } from './searxng'
 import { TavilySearchProvider } from './tavily'
 
 export type SearchProviderType = 'tavily' | 'exa' | 'searxng'
-export const DEFAULT_PROVIDER: SearchProviderType = 'tavily'
+export const DEFAULT_PROVIDER: SearchProviderType = 'exa'
 
 export function createSearchProvider(type?: SearchProviderType): SearchProvider {
   const providerType = type || (process.env.SEARCH_API as SearchProviderType) || DEFAULT_PROVIDER

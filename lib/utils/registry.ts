@@ -39,7 +39,8 @@ export function getToolCallModel(model?: string) {
     case 'anthropic':
       return getModel('anthropic:claude-3-haiku-20240307')
     default:
-      return getModel('openai:gpt-4o-mini')
+      // Prefer a fast OpenAI helper model; allow override
+      return getModel(process.env.TOOLCALL_MODEL_ID ? `openai:${process.env.TOOLCALL_MODEL_ID}` : 'openai:gpt-4o-mini')
   }
 }
 
