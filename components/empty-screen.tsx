@@ -64,10 +64,12 @@ const exampleMessages: Template[] = [
 
 export function EmptyScreen({
   submitMessage,
-  className
+  className,
+  hideHeader = false
 }: {
   submitMessage: (message: string) => void
   className?: string
+  hideHeader?: boolean
 }) {
   const rotating = [
     'perfect partnership',
@@ -85,12 +87,14 @@ export function EmptyScreen({
   return (
     <div className={`mx-auto w-full max-w-3xl transition-all ${className}`}>
       <div className="space-y-6">
-        <div className="text-center py-6">
-          <h1 className="text-3xl font-semibold">
-            Find your <span className="text-primary transition-colors">{rotating[wordIndex]}</span>
-          </h1>
-          <p className="text-sm text-muted-foreground mt-2">Ready-to-use templates from the community. Click to load into chat and edit before running.</p>
-        </div>
+        {!hideHeader && (
+          <div className="text-center py-6">
+            <h1 className="text-3xl font-semibold">
+              Find your <span className="text-primary transition-colors">{rotating[wordIndex]}</span>
+            </h1>
+            <p className="text-sm text-muted-foreground mt-2">Ready-to-use templates from the community. Click to load into chat and edit before running.</p>
+          </div>
+        )}
         {/* Intent-based template buttons */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {exampleMessages.map((tpl, index) => {

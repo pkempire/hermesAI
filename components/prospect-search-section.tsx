@@ -37,6 +37,7 @@ export function ProspectSearchSection({
   const [streamingWebsetId, setStreamingWebsetId] = useState<string | null>(null)
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null)
   const [lastStatus, setLastStatus] = useState<'idle' | 'running' | 'completed' | 'failed'>('idle')
+  const [showEmailDrafter, setShowEmailDrafter] = useState(false)
 
   // Parse the tool result to determine UI type and handle different response formats
   const parseToolResult = useCallback(() => {
@@ -143,6 +144,21 @@ export function ProspectSearchSection({
             return Array.from(byId.values())
           })
         }
+
+        // Emit pipeline progress event for the campaign tracker (0-100)
+        try {
+          const targetTotal = target || currentSearchCriteria.targetCount || 25
+          const found = typeof data.found === 'number' ? data.found : (data.prospects?.length || 0)
+          const percent = Math.max(0, Math.min(100, Math.round((found / Math.max(1, targetTotal)) * 100)))
+          window.dispatchEvent(new CustomEvent('pipeline-progress', {
+            detail: {
+              stepNumber: 1,
+              totalSteps: 5,
+              percent,
+              label: 'Searching and analyzing'
+            }
+          }))
+        } catch {}
         
         // Handle timeout
         if (pollCount >= maxPolls) {
@@ -176,6 +192,20 @@ export function ProspectSearchSection({
               entityType: currentSearchCriteria.entityType || 'person',
               websetId: streamingWebsetId
             })
+            try {
+              window.dispatchEvent(new CustomEvent('pipeline-progress', {
+                detail: { stepNumber: 2, totalSteps: 5, percent: 100, label: 'Discovery complete' }
+              }))
+            } catch {}
+
+            // Ask the model to propose next step via a short assistant message
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('chat-system-suggest', {
+                detail: {
+                  text: `Found ${data.prospects.length} prospects. I can now draft concise outreach and set up your email campaign. Ready to draft emails?`
+                }
+              }))
+            }, 300)
           } else {
             setSearchMessage('Search completed but no prospects found. Try broadening your criteria.')
             setSearchStatus('completed')
@@ -679,7 +709,21 @@ export function ProspectSearchSection({
 
                       {/* Display prospects */}
                       <ProspectGrid prospects={prospects} />
-                      {/* Drafting moved to dedicated step/component */}
+                      <div className="flex justify-end">
+                        <button
+                          className="px-3 py-2 text-xs rounded-md border bg-white hover:bg-muted transition-colors"
+                          onClick={() => {
+                            setShowEmailDrafter(true)
+                            try {
+                              window.dispatchEvent(new CustomEvent('pipeline-progress', {
+                                detail: { stepNumber: 3, totalSteps: 5, percent: 60, label: 'Draft emails' }
+                              }))
+                            } catch {}
+                          }}
+                        >
+                          Draft Emails
+                        </button>
+                      </div>
                     </div>
                   )}
 

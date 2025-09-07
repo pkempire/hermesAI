@@ -96,6 +96,26 @@ export function ToolSection({
       )
     default:
       console.log('❌ [ToolSection] No handler for tool:', tool.toolName)
-      return null
+      // Generic fallback renderer so the user sees what's happening for unknown tools
+      const resultText = (() => {
+        try {
+          if (typeof (tool as any).result === 'string') return (tool as any).result
+          if ((tool as any).result) return JSON.stringify((tool as any).result, null, 2)
+        } catch {}
+        return undefined
+      })()
+      return (
+        <div className="rounded-md border p-3 text-xs">
+          <div className="flex items-center justify-between">
+            <div className="font-medium">{tool.toolName}</div>
+            <div className="text-muted-foreground">{tool.state === 'call' ? 'Working…' : 'Done'}</div>
+          </div>
+          {resultText && (
+            <pre className="mt-2 whitespace-pre-wrap break-words text-[11px] opacity-90">
+              {resultText}
+            </pre>
+          )}
+        </div>
+      )
   }
 }

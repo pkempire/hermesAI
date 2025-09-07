@@ -133,12 +133,10 @@ export function ChatPanel({
         messages.length > 0 ? 'px-4 pb-4' : 'px-4 sm:px-8 pb-8'
       )}
     >
+      {/* Title header only */}
       {messages.length === 0 && (
-        <div className="mb-6 flex flex-col items-center gap-2">
-          <h1 className="text-3xl sm:text-4xl font-semibold">
-            Find your <span className="text-primary">AI sales engineer</span>
-          </h1>
-          <p className="text-sm text-muted-foreground">Ready-to-use templates from the community. Click to load into chat and edit before running.</p>
+        <div className="text-center py-6">
+          <h1 className="text-3xl font-semibold">Find your <span className="text-primary">AI sales engineer</span></h1>
         </div>
       )}
       
@@ -153,7 +151,7 @@ export function ChatPanel({
           }
           handleSubmit(e)
         }}
-        className={cn('max-w-4xl w-full mx-auto relative group/form')}
+        className={cn('max-w-4xl w-full mx-auto relative group/form', messages.length === 0 ? 'mb-6' : '')}
       >
         {/* Enhanced scroll to bottom button */}
         {showScrollToBottomButton && messages.length > 0 && (
@@ -260,19 +258,14 @@ export function ChatPanel({
           </div>
         </div>
 
+        {/* Templates under the input when empty */}
         {messages.length === 0 && (
-          <div className="mt-8">
+          <div className="mt-6">
             <EmptyScreen
+              hideHeader
               submitMessage={message => {
-                console.log('🔧 [ChatPanel] Template clicked, trying to submit:', message)
-                if (submitTemplateMessage) {
-                  console.log('🔧 [ChatPanel] Using submitTemplateMessage function')
-                  submitTemplateMessage(message)
-                } else {
-                  console.error('🔧 [ChatPanel] submitTemplateMessage not available')
-                }
+                if (submitTemplateMessage) submitTemplateMessage(message)
               }}
-              className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-500"
             />
           </div>
         )}

@@ -3,9 +3,9 @@
 import { CampaignSettings, EmailSequence, ProspectCriteria } from '@/components/campaign-builder'
 import { Prospect } from '@/components/prospect-grid'
 import {
-    createProspectEnrichments,
-    createProspectSearchCriteria,
-    getExaWebsetsClient
+  createProspectEnrichments,
+  createProspectSearchCriteria,
+  getExaWebsetsClient
 } from '@/lib/clients/exa-websets'
 import { optimizeProspectSearchQuery } from '@/lib/clients/openai-query-optimizer'
 import { createClient } from '@/lib/supabase/server'
@@ -236,25 +236,44 @@ export async function saveCampaignToDatabase(
     // Insert prospects
     if (prospects.length > 0) {
       console.log(`📝 [saveCampaignToDatabase] Inserting ${prospects.length} prospects...`)
-      
-      const prospectInserts = prospects.map(prospect => ({
-        id: prospect.id,
-        email: prospect.email,
-        first_name: prospect.fullName?.split(' ')[0] || '',
-        last_name: prospect.fullName?.split(' ').slice(1).join(' ') || '',
-        company: prospect.company,
-        job_title: prospect.jobTitle,
-        linkedin_url: prospect.linkedinUrl,
-        location: prospect.location,
-        industry: prospect.industry,
-        company_size: prospect.companySize,
-        website: prospect.website,
-        phone: undefined, // Not available in current Prospect interface
-        properties: prospect.enrichments || {},
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        verification_status: 'pending' // Default status
-      }));
+
+      const prospectInserts = prospects.map(prospect => {
+        const firstName = (prospect.fullName || '').trim().split(' ')[0] || ''
+        const lastName = (prospect.fullName || '')
+          .trim()
+          .split(' ')
+          .slice(1)
+          .join(' ')
+
+        return {
+          // link to campaign and exa item
+          campaign_id: (campaign as any).id,
+          exa_item_id: prospect.exaItemId || prospect.id,
+
+          // identity
+          full_name: prospect.fullName || `${firstName} ${lastName}`.trim(),
+          first_name: firstName,
+          last_name: lastName,
+
+          // contact/profile
+          email: prospect.email,
+          phone: (prospect as any).phone,
+          linkedin_url: prospect.linkedinUrl,
+          website: prospect.website,
+
+          // professional/company
+          company: prospect.company,
+          job_title: prospect.jobTitle,
+          industry: prospect.industry,
+          company_size: prospect.companySize,
+
+          // location
+          location: prospect.location,
+
+          // enrichments payload
+          enrichments: prospect.enrichments || {}
+        }
+      })
 
       const { error: prospectsError } = await supabase
         .from('prospects')

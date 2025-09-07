@@ -85,29 +85,39 @@ export async function POST(req: NextRequest) {
 
     console.log('✅ [POST /api/prospect-search/execute] Webset created:', webset.id)
 
-    // Persist minimal campaign record (best-effort)
+    // Persist minimal campaign record (best-effort) — guard against duplicates
     try {
       const supabase = await createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         const name = (originalQuery || 'Prospect Campaign').slice(0, 80)
-        const { data: campaign } = await supabase
+        // check if a campaign already exists for this user + webset
+        const { data: existing } = await supabase
           .from('campaigns')
-          .insert({
-            user_id: user.id,
-            name,
-            status: 'active',
-            prospect_query: { query: originalQuery, criteria },
-            entity_type: entityType || 'person',
-            enrichments: enrichments || [],
-            filters: searchCriteria.filters || {},
-            target_count: targetCount,
-            settings: { exa_webset_id: webset.id }
-          })
-          .select('id')
-          .single()
-        if (campaign) {
-          console.log('🗂️ [POST /api/prospect-search/execute] Campaign persisted:', campaign.id)
+          .select('id, settings')
+          .eq('user_id', user.id)
+          .contains('settings', { exa_webset_id: webset.id } as any)
+          .maybeSingle()
+
+        if (!existing) {
+          const { data: campaign } = await supabase
+            .from('campaigns')
+            .insert({
+              user_id: user.id,
+              name,
+              status: 'active',
+              prospect_query: { query: originalQuery, criteria },
+              entity_type: entityType || 'person',
+              enrichments: enrichments || [],
+              filters: searchCriteria.filters || {},
+              target_count: targetCount,
+              settings: { exa_webset_id: webset.id }
+            })
+            .select('id')
+            .single()
+          if (campaign) {
+            console.log('🗂️ [POST /api/prospect-search/execute] Campaign persisted:', campaign.id)
+          }
         }
       }
     } catch (persistError) {

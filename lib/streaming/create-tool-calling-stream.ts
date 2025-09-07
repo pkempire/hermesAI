@@ -150,6 +150,15 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
                         }
                       }
                     })
+                    // Emit concise pipeline guidance for chained flows
+                    try {
+                      if (item.toolName === 'scrape_site') {
+                        writer.write({ type: 'data-pipeline', data: { scope: 'campaign', stepNumber: 1, totalSteps: 5, percent: 10, label: 'Analyze your website' } })
+                      }
+                      if (item.toolName === 'ask_question') {
+                        writer.write({ type: 'data-pipeline', data: { scope: 'campaign', stepNumber: 1, totalSteps: 5, percent: 15, label: 'Confirm targeting' } })
+                      }
+                    } catch {}
                     // Emit pipeline step (persistent campaign tracker)
                     if (item.toolName === 'prospect_search') {
                       writer.write({
@@ -184,6 +193,15 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
                         }
                       }
                     })
+                    // Advance pipeline for chained flows
+                    try {
+                      if (item.toolName === 'scrape_site') {
+                        writer.write({ type: 'data-pipeline', data: { scope: 'campaign', stepNumber: 1, totalSteps: 5, percent: 18, label: 'Website analyzed' } })
+                      }
+                      if (item.toolName === 'ask_question') {
+                        writer.write({ type: 'data-pipeline', data: { scope: 'campaign', stepNumber: 1, totalSteps: 5, percent: 22, label: 'Target confirmed' } })
+                      }
+                    } catch {}
                   }
                 }
               }

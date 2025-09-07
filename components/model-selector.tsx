@@ -6,7 +6,7 @@ import { isReasoningModel } from '@/lib/utils/registry'
 import { Check, ChevronsUpDown, Lightbulb } from 'lucide-react'
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
-import { createModelId } from '../lib/utils'
+import { createModelId } from '@/lib/utils'
 import { Button } from './ui/button'
 import {
   Command,

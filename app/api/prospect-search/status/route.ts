@@ -125,8 +125,9 @@ export async function GET(req: NextRequest) {
                       const fmt = enrichment.format as string | undefined;
                       const isEmail = fmt === 'email' || valueStr.includes('@');
                       const isLinkedIn = valueStr.includes('linkedin.com');
-                      const isJobTitle = /(founder|ceo|chief|director|manager|head|vp|president|admissions|strategist|consultant|teacher)/i.test(valueStr) || valueStr.includes(' at ');
-                      const isCompany = /(inc\.|inc\b|llc\b|corp\b|corporation|company|academy|school|counseling|education|consulting|group|partners)/i.test(lower);
+                      const isJobTitle = /(founder|ceo|chief|principal|director|manager|head|vp|president|admissions|strategist|consultant|teacher)/i.test(valueStr) || valueStr.includes(' at ');
+                      const isCompany = /(inc\.|inc\b|llc\b|corp\b|corporation|company|academy|school|counseling|education|consulting|group|partners|college)/i.test(lower) && !isJobTitle;
+                      const isLikelyAddress = /\d{2,}.*\b(AZ|AL|AK|AR|CA|CO|CT|DC|DE|FL|GA|HI|IA|ID|IL|IN|KS|KY|LA|MA|MD|ME|MI|MN|MO|MS|MT|NC|ND|NE|NH|NJ|NM|NV|NY|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VA|VT|WA|WI|WV)\b/i.test(valueStr);
                       const looksLikeName = valueStr.split(' ').length <= 4 && valueStr.split(' ').every(w => /^(?:[A-Z][a-z'-]+|&|of|and)$/.test(w)) && !isJobTitle && !isCompany;
                       
                       if (isEmail) {
@@ -144,6 +145,9 @@ export async function GET(req: NextRequest) {
                       } else if (isCompany) {
                         prospect.company = valueStr;
                         console.log(`[GET /api/prospect-search/status] Set company to:`, valueStr);
+                      } else if (isLikelyAddress) {
+                        prospect.location = valueStr;
+                        console.log(`[GET /api/prospect-search/status] Set location (address) to:`, valueStr);
                       }
                     } else if (enrichment.status === 'canceled' || enrichment.status === 'failed') {
                       console.log(`[GET /api/prospect-search/status] Enrichment ${index} ${enrichment.status}, may retry later`);
@@ -159,7 +163,7 @@ export async function GET(req: NextRequest) {
                       
                       if (value && value !== 'null' && value !== 'None') {
                         // Map by enrichmentId patterns or value content
-                        if (enrichmentId.includes('cjr01') || (typeof value === 'string' && !value.includes('@') && !value.includes('http') && !value.includes('United States') && value.length < 50)) {
+                        if (enrichmentId.includes('cjr01') || (typeof value === 'string' && !value.includes('@') && !value.includes('http') && !/founder|principal|director|manager|ceo/i.test(String(value)) && value.length < 60)) {
                           // Company name enrichment
                           prospect.company = value as string | undefined;
                           console.log(`[GET /api/prospect-search/status] Set company to:`, value);
@@ -169,7 +173,7 @@ export async function GET(req: NextRequest) {
                           console.log(`[GET /api/prospect-search/status] Set email to:`, value);
                         } else if (enrichmentId.includes('bjr01') || (typeof value === 'string' && value.includes('linkedin.com'))) {
                           // LinkedIn URL enrichment
-                          prospect.linkedinUrl = value as string | undefined;
+                          prospect.linkedinUrl = String(value);
                           console.log(`[GET /api/prospect-search/status] Set LinkedIn to:`, value);
                           
                           // Extract name from LinkedIn URL if we don't have a better name
@@ -187,7 +191,7 @@ export async function GET(req: NextRequest) {
                               }
                             }
                           }
-                        } else if (enrichmentId.includes('djr01') || (typeof value === 'string' && ((value as string).includes('United States') || (value as string).includes('California') || (value as string).includes('Ohio')))) {
+                        } else if (enrichmentId.includes('djr01') || (typeof value === 'string' && (/(United States|[A-Z]{2})/i.test(String(value)) || /\d/.test(String(value))))) {
                           // Location enrichment
                           prospect.location = value as string | undefined;
                           console.log(`[GET /api/prospect-search/status] Set location to:`, value);

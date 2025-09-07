@@ -147,6 +147,32 @@ export function Chat({
     } catch {}
   }, [uiData, showProgressTracker])
 
+  // Also listen to window events from sections for progress updates
+  useEffect(() => {
+    const handler = (e: any) => {
+      const d = e?.detail
+      if (!d) return
+      if (d.stepNumber) setCurrentCampaignStep(d.stepNumber)
+      if (d.totalSteps) setTotalCampaignSteps(d.totalSteps)
+      if (typeof d.percent === 'number') setCampaignPercent(d.percent)
+      if (d.label) setCampaignStepLabel(d.label)
+      if (!showProgressTracker) setShowProgressTracker(true)
+    }
+    window.addEventListener('pipeline-progress', handler as any)
+    return () => window.removeEventListener('pipeline-progress', handler as any)
+  }, [showProgressTracker])
+
+  // Surface short assistant suggestions emitted by sections
+  useEffect(() => {
+    const handler = (e: any) => {
+      const text = e?.detail?.text
+      if (!text) return
+      setMessages((prev: any) => ([...prev, { id: crypto.randomUUID?.() || String(Date.now()), role: 'assistant', parts: [{ type: 'text', text }] }]))
+    }
+    window.addEventListener('chat-system-suggest', handler as any)
+    return () => window.removeEventListener('chat-system-suggest', handler as any)
+  }, [setMessages])
+
   // Convert messages array to sections array
   const sections = useMemo<ChatSection[]>(() => {
     const result: ChatSection[] = []
@@ -302,12 +328,6 @@ export function Chat({
       )}
       data-testid="full-chat"
     >
-      {/* History disabled banner */}
-      {process.env.NEXT_PUBLIC_ENABLE_SAVE_CHAT_HISTORY !== 'true' && (
-        <div className="absolute top-0 left-0 right-0 z-20 bg-yellow-50 text-yellow-800 border-b border-yellow-200 px-4 py-2 text-xs text-center">
-          Chat history is disabled. Set ENABLE_SAVE_CHAT_HISTORY=true to enable saving.
-        </div>
-      )}
       {showProgressTracker ? (
         // Campaign layout with persistent progress panel on the RIGHT (visible once a campaign starts)
         <div className="flex h-full relative z-10">
