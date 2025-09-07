@@ -1,8 +1,8 @@
 import { Model } from '@/lib/types/models'
 
 export const DEFAULT_MODEL: Model = {
-  id: process.env.DEFAULT_MODEL_ID || 'gpt-4o',
-  name: process.env.DEFAULT_MODEL_NAME || 'GPT-4o',
+  id: process.env.DEFAULT_MODEL_ID || 'gpt-5',
+  name: process.env.DEFAULT_MODEL_NAME || 'GPT-5',
   provider: 'OpenAI', 
   providerId: 'openai',
   enabled: true,

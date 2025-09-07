@@ -40,7 +40,7 @@ export function getToolCallModel(model?: string) {
       return getModel('anthropic:claude-3-haiku-20240307')
     default:
       // Prefer a fast OpenAI helper model; allow override
-      return getModel(process.env.TOOLCALL_MODEL_ID ? `openai:${process.env.TOOLCALL_MODEL_ID}` : 'openai:gpt-4o-mini')
+      return getModel(process.env.TOOLCALL_MODEL_ID ? `openai:${process.env.TOOLCALL_MODEL_ID}` : 'openai:gpt-5')
   }
 }
 
@@ -56,5 +56,5 @@ export function isReasoningModel(model: string): boolean {
     return false
   }
   // Only OpenAI o3-mini for now since we removed deepseek
-  return model.includes('o3-mini')
+  return model.includes('gpt-5-reasoning') || model.includes('o3-mini')
 }

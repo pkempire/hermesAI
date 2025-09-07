@@ -4,7 +4,7 @@ async function testProspectSearch() {
   console.log('🔧 Testing prospect search tool creation...');
   
   try {
-    const tool = createProspectSearchTool('openai:gpt-4o');
+    const tool = createProspectSearchTool('openai:gpt-5');
     console.log('✅ Tool created successfully');
     console.log('Tool description:', tool.description);
     console.log('Tool parameters schema:', tool.parameters);

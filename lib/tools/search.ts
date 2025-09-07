@@ -97,7 +97,7 @@ export function createSearchTool(fullModel: string) {
 }
 
 // Default export for backward compatibility, using a default model
-export const searchTool = createSearchTool('openai:gpt-4o-mini')
+export const searchTool = createSearchTool('openai:gpt-5')
 
 export async function search(
   query: string,

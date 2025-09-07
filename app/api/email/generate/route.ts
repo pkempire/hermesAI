@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Use GPT-4o for reliable email generation  
-    const model = getModel('openai:gpt-4o')
+    const model = getModel('openai:gpt-5')
 
     // Sample prospect context for personalization
     const prospectContext = prospects?.slice(0, 3).map((p: any) => ({

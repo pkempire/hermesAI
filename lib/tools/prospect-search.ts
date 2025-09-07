@@ -46,7 +46,7 @@ export function createProspectSearchTool(model: string) {
             const { getModel } = await import('@/lib/utils/registry')
             const { z } = await import('zod')
             
-            const model = getModel('openai:gpt-4o')
+            const model = getModel('openai:gpt-5')
             
             const criteriaSchema = z.object({
               entityType: z.enum(['person', 'company']).describe('Whether searching for people or companies'),
@@ -107,7 +107,7 @@ export function createProspectSearchTool(model: string) {
           const { getModel } = await import('@/lib/utils/registry')
           const { z } = await import('zod')
           
-          const model = getModel('openai:gpt-4o')
+          const model = getModel('openai:gpt-5')
           
           const websetPlanSchema = z.object({
             entityType: z.enum(['person', 'company']).describe('Whether searching for people or companies'),
@@ -241,7 +241,7 @@ export function createProspectSearchTool(model: string) {
         const { getModel } = await import('@/lib/utils/registry')
         const { z } = await import('zod')
         
-        const model = getModel('openai:gpt-4o')
+        const model = getModel('openai:gpt-5')
         
         const websetPlanSchema = z.object({
           entityType: z.enum(['person', 'company']).describe('Whether searching for people or companies'),

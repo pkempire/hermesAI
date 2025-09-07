@@ -33,16 +33,8 @@
       "toolCallType": "native"
     },
     {
-      "id": "gpt-4o",
-      "name": "GPT-4o",
-      "provider": "OpenAI",
-      "providerId": "openai",
-      "enabled": true,
-      "toolCallType": "native"
-    },
-    {
-      "id": "gpt-4o-mini",
-      "name": "GPT-4o mini",
+      "id": "gpt-5",
+      "name": "GPT-5",
       "provider": "OpenAI",
       "providerId": "openai",
       "enabled": true,
