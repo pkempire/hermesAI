@@ -353,12 +353,12 @@ export function Chat({
       data-testid="full-chat"
     >
       {showProgressTracker ? (
-        // Campaign layout with persistent progress panel on the RIGHT (visible once a campaign starts)
-        <div className="flex h-full relative z-10">
+        // Campaign layout with compact progress at top; chat takes full width
+        <div className="flex h-full relative z-10 flex-1 flex-col">
           <div className="flex-1 flex flex-col">
             {/* Campaign overview strip */}
             {showProgressTracker && (
-              <div className="border-b border-border px-4 py-2 text-xs flex items-center justify-between bg-card/60">
+              <div className="border-b border-border px-4 py-2 text-xs flex items-center justify-between bg-card/60 sticky top-0 z-10">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">Campaign</span>
                   <span className="text-muted-foreground">Step {currentCampaignStep} of {totalCampaignSteps}</span>
@@ -400,18 +400,6 @@ export function Chat({
               scrollContainerRef={scrollContainerRef}
               submitTemplateMessage={submitTemplateMessage}
             />
-          </div>
-          <div className="hidden md:block md:w-60 bg-card/80 border-l border-border backdrop-blur">
-            <div className="p-3 sticky top-0">
-              <CampaignProgressTracker 
-                currentStep={currentCampaignStep}
-                campaignTitle="Campaign"
-                className="text-xs"
-              />
-              <div className="mt-2 text-[10px] text-muted-foreground truncate">
-                {campaignStepLabel}
-              </div>
-            </div>
           </div>
         </div>
       ) : (

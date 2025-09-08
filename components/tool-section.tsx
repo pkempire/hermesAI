@@ -26,6 +26,9 @@ export function ToolSection({
   // ask_question is rendered inline in chat; no special popup UI here.
 
   switch (tool.toolName) {
+    case 'ask_question':
+      // Render nothing; clarifying questions are asked inline in chat now
+      return null
     case 'search':
       if (process.env.NODE_ENV !== 'production') console.log('🔧 [ToolSection] Rendering SearchSection')
       return (

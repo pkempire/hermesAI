@@ -774,6 +774,24 @@ export function ProspectSearchSection({
                     </div>
                   )}
                 </CardContent>
+                {showEmailDrafter && prospects.length > 0 && (
+                  <div className="px-4 pb-4">
+                    <div className="rounded-md border bg-card p-3 mb-3 text-xs text-muted-foreground">
+                      Drafting emails for {prospects.length} prospects. You can define a template and add natural‑language enrichments.
+                    </div>
+                    {/* Inline interactive email drafter */}
+                    <div className="bg-white rounded-md border p-3">
+                      {/* Light-weight header and CTA to open a dedicated drawer/page later; for now we render inline */}
+                      <div className="text-xs text-muted-foreground mb-2">Interactive Email Drafter</div>
+                      {/* @ts-ignore */}
+                      <div className="mt-2">
+                        {/* We import directly to keep scope minimal for now */}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <span className="text-[11px]">Open the drafter via the Templates tab to customize subject/body with variables like {'{'}firstName{'}'}, {'{'}company{'}'}. AI generation available.</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CollapsibleContent>
             </Card>
           </Collapsible>
