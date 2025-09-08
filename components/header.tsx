@@ -6,7 +6,9 @@ import { User } from '@supabase/supabase-js'
 // import Link from 'next/link' // No longer needed directly here for Sign In button
 import React from 'react'
 // import { Button } from './ui/button' // No longer needed directly here for Sign In button
-import GuestMenu from './guest-menu' // Import the new GuestMenu component
+import { getStripeCheckoutUrl } from '@/lib/utils'
+import Link from 'next/link'
+import GuestMenu from './guest-menu'; // Import the new GuestMenu component
 import UserMenu from './user-menu'
 
 interface HeaderProps {
@@ -24,6 +26,9 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
       )}
     >
       <div className="flex items-center gap-2 ml-auto">
+        <Link href={getStripeCheckoutUrl()} className="hidden sm:inline-block text-xs px-3 py-1.5 rounded-full border bg-white/60 hover:bg-white transition">
+          Upgrade $39/mo
+        </Link>
         {user ? <UserMenu user={user} /> : <GuestMenu />}
       </div>
     </header>

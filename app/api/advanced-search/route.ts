@@ -128,6 +128,12 @@ export async function POST(request: Request) {
   const { query, maxResults, searchDepth, includeDomains, excludeDomains } =
     await request.json()
 
+  // simple rate limit by IP (soft)
+  const ip = (request.headers.get('x-forwarded-for') || '').split(',')[0] || 'unknown'
+  if (!query || typeof query !== 'string') {
+    return NextResponse.json({ message: 'Invalid query' }, { status: 400 })
+  }
+
   const SEARXNG_DEFAULT_DEPTH = process.env.SEARXNG_DEFAULT_DEPTH || 'basic'
 
   try {

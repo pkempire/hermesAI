@@ -3,7 +3,8 @@ import {
   CoreMessage,
   createUIMessageStream,
   createUIMessageStreamResponse,
-  streamText
+  streamText,
+  stepCountIs
 } from 'ai'
 import { isReasoningModel } from '../utils/registry'
 import { handleStreamFinish } from './handle-stream-finish'
@@ -23,12 +24,13 @@ function containsAskQuestionTool(message: CoreMessage) {
 }
 
 export function createToolCallingStreamResponse(config: BaseStreamConfig) {
+  const DEBUG = process.env.NODE_ENV !== 'production'
   return createUIMessageStreamResponse({
     stream: createUIMessageStream({
       async execute({ writer }) {
         const { messages, model, chatId, searchMode, userId } = config
         
-        console.log('🔧 [createToolCallingStreamResponse] Config received:', {
+        DEBUG && console.log('🔧 [createToolCallingStreamResponse] Config received:', {
           hasMessages: !!messages,
           messagesType: typeof messages,
           messagesLength: messages?.length,
@@ -39,16 +41,16 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
         })
       const modelId = `${model.providerId}:${model.id}`
 
-      console.log('🔧 [createToolCallingStreamResponse] =================== STREAM STARTING ===================')
-      console.log('🔧 [createToolCallingStreamResponse] Model ID:', modelId)
-      console.log('🔧 [createToolCallingStreamResponse] Search Mode:', searchMode)
-      console.log('🔧 [createToolCallingStreamResponse] Messages:', messages.length)
+      DEBUG && console.log('🔧 [createToolCallingStreamResponse] =================== STREAM STARTING ===================')
+      DEBUG && console.log('🔧 [createToolCallingStreamResponse] Model ID:', modelId)
+      DEBUG && console.log('🔧 [createToolCallingStreamResponse] Search Mode:', searchMode)
+      DEBUG && console.log('🔧 [createToolCallingStreamResponse] Messages:', messages.length)
 
       try {
         // Debug messages before conversion
-        console.log('🔧 [createToolCallingStreamResponse] Messages type:', typeof messages)
-        console.log('🔧 [createToolCallingStreamResponse] Messages is array:', Array.isArray(messages))
-        console.log('🔧 [createToolCallingStreamResponse] Messages content:', messages)
+        DEBUG && console.log('🔧 [createToolCallingStreamResponse] Messages type:', typeof messages)
+        DEBUG && console.log('🔧 [createToolCallingStreamResponse] Messages is array:', Array.isArray(messages))
+        DEBUG && console.log('🔧 [createToolCallingStreamResponse] Messages content:', messages)
         
         // Guard against undefined messages
         if (!messages || !Array.isArray(messages)) {
@@ -69,12 +71,12 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
             )
           
           if (!isValid) {
-            console.warn('❌ [createToolCallingStreamResponse] Invalid message filtered out:', msg)
+            DEBUG && console.warn('❌ [createToolCallingStreamResponse] Invalid message filtered out:', msg)
           }
           return isValid
         })
         
-        console.log('🔧 [createToolCallingStreamResponse] Valid messages for conversion:', validMessages.length)
+        DEBUG && console.log('🔧 [createToolCallingStreamResponse] Valid messages for conversion:', validMessages.length)
         
         // Clean UI messages to remove problematic tool states before conversion
         const cleanUIMessages = (messages: any[]) => {
@@ -115,7 +117,7 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
           }
           return { role: msg.role, content }
         })
-        console.log('✅ [createToolCallingStreamResponse] Messages converted successfully:', modelMessages.length)
+        DEBUG && console.log('✅ [createToolCallingStreamResponse] Messages converted successfully:', modelMessages.length)
 
         let researcherConfig = await researcher({
           messages: modelMessages,
@@ -123,14 +125,15 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
           searchMode
         })
 
-        console.log('🔧 [createToolCallingStreamResponse] About to call streamText with tools:', Object.keys(researcherConfig.tools || {}))
-        console.log('🔧 [createToolCallingStreamResponse] Active tools:', researcherConfig.experimental_activeTools)
+        DEBUG && console.log('🔧 [createToolCallingStreamResponse] About to call streamText with tools:', Object.keys(researcherConfig.tools || {}))
+        DEBUG && console.log('🔧 [createToolCallingStreamResponse] Active tools:', researcherConfig.experimental_activeTools)
 
         const result = streamText({
           ...researcherConfig,
+          stopWhen: stepCountIs(5),
           onStepFinish: (step) => {
-            console.log('🔧 [streamText] Step finished')
-            console.log('🔧 [streamText] Step details:', step)
+            DEBUG && console.log('🔧 [streamText] Step finished')
+            DEBUG && console.log('🔧 [streamText] Step details:', step)
             // Mirror tool-call and tool-result into data chunks for immediate UI rendering
             try {
               const content = (step as any)?.content as any[] | undefined
