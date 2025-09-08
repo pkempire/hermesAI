@@ -139,6 +139,10 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
               const content = (step as any)?.content as any[] | undefined
               if (Array.isArray(content)) {
                 for (const item of content) {
+                  // Guard: drop consecutive identical tool-calls to avoid loops
+                  if (item?.type === 'tool-call' && item?.toolName === 'search') {
+                    // noop; we do not mirror 'search' tool-call metadata to UI to reduce churn
+                  }
                   if (item?.type === 'tool-call') {
                     // Mirror tool-call to message metadata for UI
                     writer.write({

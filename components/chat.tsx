@@ -362,9 +362,6 @@ export function Chat({
                   <span className="font-medium">Campaign</span>
                   <span className="text-muted-foreground">Step {currentCampaignStep} of {totalCampaignSteps}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button className="px-2 py-1 border rounded">Refresh</button>
-                </div>
               </div>
             )}
             <ChatMessages

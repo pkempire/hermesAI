@@ -1,9 +1,9 @@
 import { CoreMessage, smoothStream, streamText } from 'ai'
+import { createEmailDrafterTool } from '../tools/email-drafter'
 import { createProspectSearchTool } from '../tools/prospect-search'
 import { createQuestionTool } from '../tools/question'
 import { createScrapeSiteTool } from '../tools/scrape'
 import { createSearchTool } from '../tools/search'
-import { createEmailDrafterTool } from '../tools/email-drafter'
 import { getModel } from '../utils/registry'
 
 const SYSTEM_PROMPT = `You are HermesAI — the swift messenger and pragmatic copilot for B2B outbound. Be helpful, fast, and human. You know when to use tools and when to just talk.
