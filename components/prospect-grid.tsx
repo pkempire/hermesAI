@@ -2,11 +2,11 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { getStripeCheckoutUrl } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Grid3x3, List, Users } from 'lucide-react';
 import { useState } from 'react';
 import { ProspectCard } from './prospect-card';
-import { getStripeCheckoutUrl } from '@/lib/utils'
 
 // Prospect interface definition
 export interface Prospect {

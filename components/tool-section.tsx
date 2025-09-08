@@ -24,41 +24,7 @@ export function ToolSection({
     console.log('🔧 [ToolSection] Processing tool:', tool.toolName, 'state:', tool.state)
   }
   
-  // Special handling for ask_question tool
-  if (tool.toolName === 'ask_question') {
-    if (process.env.NODE_ENV !== 'production') console.log('🔧 [ToolSection] Processing ask_question tool')
-    // When waiting for user input
-    if (tool.state === 'call' && addToolResult) {
-      return (
-        <QuestionConfirmation
-          toolInvocation={tool}
-          onConfirm={(toolCallId, approved, response) => {
-            addToolResult({
-              toolCallId,
-              result: approved
-                ? response
-                : {
-                    declined: true,
-                    skipped: response?.skipped,
-                    message: 'User declined this question'
-                  }
-            })
-          }}
-        />
-      )
-    }
-
-    // When result is available, display the result
-    if (tool.state === 'result') {
-      return (
-        <QuestionConfirmation
-          toolInvocation={tool}
-          isCompleted={true}
-          onConfirm={() => {}} // Not used in result display mode
-        />
-      )
-    }
-  }
+  // ask_question is rendered inline in chat; no special popup UI here.
 
   switch (tool.toolName) {
     case 'search':

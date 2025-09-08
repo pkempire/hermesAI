@@ -309,6 +309,20 @@ export function Chat({
     
     try {
       if (typeof sendMessage === 'function') {
+        // If last assistant step is ask_question waiting for input, send as tool result
+        try {
+          const last = messages[messages.length - 1] as any
+          const parts = (last?.parts || []) as any[]
+          const lastPart = parts[parts.length - 1]
+          const isAsk = lastPart?.type === 'tool-call' && lastPart?.toolName === 'ask_question'
+          const toolCallId = isAsk ? lastPart.toolCallId : undefined
+          if (isAsk && (chatHook as any)?.addToolResult) {
+            ;(chatHook as any).addToolResult({ tool: 'ask_question', toolCallId, output: { type: 'text', value: messageToSend.trim() } })
+            if (!messageOverride) setInput('')
+            return
+          }
+        } catch {}
+
         sendMessage({ role: 'user', parts: [{ type: 'text', text: messageToSend.trim() }] } as any)
         if (!messageOverride) {
           setInput('')
@@ -388,21 +402,14 @@ export function Chat({
             />
           </div>
           <div className="hidden md:block md:w-64 bg-card border-l border-border">
-            <div className="p-4 border-b border-border">
-              <h3 className="font-semibold text-foreground mb-1">Campaign Builder</h3>
-              <p className="text-xs text-muted-foreground">AI-powered prospect discovery</p>
-            </div>
-            <div className="p-3 overflow-y-auto h-[calc(100%-4rem)]">
+            <div className="p-3">
               <CampaignProgressTracker 
                 currentStep={currentCampaignStep}
-                campaignTitle="Cold Email Campaign"
-                className="text-sm"
+                campaignTitle="Campaign"
+                className="text-xs"
               />
-              <div className="mt-3 text-[11px] text-muted-foreground">
-                <div className="font-medium">Step {currentCampaignStep} of {totalCampaignSteps}: {campaignStepLabel}</div>
-                <div className="w-full h-1.5 bg-muted rounded-full mt-2">
-                  <div className="h-1.5 bg-primary rounded-full transition-all" style={{ width: `${campaignPercent}%` }} />
-                </div>
+              <div className="mt-2 text-[10px] text-muted-foreground truncate">
+                {campaignStepLabel}
               </div>
             </div>
           </div>

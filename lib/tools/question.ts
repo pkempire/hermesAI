@@ -9,7 +9,8 @@ export function createQuestionTool(fullModel: string) {
     description:
       'Ask a clarifying question with multiple options when more information is needed',
     inputSchema: getQuestionSchemaForModel(fullModel)
-    // execute function removed to enable frontend confirmation
+    // No execute: we expect the model to emit a tool-call with the question payload;
+    // the next user message is captured and sent back via addToolResult inline.
   })
 }
 

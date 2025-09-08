@@ -3,10 +3,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { getStripeCheckoutUrl } from '@/lib/utils';
 import { Building2, CheckCircle, CheckCircle2, ExternalLink, Mail, MapPin, MessageSquare, Phone, User, XCircle } from 'lucide-react';
 import Image from 'next/image';
 import { Prospect } from './prospect-grid';
-import { getStripeCheckoutUrl } from '@/lib/utils'
 
 export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, onNoteChange }: {
   prospect: Prospect;

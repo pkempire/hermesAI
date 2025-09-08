@@ -101,9 +101,12 @@ export function ChatPanel({
     // Support both legacy and v5 shapes
     if (lastPart?.type === 'tool-invocation') {
       const inv = (lastPart as any).toolInvocation || lastPart
+      // Do not block input for ask_question; allow inline answering
+      if (inv?.toolName === 'ask_question') return false
       return inv?.state === 'call'
     }
     if (lastPart?.type === 'tool-call') {
+      if ((lastPart as any)?.toolName === 'ask_question') return false
       return true
     }
     return false

@@ -127,110 +127,19 @@ export function CampaignProgressTracker({
   }
 
   return (
-    <Card className={`${className}`}>
-      <CardContent className="p-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h3 className="text-lg font-semibold">{campaignTitle}</h3>
-            <p className="text-sm text-muted-foreground">
-              Step {currentStep} of {steps.length} • {Math.round(progressPercentage)}% Complete
-            </p>
-          </div>
-          <Badge variant={progressPercentage === 100 ? 'default' : 'secondary'}>
-            {progressPercentage === 100 ? 'Complete' : 'In Progress'}
-          </Badge>
+    <div className={`rounded-md border bg-card ${className}`}>
+      <div className="p-3">
+        <div className="flex items-center justify-between">
+          <div className="text-xs font-medium text-foreground/80">{campaignTitle}</div>
+          <div className="text-[10px] text-muted-foreground">{Math.round(progressPercentage)}%</div>
         </div>
-
-        {/* Progress Bar */}
-        <div className="mb-6">
-          <Progress value={progressPercentage} className="w-full h-2" />
+        <div className="mt-2 w-full h-1.5 bg-muted rounded-full overflow-hidden">
+          <div className="h-1.5 bg-primary rounded-full transition-all" style={{ width: `${progressPercentage}%` }} />
         </div>
-
-        {/* Steps */}
-        <div className="space-y-4">
-          {updatedSteps.map((step, index) => (
-            <div key={step.id} className="flex items-start space-x-4">
-              {/* Step Icon */}
-              <div className="flex flex-col items-center">
-                {getStepIcon(step)}
-                {index < steps.length - 1 && (
-                  <div className={`w-px h-8 mt-2 ${
-                    step.status === 'completed' ? 'bg-green-200' : 'bg-gray-200'
-                  }`} />
-                )}
-              </div>
-
-              {/* Step Content */}
-              <div className={`flex-1 min-w-0 pb-4 ${index === steps.length - 1 ? 'pb-0' : ''}`}>
-                <div className={`p-4 rounded-lg border ${getStepColor(step)}`}>
-                  <div className="flex items-center justify-between mb-1">
-                    <h4 className={`font-medium ${
-                      step.status === 'completed' ? 'text-green-900' :
-                      step.status === 'current' ? 'text-blue-900' : 'text-gray-700'
-                    }`}>
-                      {step.title}
-                    </h4>
-                    <div className="flex items-center space-x-2">
-                      {step.status === 'completed' && step.completedAt && (
-                        <span className="text-xs text-green-600">
-                          Completed {step.completedAt.toLocaleTimeString([], { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}
-                        </span>
-                      )}
-                      {step.status === 'current' && (
-                        <div className="flex items-center space-x-1 text-blue-600">
-                          <Clock className="w-3 h-3" />
-                          <span className="text-xs">{step.estimatedTime}</span>
-                        </div>
-                      )}
-                      {step.status === 'pending' && step.estimatedTime && (
-                        <span className="text-xs text-gray-500">
-                          ~{step.estimatedTime}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <p className={`text-sm ${
-                    step.status === 'completed' ? 'text-green-700' :
-                    step.status === 'current' ? 'text-blue-700' : 'text-gray-600'
-                  }`}>
-                    {step.description}
-                  </p>
-
-                  {/* Current step indicator */}
-                  {step.status === 'current' && (
-                    <div className="flex items-center space-x-1 mt-2 text-blue-600">
-                      <ArrowRight className="w-3 h-3" />
-                      <span className="text-xs font-medium">Currently working on this step</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="mt-2 text-[11px] text-muted-foreground truncate">
+          Step {currentStep} of {steps.length}
         </div>
-
-        {/* Summary */}
-        {progressPercentage === 100 && (
-          <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <div className="flex items-center space-x-2">
-              <CheckCircle2 className="w-5 h-5 text-green-600" />
-              <div>
-                <p className="text-sm font-medium text-green-900">
-                  Campaign Setup Complete!
-                </p>
-                <p className="text-xs text-green-700 mt-1">
-                  Your campaign is ready to launch. All steps have been completed successfully.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
