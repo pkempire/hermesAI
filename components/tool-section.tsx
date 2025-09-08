@@ -26,6 +26,25 @@ export function ToolSection({
   // ask_question is rendered inline in chat; no special popup UI here.
 
   switch (tool.toolName) {
+    case 'email_drafter':
+      return (
+        <div className="rounded-md border p-3">
+          <div className="text-xs text-muted-foreground mb-2">Email Drafter</div>
+          {/* Inline renderer if model calls the tool with UI props */}
+          {tool?.state === 'result' && tool?.result && (() => {
+            try {
+              const res = typeof tool.result === 'string' ? JSON.parse(tool.result) : tool.result
+              if (res?.type === 'drafter_ui') {
+                const props = res.props || {}
+                const Dr = require('./interactive-email-drafter') as any
+                const Comp = Dr.InteractiveEmailDrafter
+                if (Comp) return <Comp {...props} />
+              }
+            } catch {}
+            return null
+          })()}
+        </div>
+      )
     case 'ask_question':
       // Render nothing; clarifying questions are asked inline in chat now
       return null

@@ -614,29 +614,22 @@ export function ProspectSearchSection({
                             </div>
                           </div>
 
-                          {/* Animated prospect cards as they stream in */}
+                          {/* Single prospect deep‑dive: show last enriched prospect only */}
                           <div className="space-y-2">
-                            <div className="text-xs font-medium text-muted-foreground flex items-center gap-2">
-                              <span>Latest Prospects</span>
-                              <div className="flex space-x-1">
-                                <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce"></div>
-                                <div className="w-1 h-1 bg-purple-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                                <div className="w-1 h-1 bg-pink-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-                              </div>
-                            </div>
-                            <ProspectGrid 
-                              prospects={prospects}
-                              onSelectionChange={(ids) => {
-                                // Could be used to enable CTA or next step
-                                console.log('📝 Selected prospects:', ids.length)
-                              }}
-                              onReviewComplete={() => {
-                                // Transition to next step: drafting emails
-                                setUiType('results')
-                                setSearchStatus('completed')
-                                setSearchMessage('Prospect review complete! Moving to email drafting…')
-                              }}
-                            />
+                            {(() => {
+                              const p = prospects[prospects.length - 1]
+                              const ready = !!(p?.fullName || p?.email || p?.linkedinUrl || p?.jobTitle)
+                              if (!ready) {
+                                return (
+                                  <div className="text-[11px] text-muted-foreground">Waiting for enrichments…</div>
+                                )
+                              }
+                              return (
+                                <div className="max-w-3xl mx-auto">
+                                  <ProspectGrid prospects={[p]} />
+                                </div>
+                              )
+                            })()}
                           </div>
                         </div>
                       )}
@@ -775,7 +768,7 @@ export function ProspectSearchSection({
                     </div>
                   )}
                 </CardContent>
-                {showEmailDrafter && prospects.length > 0 && (
+                {false && showEmailDrafter && prospects.length > 0 && (
                   <div className="px-4 pb-4">
                     <div className="rounded-md border bg-card p-3 mb-3 text-xs text-muted-foreground">
                       Drafting emails for {prospects.length} prospects. You can define a template and add natural‑language enrichments.

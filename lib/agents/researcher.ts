@@ -3,6 +3,7 @@ import { createProspectSearchTool } from '../tools/prospect-search'
 import { createQuestionTool } from '../tools/question'
 import { createScrapeSiteTool } from '../tools/scrape'
 import { createSearchTool } from '../tools/search'
+import { createEmailDrafterTool } from '../tools/email-drafter'
 import { getModel } from '../utils/registry'
 
 const SYSTEM_PROMPT = `You are HermesAI — the swift messenger and pragmatic copilot for B2B outbound. Be helpful, fast, and human. You know when to use tools and when to just talk.
@@ -15,6 +16,7 @@ Help plan and run outbound campaigns: clarify goals, find qualified prospects, e
 - Use search for market/company research when user asks for info.
 - Use ask_question to clarify ambiguous targeting or missing constraints.
 - Use scrape_site to extract ICP/offer/partner categories from a provided website before proposing partners.
+ - Use email_drafter only after prospect search is complete or when the user explicitly asks to draft emails.
 
 ## Proactive Onboarding (be a GTM copilot)
 - Brief 1‑line intro + plan: confirm campaign goal, ICP, offer, channels (email/LinkedIn), success metric.
@@ -74,6 +76,8 @@ export function researcher({
 
     console.log('🔧 [researcher] Creating scrape site tool...')
     const scrapeSiteTool = createScrapeSiteTool()
+    console.log('🔧 [researcher] Creating email drafter tool...')
+    const emailDrafterTool = createEmailDrafterTool()
     
     console.log('✅ [researcher] All tools created successfully')
     // Debug tool schemas (AI SDK v5 expects Zod schemas)
@@ -84,6 +88,8 @@ export function researcher({
       console.log('🔍 [researcher] ask_question.inputSchema defined:', !!askQuestionTool?.inputSchema)
       // @ts-ignore
       console.log('🔍 [researcher] prospect_search.inputSchema defined:', !!prospectSearchTool?.inputSchema)
+      // @ts-ignore
+      console.log('🔍 [researcher] email_drafter.inputSchema defined:', !!emailDrafterTool?.inputSchema)
     } catch (e) {
       console.warn('⚠️ [researcher] Tool schema debug failed:', e)
     }
@@ -91,7 +97,8 @@ export function researcher({
       search: searchTool,
       ask_question: askQuestionTool,
       prospect_search: prospectSearchTool,
-      scrape_site: scrapeSiteTool
+      scrape_site: scrapeSiteTool,
+      email_drafter: emailDrafterTool
     }))
     
     // TEMP: Narrow tools to prospect_search only to isolate schema issues
@@ -103,7 +110,8 @@ export function researcher({
         search: searchTool,
         ask_question: askQuestionTool,
         prospect_search: prospectSearchTool,
-        scrape_site: scrapeSiteTool
+        scrape_site: scrapeSiteTool,
+        email_drafter: emailDrafterTool
       },
       experimental_transform: smoothStream()
     }
