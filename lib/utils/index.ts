@@ -54,6 +54,12 @@ export function getDefaultModelId(models: Model[]): string {
   return createModelId(models[0])
 }
 
+export function getMonthlyPlanForCount(count: number): { plan: 'starter' | 'pro' | 'enterprise'; price: number; quota: number } {
+  if (count <= 200) return { plan: 'starter', price: 39, quota: 200 }
+  if (count <= 2000) return { plan: 'pro', price: 200, quota: 2000 }
+  return { plan: 'enterprise', price: 0, quota: Number.POSITIVE_INFINITY }
+}
+
 function addToolMessageToChat({
   toolMessage,
   messages

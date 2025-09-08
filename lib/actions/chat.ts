@@ -47,6 +47,11 @@ export async function saveChat(chat: Chat, userId: string): Promise<void> {
   try {
     const supabase = await createClient()
     
+    // ensure subscription row exists
+    await supabase
+      .from('subscriptions')
+      .upsert({ user_id: userId }, { onConflict: 'user_id' })
+
     const { error } = await supabase
       .from('chats')
       .upsert({
