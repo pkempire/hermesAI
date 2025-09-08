@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Building2, CheckCircle, CheckCircle2, ExternalLink, Mail, MapPin, MessageSquare, Phone, User, XCircle } from 'lucide-react';
 import Image from 'next/image';
 import { Prospect } from './prospect-grid';
+import { getStripeCheckoutUrl } from '@/lib/utils'
 
 export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, onNoteChange }: {
   prospect: Prospect;
@@ -123,19 +124,27 @@ export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, o
               >
                 LinkedIn Profile
               </a>
+              <div className="text-[11px] text-blue-700/80 mt-1">
+                Auto‑message via LinkedIn coming soon — <a className="underline hover:no-underline" href={getStripeCheckoutUrl()} target="_blank" rel="noreferrer">upgrade $39/mo</a>
+              </div>
             </div>
             <ExternalLink className="w-3 h-3 text-blue-400" />
           </div>
 
           {/* Phone */}
-          {prospect.phone && (
-            <div className="flex items-center gap-3 p-3 bg-purple-50/50 rounded-lg border border-purple-100">
-              <Phone className="w-4 h-4 text-purple-600 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-3 p-3 bg-purple-50/50 rounded-lg border border-purple-100">
+            <Phone className="w-4 h-4 text-purple-600 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              {prospect.phone ? (
                 <span className="text-sm font-medium text-purple-700">{prospect.phone}</span>
+              ) : (
+                <span className="text-sm text-purple-700/70">Phone not yet enriched</span>
+              )}
+              <div className="text-[11px] text-purple-700/80 mt-1">
+                Auto‑dial and SMS outreach coming soon — <a className="underline hover:no-underline" href={getStripeCheckoutUrl()} target="_blank" rel="noreferrer">upgrade $39/mo</a>
               </div>
             </div>
-          )}
+          </div>
 
           {/* Location */}
           {prospect.location && (

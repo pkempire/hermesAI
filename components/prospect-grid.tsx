@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Grid3x3, List, Users } from 'lucide-react';
 import { useState } from 'react';
 import { ProspectCard } from './prospect-card';
+import { getStripeCheckoutUrl } from '@/lib/utils'
 
 // Prospect interface definition
 export interface Prospect {
@@ -151,6 +152,14 @@ export function ProspectGrid({ prospects, onSelectionChange, onReviewComplete }:
             <Button size="sm" variant="outline">
               Export List
             </Button>
+            <a
+              href={getStripeCheckoutUrl()}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs px-3 py-2 rounded-md border bg-white hover:bg-muted transition-colors"
+            >
+              Upgrade $39/mo
+            </a>
           </motion.div>
         )}
       </div>

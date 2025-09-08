@@ -3,8 +3,8 @@ import {
   CoreMessage,
   createUIMessageStream,
   createUIMessageStreamResponse,
-  streamText,
-  stepCountIs
+  stepCountIs,
+  streamText
 } from 'ai'
 import { isReasoningModel } from '../utils/registry'
 import { handleStreamFinish } from './handle-stream-finish'

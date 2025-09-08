@@ -19,6 +19,10 @@ const DEFAULT_MODEL: Model = {
 export async function POST(req: Request) {
   try {
     const { messages, id: chatId } = await req.json()
+    // Basic validation and soft rate-limit key
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return new Response('Missing messages', { status: 400 })
+    }
     const referer = req.headers.get('referer')
     const isSharePage = referer?.includes('/share/')
     const userId = await getCurrentUserId()

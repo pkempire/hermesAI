@@ -5,6 +5,12 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function POST(req: NextRequest) {
   try {
     const { criteria, enrichments, entityType, targetCount, originalQuery, preview = false } = await req.json()
+    if (!originalQuery || typeof originalQuery !== 'string') {
+      return NextResponse.json({ error: 'Missing query' }, { status: 400 })
+    }
+    if (targetCount && (typeof targetCount !== 'number' || targetCount < 1)) {
+      return NextResponse.json({ error: 'Invalid targetCount' }, { status: 400 })
+    }
     
     console.log(`🔍 [POST /api/prospect-search/execute] ${preview ? 'Preview' : 'Full'} search requested:`, {
       criteriaCount: criteria?.length || 0,

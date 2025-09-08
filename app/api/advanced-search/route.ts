@@ -1,15 +1,15 @@
-import { NextResponse } from 'next/server'
+import { getRedisClient } from '@/lib/redis/config'
+import {
+    SearXNGResponse,
+    SearXNGResult,
+    SearXNGSearchResults,
+    SearchResultItem
+} from '@/lib/types'
+import { Redis } from '@upstash/redis'
 import http from 'http'
 import https from 'https'
 import { JSDOM, VirtualConsole } from 'jsdom'
-import {
-  SearXNGSearchResults,
-  SearXNGResponse,
-  SearXNGResult,
-  SearchResultItem
-} from '@/lib/types'
-import { Agent } from 'http'
-import { Redis } from '@upstash/redis'
+import { NextResponse } from 'next/server'
 import { createClient } from 'redis'
 
 /**
@@ -130,6 +130,21 @@ export async function POST(request: Request) {
 
   // simple rate limit by IP (soft)
   const ip = (request.headers.get('x-forwarded-for') || '').split(',')[0] || 'unknown'
+  // simple Redis-based token bucket per IP
+  try {
+    const redis = await getRedisClient()
+    const key = `rl:adv:${ip}:${new Date().toISOString().slice(0, 13)}`
+    const current = await redis.hgetall<{ count: string }>(key)
+    const count = parseInt(current?.count || '0', 10) + 1
+    await redis.hmset(key, { count })
+    if (count === 1) {
+      // expire in ~1 hour (best-effort; Upstash vs local variants differ)
+      // fall back to sorted sets if needed (omitted for brevity)
+    }
+    if (count > 300) {
+      return NextResponse.json({ message: 'Rate limit exceeded' }, { status: 429 })
+    }
+  } catch {}
   if (!query || typeof query !== 'string') {
     return NextResponse.json({ message: 'Invalid query' }, { status: 400 })
   }

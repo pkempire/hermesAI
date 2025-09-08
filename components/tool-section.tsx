@@ -19,11 +19,14 @@ export function ToolSection({
   onOpenChange,
   addToolResult
 }: ToolSectionProps) {
-  console.log('🔧 [ToolSection] Processing tool:', tool.toolName, 'state:', tool.state)
+  // concise debug in dev only
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('🔧 [ToolSection] Processing tool:', tool.toolName, 'state:', tool.state)
+  }
   
   // Special handling for ask_question tool
   if (tool.toolName === 'ask_question') {
-    console.log('🔧 [ToolSection] Processing ask_question tool')
+    if (process.env.NODE_ENV !== 'production') console.log('🔧 [ToolSection] Processing ask_question tool')
     // When waiting for user input
     if (tool.state === 'call' && addToolResult) {
       return (
@@ -59,7 +62,7 @@ export function ToolSection({
 
   switch (tool.toolName) {
     case 'search':
-      console.log('🔧 [ToolSection] Rendering SearchSection')
+      if (process.env.NODE_ENV !== 'production') console.log('🔧 [ToolSection] Rendering SearchSection')
       return (
         <SearchSection
           tool={tool}
@@ -68,7 +71,7 @@ export function ToolSection({
         />
       )
     case 'videoSearch':
-      console.log('🔧 [ToolSection] Rendering VideoSearchSection')
+      if (process.env.NODE_ENV !== 'production') console.log('🔧 [ToolSection] Rendering VideoSearchSection')
       return (
         <VideoSearchSection
           tool={tool}
@@ -77,7 +80,7 @@ export function ToolSection({
         />
       )
     case 'retrieve':
-      console.log('🔧 [ToolSection] Rendering RetrieveSection')
+      if (process.env.NODE_ENV !== 'production') console.log('🔧 [ToolSection] Rendering RetrieveSection')
       return (
         <RetrieveSection
           tool={tool}
@@ -86,7 +89,7 @@ export function ToolSection({
         />
       )
     case 'prospect_search':
-      console.log('🔧 [ToolSection] Rendering ProspectSearchSection')
+      if (process.env.NODE_ENV !== 'production') console.log('🔧 [ToolSection] Rendering ProspectSearchSection')
       return (
         <ProspectSearchSection
           tool={tool}
@@ -95,7 +98,7 @@ export function ToolSection({
         />
       )
     default:
-      console.log('❌ [ToolSection] No handler for tool:', tool.toolName)
+      if (process.env.NODE_ENV !== 'production') console.log('❌ [ToolSection] No handler for tool:', tool.toolName)
       // Generic fallback renderer so the user sees what's happening for unknown tools
       const resultText = (() => {
         try {
