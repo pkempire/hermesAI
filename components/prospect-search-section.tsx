@@ -7,6 +7,7 @@ import { motion } from 'framer-motion'
 import { AlertCircle, CheckCircle, ChevronDown, ChevronRight, Search, Users } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { EnhancedProspectSearchBuilder } from './enhanced-prospect-search-builder'
+import { InteractiveEmailDrafter } from './interactive-email-drafter'
 import { Prospect, ProspectGrid } from './prospect-grid'
 import { ProspectPreviewCard } from './prospect-preview-card'
 
@@ -780,16 +781,19 @@ export function ProspectSearchSection({
                       Drafting emails for {prospects.length} prospects. You can define a template and add natural‑language enrichments.
                     </div>
                     {/* Inline interactive email drafter */}
-                    <div className="bg-white rounded-md border p-3">
-                      {/* Light-weight header and CTA to open a dedicated drawer/page later; for now we render inline */}
-                      <div className="text-xs text-muted-foreground mb-2">Interactive Email Drafter</div>
-                      {/* @ts-ignore */}
-                      <div className="mt-2">
-                        {/* We import directly to keep scope minimal for now */}
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <span className="text-[11px]">Open the drafter via the Templates tab to customize subject/body with variables like {'{'}firstName{'}'}, {'{'}company{'}'}. AI generation available.</span>
-                      </div>
-                    </div>
+                    <InteractiveEmailDrafter 
+                      prospects={prospects}
+                      searchSummary={searchSummary}
+                      step={3}
+                      totalSteps={5}
+                      onEmailsGenerated={() => {
+                        try {
+                          window.dispatchEvent(new CustomEvent('pipeline-progress', {
+                            detail: { stepNumber: 4, totalSteps: 5, percent: 85, label: 'Campaign draft ready' }
+                          }))
+                        } catch {}
+                      }}
+                    />
                   </div>
                 )}
               </CollapsibleContent>

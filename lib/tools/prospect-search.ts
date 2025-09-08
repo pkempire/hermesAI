@@ -6,7 +6,8 @@ const prospectSearchSchema = z.object({
   query: z.string().describe('Natural language description of the prospects you want to find (e.g., "CTOs at fintech companies who posted about API scaling issues")'),
   targetCount: z.number().optional().default(25).describe('Number of prospects to find (default: 25)'),
   interactive: z.boolean().optional().default(true).describe('Show interactive search builder UI'),
-  previewOnly: z.boolean().optional().default(false).describe('Run search on just 1 prospect first for preview/validation')
+  previewOnly: z.boolean().optional().default(false).describe('Run search on just 1 prospect first for preview/validation'),
+  entityType: z.enum(['person','company']).optional().default('person').describe('When set to company, also identify key decision maker and require LinkedIn URL enrichment')
 })
 
 export function createProspectSearchTool(model: string) {
@@ -200,6 +201,10 @@ export function createProspectSearchTool(model: string) {
           { label: 'Company Size', value: 'companySize', required: false },
           { label: 'Recent Activity', value: 'recentActivity', required: false }
         ]
+        // If searching companies, require decision-maker LinkedIn enrichment
+        if ((initialEntityType || 'person') === 'company') {
+          coreEnrichments.unshift({ label: 'Decision Maker LinkedIn', value: 'decision_maker_linkedin', required: true })
+        }
         const existing = new Set(initialEnrichments.map(e => e.value))
         for (const e of coreEnrichments) {
           if (initialEnrichments.length >= 10) break
