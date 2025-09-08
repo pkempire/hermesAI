@@ -135,7 +135,7 @@ export function ChatMessages({
       role="list"
       aria-roledescription="chat messages"
       className={cn(
-        'relative size-full pt-14',
+        'relative pt-14 w-full h-full',
         sections.length > 0 ? 'flex-1 overflow-y-auto' : ''
       )}
     >

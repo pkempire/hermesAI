@@ -138,7 +138,7 @@ export function ChatPanel({
   return (
     <div
       className={cn(
-        'w-full group/form-container shrink-0 relative',
+        'w-full group/form-container shrink-0 relative z-10',
         messages.length > 0 ? 'px-4 pb-4' : 'px-4 sm:px-8 pb-8'
       )}
     >
