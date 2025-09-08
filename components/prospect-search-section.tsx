@@ -709,7 +709,15 @@ export function ProspectSearchSection({
 
                       {/* Display prospects */}
                       <ProspectGrid prospects={prospects} />
-                      <div className="flex justify-end">
+                      <div className="flex justify-end gap-2">
+                        <a
+                          href={typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_STRIPE_CHECKOUT_URL || 'https://stripe.com') : '#'}
+                          className="px-3 py-2 text-xs rounded-md border bg-white hover:bg-muted transition-colors"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Upgrade $39/mo
+                        </a>
                         <button
                           className="px-3 py-2 text-xs rounded-md border bg-white hover:bg-muted transition-colors"
                           onClick={() => {

@@ -60,6 +60,13 @@ export function getMonthlyPlanForCount(count: number): { plan: 'starter' | 'pro'
   return { plan: 'enterprise', price: 0, quota: Number.POSITIVE_INFINITY }
 }
 
+export function getStripeCheckoutUrl(): string {
+  return (
+    process.env.NEXT_PUBLIC_STRIPE_CHECKOUT_URL ||
+    'https://stripe.com'
+  )
+}
+
 function addToolMessageToChat({
   toolMessage,
   messages
