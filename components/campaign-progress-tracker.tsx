@@ -1,18 +1,13 @@
 'use client'
 
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
-import { 
-  CheckCircle2, 
-  Circle, 
-  Clock, 
-  Search, 
-  Mail, 
-  Eye, 
-  Send, 
+import {
   BarChart3,
-  ArrowRight
+  CheckCircle2,
+  Circle,
+  Eye,
+  Mail,
+  Search,
+  Send
 } from 'lucide-react'
 
 export interface CampaignStep {

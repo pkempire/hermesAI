@@ -164,7 +164,7 @@ export function ProspectSearchSection({
         if (pollCount >= maxPolls) {
           console.warn('⏰ [ProspectSearchSection] Polling timeout reached')
           setSearchStatus('failed')
-          setSearchMessage('Search timeout - please try again with fewer prospects or different criteria')
+          setSearchMessage('Search took too long. Try a smaller target (e.g., 10–25) or simplify criteria.')
           clearInterval(interval)
           setPollingInterval(null)
           setUiType('error')
@@ -387,39 +387,39 @@ export function ProspectSearchSection({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
-      className="w-full my-6 rounded-2xl bg-gradient-to-br from-white via-blue-50/30 to-purple-50/30 border border-blue-200/50 backdrop-blur-sm p-0 md:p-2 hermes-card-glow"
+      className="w-full my-4 rounded-xl bg-card border border-border p-0 md:p-2"
     >
       {/* Removed embedded step progress - handled by global campaign tracker */}
 
       <Collapsible open={isOpen} onOpenChange={onOpenChange}>
         <Card className="w-full border-none shadow-none bg-transparent">
           <CollapsibleTrigger asChild>
-            <CardHeader className="cursor-pointer hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-200 rounded-t-2xl px-6 py-4">
+            <CardHeader className="cursor-pointer hover:bg-muted/40 transition-all duration-200 rounded-t-xl px-4 py-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="p-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600">
+                  <div className="p-2 rounded-lg bg-primary/90">
                     {getStatusIcon()}
                   </div>
                   <div>
-                    <CardTitle className="text-xl font-semibold bg-gradient-to-r from-blue-900 to-purple-900 bg-clip-text text-transparent">
+                    <CardTitle className="text-base font-semibold">
                       Prospect Discovery
                     </CardTitle>
-                    <Badge variant={getStatusBadgeVariant()} className="mt-1">
+                    <Badge variant={getStatusBadgeVariant()} className="mt-1 text-[10px]">
                       {searchStatus === 'completed' ? '✓ Complete' : 
                        searchStatus === 'running' ? '⏳ Searching...' : 
                        searchStatus === 'failed' ? '✗ Failed' : 'Ready'}
                     </Badge>
                   </div>
                 </div>
-                <div className="p-2 rounded-full bg-white/50">
+                <div className="p-2 rounded-full bg-muted">
                   {isOpen ? <ChevronDown className="h-5 w-5 text-gray-600" /> : <ChevronRight className="h-5 w-5 text-gray-600" />}
                 </div>
               </div>
               <div className="space-y-2">
-                <CardDescription className="text-sm">
+                <CardDescription className="text-xs">
                   {searchMessage || `Ready to search for: ${currentSearchCriteria.query}`}
                 </CardDescription>
-                <div className="flex flex-wrap gap-2 text-xs">
+                <div className="flex flex-wrap gap-2 text-[10px]">
                   <Badge variant="outline" className="bg-blue-50 text-blue-700">
                     Type: {currentSearchCriteria.entityType}
                   </Badge>
@@ -541,7 +541,7 @@ export function ProspectSearchSection({
                   {uiType === 'streaming' && (
                     <div className="space-y-4">
                       {/* Real-time Progress Bar */}
-                      <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4">
+                      <div className="bg-muted/40 border border-border rounded-md p-3">
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center space-x-2">
                             <Search className="h-5 w-5 text-blue-600 animate-pulse" />
@@ -549,24 +549,24 @@ export function ProspectSearchSection({
                               {searchStatus === 'completed' ? 'Search Completed!' : lastStatus === 'running' ? 'Searching and analyzing sources…' : 'Initializing search…'}
                             </p>
                           </div>
-                          <div className="text-xs text-blue-600 font-mono">
+                          <div className="text-[10px] text-muted-foreground font-mono">
                             {prospects.length} found
                           </div>
                         </div>
                         
                         {/* Progress indicators */}
                         <div className="space-y-2">
-                          <div className="flex justify-between text-xs text-blue-600">
+                          <div className="flex justify-between text-[10px] text-muted-foreground">
                             <span>Progress</span>
                             <span>{searchMessage || (lastStatus === 'running' ? 'Working…' : 'Starting…')}</span>
                           </div>
-                          <div className="w-full bg-blue-100 rounded-full h-2">
+                          <div className="w-full bg-muted rounded-full h-1.5">
                             <div 
-                              className="bg-gradient-to-r from-blue-600 to-purple-600 h-2 rounded-full transition-all duration-500 animate-pulse"
+                              className="bg-primary h-1.5 rounded-full transition-all duration-500 animate-pulse"
                               style={{ width: `${Math.min((prospects.length / (currentSearchCriteria.targetCount || 25)) * 100, 100)}%` }}
                             />
                           </div>
-                          <div className="flex justify-between text-xs text-gray-500">
+                          <div className="flex justify-between text-[10px] text-muted-foreground">
                             <span>{prospects.length} prospects found</span>
                             <span>Target: {currentSearchCriteria.targetCount}</span>
                           </div>
@@ -575,14 +575,14 @@ export function ProspectSearchSection({
 
                       {/* Empty state while searching */}
                       {prospects.length === 0 && searchStatus === 'running' && (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
                           <div className="flex items-center space-x-2">
                             <Search className="h-5 w-5 text-yellow-600 animate-pulse" />
                             <div>
                               <p className="text-sm font-medium text-yellow-800">
                                 {lastStatus === 'running' ? 'Scanning sources and enriching…' : 'Starting the pipeline…'}
                               </p>
-                              <p className="text-xs text-yellow-600 mt-1">
+                              <p className="text-[11px] text-amber-700 mt-1">
                                 This might take a moment. We’ll stream results as soon as we verify matches.
                               </p>
                             </div>
@@ -593,7 +593,7 @@ export function ProspectSearchSection({
                       {/* Real-time prospect discovery */}
                       {prospects.length > 0 && (
                         <div className="space-y-4">
-                          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                          <div className="bg-green-50 border border-green-200 rounded-md p-3">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center space-x-2">
                                 <Users className="h-5 w-5 text-green-600" />
@@ -608,14 +608,14 @@ export function ProspectSearchSection({
                               </div>
                               <div className="flex items-center space-x-2">
                                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                                <span className="text-xs text-green-600 font-mono">LIVE</span>
+                                <span className="text-[10px] text-green-700 font-mono">LIVE</span>
                               </div>
                             </div>
                           </div>
 
                           {/* Animated prospect cards as they stream in */}
                           <div className="space-y-2">
-                            <div className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                            <div className="text-xs font-medium text-muted-foreground flex items-center gap-2">
                               <span>Latest Prospects</span>
                               <div className="flex space-x-1">
                                 <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce"></div>

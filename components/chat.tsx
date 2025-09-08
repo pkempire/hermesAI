@@ -401,8 +401,8 @@ export function Chat({
               submitTemplateMessage={submitTemplateMessage}
             />
           </div>
-          <div className="hidden md:block md:w-64 bg-card border-l border-border">
-            <div className="p-3">
+          <div className="hidden md:block md:w-60 bg-card/80 border-l border-border backdrop-blur">
+            <div className="p-3 sticky top-0">
               <CampaignProgressTracker 
                 currentStep={currentCampaignStep}
                 campaignTitle="Campaign"

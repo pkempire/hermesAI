@@ -1,7 +1,6 @@
 'use client'
 
 import { ProspectSearchSection } from './prospect-search-section'
-import { QuestionConfirmation } from './question-confirmation'
 import RetrieveSection from './retrieve-section'
 import { SearchSection } from './search-section'
 import { VideoSearchSection } from './video-search-section'
