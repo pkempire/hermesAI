@@ -74,6 +74,12 @@ export function ChatPanel({
   // Quick auth check helper
   async function ensureSignedIn(): Promise<boolean> {
     try {
+      // Save draft before auth redirect
+      if (input && input.trim().length > 0) {
+        try {
+          localStorage.setItem('hermes_draft', input)
+        } catch {}
+      }
       const res = await fetch('/api/auth/me', { cache: 'no-store' })
       if (!res.ok) return false
       const data = await res.json()
@@ -149,6 +155,9 @@ export function ChatPanel({
             router.push('/auth/login')
             return
           }
+          try {
+            localStorage.removeItem('hermes_draft')
+          } catch {}
           handleSubmit(e)
         }}
         className={cn('max-w-4xl w-full mx-auto relative group/form', messages.length === 0 ? 'mb-6' : '')}

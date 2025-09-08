@@ -247,6 +247,16 @@ export function Chat({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
+  // Restore any saved draft after login
+  useEffect(() => {
+    try {
+      const draft = localStorage.getItem('hermes_draft')
+      if (draft && !inputValue) {
+        setInputValue(draft)
+      }
+    } catch {}
+  }, [])
+
   const onQuerySelect = (query: string) => {
     append({ role: 'user', parts: [{ type: 'text', text: query }] } as any)
   }
