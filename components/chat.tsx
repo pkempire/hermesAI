@@ -35,6 +35,13 @@ export function Chat({
   const [campaignPercent, setCampaignPercent] = useState(20)
   const [totalCampaignSteps, setTotalCampaignSteps] = useState(5)
   const [campaignStepLabel, setCampaignStepLabel] = useState('Configure Prospect Search')
+  const stepsBrief = [
+    'Configure Prospect Search',
+    'Searching and analyzing',
+    'Discovery complete',
+    'Draft emails',
+    'Review & next steps'
+  ]
   const [inputValue, setInputValue] = useState('')
   const [uiData, setUiData] = useState<JSONValue[]>([])
 
@@ -372,9 +379,13 @@ export function Chat({
             {/* Campaign overview strip */}
             {showProgressTracker && (
               <div className="border-b border-border px-4 py-2 text-xs flex items-center justify-between bg-card/60">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <span className="font-medium">Campaign</span>
                   <span className="text-muted-foreground">Step {currentCampaignStep} of {totalCampaignSteps}</span>
+                  <span className="text-muted-foreground">• {stepsBrief[Math.min(currentCampaignStep-1, stepsBrief.length-1)]}</span>
+                </div>
+                <div className="w-40 h-1 bg-muted rounded-full overflow-hidden">
+                  <div className="h-1 bg-primary rounded-full" style={{ width: `${campaignPercent}%` }} />
                 </div>
               </div>
             )}

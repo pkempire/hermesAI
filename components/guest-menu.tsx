@@ -14,7 +14,6 @@ import {
 import { Link2, LogIn, Settings2 } from 'lucide-react'
 import Link from 'next/link'
 import { ExternalLinkItems } from './external-link-items'
-import { ThemeMenuItems } from './theme-menu-items'
 
 export default function GuestMenu() {
   return (

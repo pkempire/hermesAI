@@ -12,6 +12,25 @@ export async function GET(request: Request) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
+      // Seed trial on first login if no subscription row
+      try {
+        const { data: userData } = await supabase.auth.getUser()
+        const userId = userData?.user?.id
+        if (userId) {
+          const { data: sub } = await supabase
+            .from('subscriptions')
+            .select('user_id')
+            .eq('user_id', userId)
+            .maybeSingle()
+          if (!sub) {
+            const trialEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+            await supabase
+              .from('subscriptions')
+              .insert({ user_id: userId, plan: 'starter', quota_monthly: 200, used_this_month: 0, trial_expires_at: trialEnd, metadata: { source: 'seeded_on_login' } })
+          }
+        }
+      } catch {}
+
       const forwardedHost = request.headers.get('x-forwarded-host') // original origin before load balancer
       const isLocalEnv = process.env.NODE_ENV === 'development'
       if (isLocalEnv) {

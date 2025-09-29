@@ -1,6 +1,6 @@
+import { getCurrentUserId } from '@/lib/auth/get-current-user'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { getCurrentUserId } from '@/lib/auth/get-current-user'
 
 export async function POST(req: NextRequest) {
   const userId = await getCurrentUserId()

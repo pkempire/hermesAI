@@ -1,10 +1,10 @@
 import { researcher } from '@/lib/agents/researcher'
 import {
-  CoreMessage,
-  createUIMessageStream,
-  createUIMessageStreamResponse,
-  stepCountIs,
-  streamText
+    CoreMessage,
+    createUIMessageStream,
+    createUIMessageStreamResponse,
+    stepCountIs,
+    streamText
 } from 'ai'
 import { isReasoningModel } from '../utils/registry'
 import { handleStreamFinish } from './handle-stream-finish'
