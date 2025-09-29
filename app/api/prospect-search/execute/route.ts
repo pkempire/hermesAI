@@ -1,8 +1,8 @@
+import { getCurrentUserId } from '@/lib/auth/get-current-user'
 import { createExaWebsetsClient, createProspectSearchCriteria } from '@/lib/clients/exa-websets'
 import { createClient } from '@/lib/supabase/server'
-import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUserId } from '@/lib/auth/get-current-user'
 import { requireQuota } from '@/lib/utils/quota'
+import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
   try {

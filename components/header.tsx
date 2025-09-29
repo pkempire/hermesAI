@@ -4,7 +4,7 @@ import { useSidebar } from '@/components/ui/sidebar'
 import { cn } from '@/lib/utils'
 import { User } from '@supabase/supabase-js'
 // import Link from 'next/link' // No longer needed directly here for Sign In button
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 // import { Button } from './ui/button' // No longer needed directly here for Sign In button
 import { getStripeCheckoutUrl } from '@/lib/utils'
 import Link from 'next/link'
@@ -17,6 +17,23 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ user }) => {
   const { open } = useSidebar()
+  const [credits, setCredits] = useState<number | null>(null)
+
+  useEffect(() => {
+    let mounted = true
+    async function load() {
+      try {
+        if (!user) { setCredits(null); return }
+        const res = await fetch('/api/subscription', { cache: 'no-store' })
+        const data = await res.json()
+        if (mounted) setCredits(typeof data?.remaining === 'number' ? data.remaining : null)
+      } catch {
+        if (mounted) setCredits(null)
+      }
+    }
+    load()
+    return () => { mounted = false }
+  }, [user])
   return (
     <header
       className={cn(
@@ -26,6 +43,9 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
       )}
     >
       <div className="flex items-center gap-2 ml-auto">
+        {typeof credits === 'number' && (
+          <span className="hidden sm:inline-block text-xs px-3 py-1.5 rounded-full border bg-white/60">{credits} credits</span>
+        )}
         <Link href={getStripeCheckoutUrl()} className="hidden sm:inline-block text-xs px-3 py-1.5 rounded-full border bg-white/60 hover:bg-white transition">
           Start 7‑day free trial
         </Link>

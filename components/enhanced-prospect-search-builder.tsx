@@ -85,7 +85,7 @@ export function EnhancedProspectSearchBuilder({
     }))
   )
   const [enrichments, setEnrichments] = useState<EnrichmentField[]>(
-    initialEnrichments.map(e => ({ ...e, enabled: e.required }))
+    initialEnrichments.map(e => ({ ...e, enabled: true, required: false }))
   )
   const [customEnrichments, setCustomEnrichments] = useState<CustomEnrichment[]>(initialCustomEnrichments)
   const enabledEnrichmentCount = enrichments.filter(e => e.enabled).length + (customEnrichments?.length || 0)
@@ -278,9 +278,8 @@ export function EnhancedProspectSearchBuilder({
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="w-full overflow-x-auto">
-                <div className="grid grid-cols-12 gap-2 text-xs text-muted-foreground px-1">
-                  <div className="col-span-6">Field</div>
-                  <div className="col-span-2 text-center">Required</div>
+                  <div className="grid grid-cols-12 gap-2 text-xs text-muted-foreground px-1">
+                  <div className="col-span-8">Field</div>
                   <div className="col-span-2 text-center">Enabled</div>
                   <div className="col-span-2 text-right">Status</div>
                 </div>
@@ -288,21 +287,15 @@ export function EnhancedProspectSearchBuilder({
                   {enrichments.map((enrichment, index) => (
                     <div key={index} className="grid grid-cols-12 gap-2 items-center py-2">
                       <input
-                        className="col-span-6 bg-transparent text-sm border-b border-transparent focus:border-gray-300 outline-none px-1"
+                        className="col-span-8 bg-transparent text-sm border-b border-transparent focus:border-gray-300 outline-none px-1"
                         value={enrichment.label}
                         onChange={e => setEnrichments(prev => prev.map((en, i) => i === index ? { ...en, label: e.target.value } : en))}
                       />
                       <div className="col-span-2 flex items-center justify-center">
                         <Checkbox
-                          checked={enrichment.required}
-                          onCheckedChange={() => setEnrichments(prev => prev.map((en, i) => i === index ? { ...en, required: !en.required, enabled: !en.required ? en.enabled : true } : en))}
-                        />
-                      </div>
-                      <div className="col-span-2 flex items-center justify-center">
-                        <Checkbox
                           checked={enrichment.enabled}
                           onCheckedChange={() => toggleEnrichment(index)}
-                          disabled={enrichment.required || (!enrichment.enabled && !canEnableMore)}
+                          disabled={!enrichment.enabled && !canEnableMore}
                         />
                       </div>
                       <div className="col-span-2 text-right pr-2">
@@ -325,11 +318,7 @@ export function EnhancedProspectSearchBuilder({
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="font-medium">Custom Enrichments</h4>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowAdvanced(!showAdvanced)}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => setShowAdvanced(!showAdvanced)}>
                     {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                     {showAdvanced ? 'Hide' : 'Add Custom'}
                   </Button>
@@ -367,7 +356,7 @@ export function EnhancedProspectSearchBuilder({
                 {customEnrichments.length > 0 && (
                   <div className="space-y-2">
                     {customEnrichments.map((custom, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                      <div key={index} className="flex items-center justify-between p-3 bg-muted/30 border rounded-lg">
                         <div>
                           <p className="font-medium text-sm">{custom.label}</p>
                           <p className="text-xs text-muted-foreground">{custom.description}</p>

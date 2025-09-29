@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { NextRequest, NextResponse } from 'next/server'
 
 // Idempotent daily cron that finds trials expiring in ~48 hours and marks for reminder.
 export async function GET(_req: NextRequest) {
