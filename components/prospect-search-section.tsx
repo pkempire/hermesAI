@@ -109,7 +109,7 @@ export function ProspectSearchSection({
     }
 
     let pollCount = 0
-    const maxPolls = 60 // 3 minutes max at 3-second intervals
+    const maxPolls = 80 // ~3 minutes at faster intervals
     
     const interval = setInterval(async () => {
       try {
@@ -232,7 +232,7 @@ export function ProspectSearchSection({
           setSearchMessage(`Retrying connection... (attempt ${pollCount})`)
         }
       }
-    }, 3000) // Poll every 3 seconds
+    }, 2250) // Poll a bit faster for snappier UI
 
     setPollingInterval(interval)
   }, [pollingInterval])  // Remove excessive dependencies that cause re-renders
@@ -705,7 +705,7 @@ export function ProspectSearchSection({
                       <ProspectGrid prospects={prospects} />
                       <div className="flex justify-end gap-2">
                         <a
-                          href={typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_STRIPE_CHECKOUT_URL || 'https://stripe.com') : '#'}
+                          href={typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_STRIPE_CHECKOUT_URL || 'https://buy.stripe.com/cNi00i7UMc0xgLCfk56sw03') : '#'}
                           className="px-3 py-2 text-xs rounded-md border bg-white hover:bg-muted transition-colors"
                           target="_blank"
                           rel="noreferrer"

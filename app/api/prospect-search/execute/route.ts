@@ -1,10 +1,14 @@
 import { createExaWebsetsClient, createProspectSearchCriteria } from '@/lib/clients/exa-websets'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { getCurrentUserId } from '@/lib/auth/get-current-user'
+import { requireQuota } from '@/lib/utils/quota'
 
 export async function POST(req: NextRequest) {
   try {
     const { criteria, enrichments, entityType, targetCount, originalQuery, preview = false } = await req.json()
+    const userId = await getCurrentUserId()
+    if (!userId) return NextResponse.json({ type: 'error', message: 'Unauthorized' }, { status: 401 })
     if (!originalQuery || typeof originalQuery !== 'string') {
       return NextResponse.json({ error: 'Missing query' }, { status: 400 })
     }
@@ -19,6 +23,13 @@ export async function POST(req: NextRequest) {
       targetCount,
       preview
     })
+
+    // Quota: cost = number of targets requested (min 1)
+    const cost = Math.max(1, preview ? 1 : (targetCount || 25))
+    const quota = await requireQuota({ userId, cost, kind: 'prospect_search', idempotencyKey: `ps:${userId}:${originalQuery}:${cost}` })
+    if (!quota.ok) {
+      return NextResponse.json({ type: 'error', message: quota.reason }, { status: 402 })
+    }
 
     const exa = createExaWebsetsClient()
     

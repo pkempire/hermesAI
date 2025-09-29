@@ -20,14 +20,14 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
   return (
     <header
       className={cn(
-        'absolute top-0 right-0 p-2 flex justify-between items-center z-10 backdrop-blur lg:backdrop-blur-none bg-[#0f0f11]/80 lg:bg-transparent transition-[width] duration-200 ease-linear',
+        'absolute top-0 right-0 p-2 flex justify-between items-center z-30 backdrop-blur lg:backdrop-blur-none bg-[#0f0f11]/80 lg:bg-transparent transition-[width] duration-200 ease-linear',
         open ? 'md:w-[calc(100%-var(--sidebar-width))]' : 'md:w-full',
         'w-full'
       )}
     >
       <div className="flex items-center gap-2 ml-auto">
         <Link href={getStripeCheckoutUrl()} className="hidden sm:inline-block text-xs px-3 py-1.5 rounded-full border bg-white/60 hover:bg-white transition">
-          Upgrade $39/mo
+          Start 7‑day free trial
         </Link>
         {user ? <UserMenu user={user} /> : <GuestMenu />}
       </div>

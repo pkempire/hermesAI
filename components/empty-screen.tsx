@@ -89,10 +89,11 @@ export function EmptyScreen({
       <div className="space-y-6">
         {!hideHeader && (
           <div className="text-center py-6">
-            <h1 className="text-3xl font-semibold">
-              Find your <span className="text-primary transition-colors">{rotating[wordIndex]}</span>
-            </h1>
-            <p className="text-sm text-muted-foreground mt-2">Ready-to-use templates from the community. Click to load into chat and edit before running.</p>
+            <div className="mx-auto mb-2">
+              <img src="/images/hermes-logo.png" alt="Hermes" className="mx-auto h-14 w-14 rounded-full shadow-sm" />
+            </div>
+            <p className="text-base font-medium">Describe who to find and what to do.</p>
+            <p className="text-xs text-muted-foreground mt-1">Examples below load into chat. Sign in to run your first 7‑day trial search.</p>
           </div>
         )}
         {/* Intent-based template buttons */}

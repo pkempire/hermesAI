@@ -70,7 +70,7 @@ export function SignUpForm({
             Create an account
           </CardTitle>
           <CardDescription>
-            Enter your details below to get started
+            Start your 7‑day free trial. We’ll email a reminder before $39/mo begins.
           </CardDescription>
         </CardHeader>
         <CardContent>

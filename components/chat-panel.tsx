@@ -249,7 +249,7 @@ export function ChatPanel({
                       console.log('🔧 [ChatPanel] Send button clicked')
                       const isAuthed = await ensureSignedIn()
                       if (!isAuthed) {
-                        router.push('/auth/login')
+                        router.push('/auth/sign-up')
                         return
                       }
                       const form = document.querySelector('form')

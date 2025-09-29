@@ -99,8 +99,7 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
           })
         }
 
-        // Convert UI messages to core/model-compatible messages with proper cleaning
-        // Use manual conversion to CoreMessage to avoid v5 UI-only fields
+        // Convert UI messages to CoreMessage while PRESERVING tool-call / tool-result parts (AI SDK v5)
         const cleanedMessages = cleanUIMessages(validMessages)
         const modelMessages = cleanedMessages.map((msg: any) => {
           let content: any = ''
@@ -109,11 +108,43 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
           } else if (Array.isArray(msg.content)) {
             content = msg.content
           } else if (Array.isArray(msg.parts)) {
-            const text = msg.parts
-              .filter((p: any) => p && p.type === 'text' && typeof p.text === 'string')
-              .map((p: any) => p.text)
-              .join(' ')
-            content = text || ''
+            // Map UI parts to CoreMessage content parts, keeping tool metadata
+            const mapped = msg.parts
+              .map((p: any) => {
+                if (!p || typeof p !== 'object') return null
+                if (p.type === 'text' && typeof p.text === 'string') {
+                  return { type: 'text', text: p.text }
+                }
+                if (p.type === 'tool-call') {
+                  return {
+                    type: 'tool-call',
+                    toolCallId: p.toolCallId,
+                    toolName: p.toolName,
+                    args: p.args
+                  }
+                }
+                if (p.type === 'tool-result') {
+                  return {
+                    type: 'tool-result',
+                    toolCallId: p.toolCallId,
+                    toolName: p.toolName,
+                    output: p.output
+                  }
+                }
+                // Legacy shape from some renderers
+                if (p.type === 'tool-invocation' && p.toolInvocation) {
+                  const inv = p.toolInvocation
+                  return {
+                    type: 'tool-call',
+                    toolCallId: inv.toolCallId,
+                    toolName: inv.toolName,
+                    args: inv.args
+                  }
+                }
+                return null
+              })
+              .filter(Boolean)
+            content = mapped && mapped.length > 0 ? mapped : ''
           }
           return { role: msg.role, content }
         })

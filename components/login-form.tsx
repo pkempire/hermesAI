@@ -83,7 +83,7 @@ export function LoginForm({
             <IconLogo className="size-12" />
             Welcome back
           </CardTitle>
-          <CardDescription>Sign in to your account</CardDescription>
+          <CardDescription>Sign in to continue your 7‑day free trial</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-4">

@@ -63,7 +63,7 @@ export function getMonthlyPlanForCount(count: number): { plan: 'starter' | 'pro'
 export function getStripeCheckoutUrl(): string {
   return (
     process.env.NEXT_PUBLIC_STRIPE_CHECKOUT_URL ||
-    'https://stripe.com'
+    'https://buy.stripe.com/cNi00i7UMc0xgLCfk56sw03'
   )
 }
 

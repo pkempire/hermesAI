@@ -316,7 +316,12 @@ export function Chat({
           const isAsk = lastPart?.type === 'tool-call' && lastPart?.toolName === 'ask_question'
           const toolCallId = isAsk ? lastPart.toolCallId : undefined
           if (isAsk && (chatHook as any)?.addToolResult) {
-            ;(chatHook as any).addToolResult({ tool: 'ask_question', toolCallId, output: { type: 'text', value: messageToSend.trim() } })
+            // Treat short confirmations like "continue" as acceptance to proceed
+            const normalized = messageToSend.trim().toLowerCase()
+            const value = ['continue', 'proceed', 'go ahead', 'yes', 'yep', 'ok', 'okay'].includes(normalized)
+              ? 'continue'
+              : messageToSend.trim()
+            ;(chatHook as any).addToolResult({ tool: 'ask_question', toolCallId, output: { type: 'text', value } })
             if (!messageOverride) setInput('')
             return
           }
