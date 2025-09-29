@@ -31,9 +31,9 @@ export const metadata: Metadata = {
   title,
   description,
   icons: {
-    icon: '/favicon.png',
-    shortcut: '/favicon.png',
-    apple: '/favicon.png'
+    icon: '/images/hermes-icon.png',
+    shortcut: '/images/hermes-icon.png',
+    apple: '/images/hermes-icon.png'
   },
   openGraph: {
     title,
@@ -100,7 +100,7 @@ export default async function RootLayout({
         >
           <SidebarProvider defaultOpen>
             <AppSidebar />
-            <div className="flex flex-col flex-1 pt-20 md:pt-24">
+            <div className="flex flex-col flex-1 pt-24 md:pt-28">
               <Header user={user} />
               <main className="flex flex-1 min-h-0">
                 <ArtifactRoot>{children}</ArtifactRoot>

@@ -257,7 +257,16 @@ export function Chat({
   }, [])
 
   const onQuerySelect = (query: string) => {
-    append({ role: 'user', parts: [{ type: 'text', text: query }] } as any)
+    // Gate to sign-up if not authed
+    fetch('/api/auth/me', { cache: 'no-store' })
+      .then(r => r.json())
+      .then(d => {
+        if (!d?.user?.id) {
+          window.location.href = '/auth/sign-up'
+          return
+        }
+        append({ role: 'user', parts: [{ type: 'text', text: query }] } as any)
+      })
   }
 
   const handleUpdateAndReloadMessage = async (

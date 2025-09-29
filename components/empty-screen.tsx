@@ -92,7 +92,7 @@ export function EmptyScreen({
             <div className="mx-auto mb-2">
               <img src="/images/hermes-logo.png" alt="Hermes" className="mx-auto h-14 w-14 rounded-full shadow-sm" />
             </div>
-            <p className="text-base font-medium">Describe who to find and what to do.</p>
+            <p className="text-base font-medium">Describe your ideal prospect & what you're offering.</p>
             <p className="text-xs text-muted-foreground mt-1">Examples below load into chat. Sign in to run your first 7‑day trial search.</p>
           </div>
         )}
@@ -113,20 +113,27 @@ export function EmptyScreen({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-foreground mb-1 text-sm">{tpl.heading}</div>
-                    <div className="text-xs text-muted-foreground leading-relaxed mb-2">{tpl.message}</div>
-                    {requiresParams && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
-                        {tpl.params!.map(p => (
-                          <input
-                            key={p.key}
-                            placeholder={p.placeholder || p.label}
-                            className="w-full text-sm bg-white border rounded px-2 py-1"
-                            value={values[p.key] || ''}
-                            onChange={e => setTemplateInputs(prev => ({ ...prev, [index]: { ...(prev[index] || {}), [p.key]: e.target.value } }))}
-                          />
-                        ))}
-                      </div>
-                    )}
+                    <div className="text-xs text-muted-foreground leading-relaxed mb-2">
+                      {tpl.params && tpl.params.length > 0 ? (
+                        <>
+                          {tpl.message.split(/(\{\{[^}]+\}\})/g).map((chunk, i) => {
+                            const match = chunk.match(/^\{\{(.+)\}\}$/)
+                            if (!match) return <span key={i}>{chunk}</span>
+                            const key = match[1]
+                            const pdef = tpl.params!.find(p => p.key === key)
+                            return (
+                              <input
+                                key={i}
+                                placeholder={pdef?.placeholder || pdef?.label || key}
+                                className="inline-block w-auto text-xs bg-white border rounded px-1 py-0.5 mx-0.5"
+                                value={values[key] || ''}
+                                onChange={e => setTemplateInputs(prev => ({ ...prev, [index]: { ...(prev[index] || {}), [key]: e.target.value } }))}
+                              />
+                            )
+                          })}
+                        </>
+                      ) : tpl.message}
+                    </div>
                     <Button
                       variant="outline"
                       size="sm"
