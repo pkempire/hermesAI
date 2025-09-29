@@ -90,7 +90,7 @@ export function EmptyScreen({
         {!hideHeader && (
           <div className="text-center py-6">
             <div className="mx-auto mb-2">
-              <img src="/images/hermes-logo.png" alt="Hermes" className="mx-auto h-14 w-14 rounded-full shadow-sm" />
+              <img src="/images/hermes-avatar.png" alt="Hermes" className="mx-auto h-16 w-16 rounded-full shadow-sm" />
             </div>
             <p className="text-base font-medium">Describe your ideal prospect & what you're offering.</p>
             <p className="text-xs text-muted-foreground mt-1">Examples below load into chat. Sign in to run your first 7‑day trial search.</p>

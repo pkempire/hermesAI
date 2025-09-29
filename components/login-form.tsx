@@ -59,7 +59,7 @@ export function LoginForm({
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${baseUrl}/auth/oauth`
+          redirectTo: `${baseUrl}/auth/oauth?next=/`
         }
       })
       if (error) throw error

@@ -210,6 +210,14 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
                         }
                       })
                     }
+                    // Guard against scrape_site loop: after one scrape call, enable only ask_question or prospect_search
+                    if (item.toolName === 'scrape_site') {
+                      try {
+                        (result as any)?.update?.({
+                          activeTools: ['ask_question','prospect_search']
+                        })
+                      } catch {}
+                    }
                   }
                   if (item?.type === 'tool-result') {
                     const output = item.output

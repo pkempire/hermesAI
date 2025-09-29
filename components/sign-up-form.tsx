@@ -41,16 +41,17 @@ export function SignUpForm({
     }
 
     try {
+      const { error } = await supabase.auth.signUp({ email, password })
+      if (error) throw error
+      // After account creation, redirect to Google sign-in to grant Gmail scopes and start trial
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
         options: {
-          emailRedirectTo: `${baseUrl}/`
+          redirectTo: `${baseUrl}/auth/oauth?next=/`,
+          scopes: 'https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.modify openid email profile'
         }
       })
-      if (error) throw error
-      router.push('/auth/sign-up-success')
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred')
     } finally {

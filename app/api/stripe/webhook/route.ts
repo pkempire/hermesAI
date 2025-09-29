@@ -23,13 +23,20 @@ export async function POST(req: NextRequest) {
       const s = evt.data.object as any
       const userId = s.client_reference_id || s.metadata?.user_id
       const customerId = s.customer as string
-      const trialEnd = s.subscription ? undefined : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      // Prefer Stripe subscription trial_end when present; else default 7 days
+      let trialEnd: string | null = null
+      if (s.subscription && s.subscription.trial_end) {
+        try { trialEnd = new Date(s.subscription.trial_end * 1000).toISOString() } catch {}
+      }
+      if (!trialEnd) {
+        trialEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      }
       if (userId) {
         await supabase.from('subscriptions').upsert({
           user_id: userId,
           plan: 'starter',
           quota_monthly: 200,
-          trial_expires_at: trialEnd ? trialEnd : null,
+          trial_expires_at: trialEnd,
           metadata: { stripe_customer_id: customerId }
         }, { onConflict: 'user_id' })
       }
