@@ -83,16 +83,16 @@ export function EmptyScreen({
   useEffect(() => {
     const id = setInterval(() => setWordIndex(i => (i + 1) % rotating.length), 2200)
     return () => clearInterval(id)
-  }, [])
+  }, [rotating.length])
   return (
     <div className={`mx-auto w-full max-w-3xl transition-all ${className}`}>
       <div className="space-y-6">
         {!hideHeader && (
-          <div className="text-center py-6">
-            <div className="mx-auto mb-2">
-              <img src="/images/hermes-avatar.png" alt="Hermes" className="mx-auto h-16 w-16 rounded-full shadow-sm" />
+          <div className="text-center py-8">
+            <div className="mx-auto mb-3">
+              <img src="/images/hermes-avatar.png" alt="Hermes" className="mx-auto h-20 w-20 rounded-full shadow-sm" />
             </div>
-            <p className="text-base font-medium">Describe your ideal prospect & what you're offering.</p>
+            <p className="text-base font-medium">Describe your ideal prospect &amp; what you&apos;re offering.</p>
             <p className="text-xs text-muted-foreground mt-1">Examples below load into chat. Sign in to run your first 7‑day trial search.</p>
           </div>
         )}

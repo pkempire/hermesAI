@@ -261,7 +261,7 @@ export function Chat({
         setInputValue(draft)
       }
     } catch {}
-  }, [])
+  }, [inputValue])
 
   const onQuerySelect = (query: string) => {
     // Gate to sign-up if not authed

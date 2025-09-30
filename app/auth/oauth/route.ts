@@ -28,6 +28,17 @@ export async function GET(request: Request) {
               .from('subscriptions')
               .insert({ user_id: userId, plan: 'starter', quota_monthly: 200, used_this_month: 0, trial_expires_at: trialEnd, metadata: { source: 'seeded_on_login' } })
           }
+          // Capture provider tokens when available (depends on provider configuration)
+          try {
+            const { data: sessionData } = await supabase.auth.getSession()
+            const providerAccess = (sessionData as any)?.session?.provider_token
+            const providerRefresh = (sessionData as any)?.session?.provider_refresh_token
+            if (providerAccess) {
+              await supabase
+                .from('gmail_credentials')
+                .upsert({ user_id: userId, access_token: providerAccess, refresh_token: providerRefresh || null })
+            }
+          } catch {}
         }
       } catch {}
 
