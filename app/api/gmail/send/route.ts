@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUserId } from '@/lib/auth/get-current-user'
 import { sendGmailRaw, toBase64Url } from '@/lib/clients/gmail'
+import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
   const userId = await getCurrentUserId()
