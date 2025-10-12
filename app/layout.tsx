@@ -5,6 +5,7 @@ import { Manrope, Playfair_Display } from 'next/font/google'
 import AppSidebar from '@/components/app-sidebar'
 import ArtifactRoot from '@/components/artifact/artifact-root'
 import { Header } from '@/components/header'
+import { OnboardingModal } from '@/components/onboarding-modal'
 import { ThemeProvider } from '@/components/theme-provider'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
@@ -95,18 +96,20 @@ export default async function RootLayout({
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
+          forcedTheme="light"
           enableSystem={false}
           disableTransitionOnChange
         >
-          <SidebarProvider defaultOpen>
+          <SidebarProvider defaultOpen={false}>
             <AppSidebar />
-            <div className="flex flex-col flex-1 pt-24 md:pt-28">
+            <div className="flex flex-col flex-1">
               <Header user={user} />
-              <main className="flex flex-1 min-h-0">
+              <main className="flex flex-1 min-h-0 overflow-hidden">
                 <ArtifactRoot>{children}</ArtifactRoot>
               </main>
             </div>
           </SidebarProvider>
+          <OnboardingModal />
           <Toaster />
           <Analytics />
         </ThemeProvider>

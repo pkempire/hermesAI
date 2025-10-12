@@ -20,6 +20,11 @@ export async function GET(request: NextRequest) {
 
   const userId = await getCurrentUserId()
 
+  // Return empty if user is not authenticated (no point querying with 'anonymous')
+  if (userId === 'anonymous') {
+    return NextResponse.json<ChatPageResponse>({ chats: [], nextOffset: null })
+  }
+
   try {
     const page = Math.floor(offset / limit)
     const result = await getChatsPage(page, userId)

@@ -11,18 +11,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
-import { 
-  Mail, 
-  Send, 
-  Sparkles, 
-  User, 
-  Building, 
-  MessageSquare,
+import {
+  Building,
+  CheckCircle2,
   Eye,
-  RefreshCw,
   Plus,
-  X,
-  CheckCircle2
+  Send,
+  Sparkles,
+  User,
+  X
 } from 'lucide-react'
 import { useState } from 'react'
 import { Prospect } from './prospect-grid'
@@ -63,6 +60,31 @@ export function InteractiveEmailDrafter({
   onEmailsGenerated,
   onPreviewEmail
 }: InteractiveEmailDrafterProps) {
+  // Pre-fill campaign fields from search context
+  const getInitialObjective = () => {
+    try {
+      const stored = sessionStorage.getItem('hermes-search-context')
+      if (stored) {
+        const context = JSON.parse(stored)
+        const persona = context.targetPersona || 'decision makers'
+        const offer = context.offer || 'our services'
+        return `Connect with ${persona} to discuss ${offer}`
+      }
+    } catch {}
+    return ''
+  }
+  
+  const getInitialValueProp = () => {
+    try {
+      const stored = sessionStorage.getItem('hermes-search-context')
+      if (stored) {
+        const context = JSON.parse(stored)
+        return context.offer || ''
+      }
+    } catch {}
+    return ''
+  }
+  
   // State management
   const [campaignType, setCampaignType] = useState<'single' | 'sequence'>('single')
   const [emailCount, setEmailCount] = useState(1)
@@ -86,8 +108,8 @@ export function InteractiveEmailDrafter({
   })
   const [isGenerating, setIsGenerating] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState(0)
-  const [campaignObjective, setCampaignObjective] = useState('')
-  const [valueProposition, setValueProposition] = useState('')
+  const [campaignObjective, setCampaignObjective] = useState(getInitialObjective())
+  const [valueProposition, setValueProposition] = useState(getInitialValueProp())
 
   // Add new email to sequence
   const addEmailToSequence = () => {
@@ -161,8 +183,15 @@ export function InteractiveEmailDrafter({
     }
   }
 
+  const generatingRef = { current: false } as any
   const handleGenerate = () => {
-    onEmailsGenerated?.(emailTemplates)
+    if (generatingRef.current) return
+    generatingRef.current = true
+    try {
+      onEmailsGenerated?.(emailTemplates)
+    } finally {
+      setTimeout(() => { generatingRef.current = false }, 1000)
+    }
   }
 
   const sampleProspect = prospects[0]
@@ -229,22 +258,24 @@ export function InteractiveEmailDrafter({
                   <Label htmlFor="objective">Campaign Objective</Label>
                   <Textarea
                     id="objective"
-                    placeholder="e.g., Schedule demos for our new API management platform with CTOs at fintech companies..."
+                    placeholder="e.g., Connect with decision makers to explore partnership opportunities..."
                     value={campaignObjective}
                     onChange={(e) => setCampaignObjective(e.target.value)}
                     className="min-h-20"
                   />
+                  <p className="text-xs text-gray-500">What do you want to achieve with this outreach?</p>
                 </div>
 
                 <div>
                   <Label htmlFor="value-prop">Value Proposition</Label>
                   <Textarea
                     id="value-prop"
-                    placeholder="e.g., We help fintech companies reduce API latency by 40% and improve reliability..."
+                    placeholder="e.g., We help organizations achieve their goals through innovative solutions..."
                     value={valueProposition}
                     onChange={(e) => setValueProposition(e.target.value)}
                     className="min-h-20"
                   />
+                  <p className="text-xs text-gray-500">What unique value do you offer?</p>
                 </div>
               </div>
 

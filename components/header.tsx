@@ -3,12 +3,9 @@
 import { useSidebar } from '@/components/ui/sidebar'
 import { cn } from '@/lib/utils'
 import { User } from '@supabase/supabase-js'
-// import Link from 'next/link' // No longer needed directly here for Sign In button
-import React, { useEffect, useState } from 'react'
-// import { Button } from './ui/button' // No longer needed directly here for Sign In button
-import { getStripeCheckoutUrl } from '@/lib/utils'
 import Link from 'next/link'
-import GuestMenu from './guest-menu'; // Import the new GuestMenu component
+import React, { useEffect, useState } from 'react'
+import GuestMenu from './guest-menu'
 import UserMenu from './user-menu'
 
 interface HeaderProps {
@@ -36,19 +33,34 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
   }, [user])
   return (
     <header
-      className={cn(
-        'absolute top-0 right-0 p-2 flex justify-between items-center z-30 backdrop-blur lg:backdrop-blur-none bg-[#0f0f11]/80 lg:bg-transparent transition-[width] duration-200 ease-linear',
-        open ? 'md:w-[calc(100%-var(--sidebar-width))]' : 'md:w-full',
-        'w-full'
-      )}
-    >
-      <div className="flex items-center gap-2 ml-auto">
-        {typeof credits === 'number' && (
-          <span className="hidden sm:inline-block text-xs px-3 py-1.5 rounded-full border bg-white/60">{credits} credits</span>
+        className={cn(
+          'sticky top-0 right-0 left-0 p-4 flex justify-between items-center z-30 backdrop-blur-md bg-background/95 border-b border-border/50 shadow-sm transition-all duration-200',
+          open ? 'md:pl-[calc(var(--sidebar-width)+1rem)]' : 'md:pl-4'
         )}
-        <Link href={getStripeCheckoutUrl()} className="hidden sm:inline-block text-xs px-3 py-1.5 rounded-full border bg-white/60 hover:bg-white transition">
-          Start 7‑day free trial
-        </Link>
+    >
+      {/* Branding */}
+      <Link href="/" className="flex items-center gap-3 transition-transform duration-200">
+        <img
+          src="/images/hermes-avatar.png"
+          alt="Hermes"
+          className="h-8 w-8 rounded-full border border-border"
+          onError={(e) => { e.currentTarget.style.display = 'none' }}
+        />
+        <div className="hidden sm:block">
+          <h1 className="text-base font-semibold text-foreground">Hermes</h1>
+          <p className="text-xs text-muted-foreground">Prospecting Copilot</p>
+        </div>
+      </Link>
+
+      {/* Actions */}
+      <div className="flex items-center gap-2">
+        {user && credits !== null && (
+          <div className="hidden sm:inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border text-foreground/80">
+            <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+            <span className="font-semibold">{credits}</span>
+            <span>credits</span>
+          </div>
+        )}
         {user ? <UserMenu user={user} /> : <GuestMenu />}
       </div>
     </header>

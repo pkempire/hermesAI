@@ -94,6 +94,8 @@ export function EnhancedProspectSearchBuilder({
   const [targetCount, setTargetCount] = useState(initialCount)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [newCustomEnrichment, setNewCustomEnrichment] = useState({ label: '', description: '' })
+  // Evidence mode: when enabled, downstream UI can require sources before sending
+  const [evidenceMode, setEvidenceMode] = useState<boolean>(false)
 
   // Grouping criteria by type
   const criteriaByType = criteria.reduce((acc, criterion) => {
@@ -173,7 +175,8 @@ export function EnhancedProspectSearchBuilder({
       enrichments: allEnabledEnrichments,
       entityType,
       targetCount: 1,
-      originalQuery
+      originalQuery,
+      evidenceMode
     }
     onPreviewExecute?.(params)
   }
@@ -184,7 +187,8 @@ export function EnhancedProspectSearchBuilder({
       enrichments: allEnabledEnrichments,
       entityType,
       targetCount,
-      originalQuery
+      originalQuery,
+      evidenceMode
     }
     onSearchExecute?.(params)
   }
@@ -411,6 +415,16 @@ export function EnhancedProspectSearchBuilder({
                     <div className="text-sm text-muted-foreground text-center">
                       {targetCount} prospects
                     </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Evidence mode</Label>
+                  <div className="flex items-center justify-between rounded-md border p-3">
+                    <div className="text-sm text-muted-foreground pr-4">
+                      Require sources later before sending emails. Useful for research‑grade campaigns. Toggle off for simple directory outreach.
+                    </div>
+                    <Checkbox checked={evidenceMode} onCheckedChange={(v) => setEvidenceMode(Boolean(v))} />
                   </div>
                 </div>
               </div>

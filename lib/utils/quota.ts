@@ -8,6 +8,12 @@ export interface QuotaCheckOptions {
 }
 
 export async function requireQuota({ userId, cost, kind, idempotencyKey }: QuotaCheckOptions): Promise<{ ok: true } | { ok: false; reason: string }> {
+  // Development bypass: skip quota checks in development
+  if (process.env.NODE_ENV === 'development' || process.env.SKIP_QUOTA_CHECK === 'true') {
+    console.log('⚠️ [Quota] Bypassing quota check (development mode)')
+    return { ok: true }
+  }
+  
   const supabase = await createClient()
 
   // Fetch subscription

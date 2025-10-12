@@ -26,7 +26,7 @@ export default function GuestMenu() {
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuItem asChild>
-          <Link href="/auth/login">
+          <Link href="/auth/oauth?provider=google">
             <LogIn className="mr-2 h-4 w-4" />
             <span>Sign In</span>
           </Link>

@@ -4,7 +4,7 @@ import Stripe from 'stripe'
 
 export async function POST(req: NextRequest) {
   const userId = await getCurrentUserId()
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!userId || userId === 'anonymous') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { priceId, successPath = '/', cancelPath = '/' } = await req.json()
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-12-18.acacia' as any })
   const session = await stripe.checkout.sessions.create({

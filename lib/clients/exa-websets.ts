@@ -89,12 +89,14 @@ export interface ListItemsResponse {
 
 export class ExaWebsetsClient {
   private exa: Exa
+  private useFastApi: boolean
 
-  constructor(apiKey: string) {
+  constructor(apiKey: string, options?: { fastApi?: boolean }) {
     if (!apiKey) {
       throw new Error('EXA_API_KEY is required')
     }
     this.exa = new Exa(apiKey)
+    this.useFastApi = options?.fastApi ?? true // Default to fast API for speed
   }
 
   /**
@@ -329,7 +331,7 @@ export function createProspectSearchCriteria(
 ): WebsetSearchConfig {
   console.log('🔧 [createProspectSearchCriteria] Creating search criteria for:', criteria.query)
   
-  const entityType = criteria.entityType || 'person'
+  const entityType = criteria.entityType || 'company'
   
   // Build verification criteria from ALL extracted criteria
   const verificationCriteria: Array<{ description: string; successRate?: number }> = []

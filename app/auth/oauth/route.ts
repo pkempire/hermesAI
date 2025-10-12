@@ -5,8 +5,11 @@ import { createClient } from '@/lib/supabase/server'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
+  const provider = searchParams.get('provider')
   // if "next" is in param, use it as the redirect URL
   const next = searchParams.get('next') ?? '/'
+
+  console.log('🔧 [OAuth] Request params:', { code: !!code, provider, next, allParams: Object.fromEntries(searchParams) })
 
   if (code) {
     const supabase = await createClient()
@@ -56,5 +59,27 @@ export async function GET(request: Request) {
   }
 
   // return the user to an error page with instructions
+  console.log('🔧 [OAuth] No code parameter, redirecting to error')
+
+  // If provider=google was passed, try to initiate OAuth flow
+  if (provider === 'google') {
+    const supabase = await createClient()
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${origin}/auth/oauth`,
+        scopes: 'https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.send'
+      }
+    })
+
+    if (data.url) {
+      console.log('🔧 [OAuth] Redirecting to Google OAuth URL')
+      return NextResponse.redirect(data.url)
+    }
+
+    console.log('🔧 [OAuth] Failed to get Google OAuth URL:', error)
+    return NextResponse.redirect(`${origin}/auth/error?error=${encodeURIComponent('Google OAuth not configured in Supabase')}`)
+  }
+
   return NextResponse.redirect(`${origin}/auth/error`)
 }

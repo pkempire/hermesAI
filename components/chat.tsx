@@ -366,10 +366,7 @@ export function Chat({
 
   return (
     <div
-      className={cn(
-        'relative flex h-full min-w-0 min-h-0 flex-1 overflow-hidden',
-        messages.length === 0 ? 'items-center justify-center' : ''
-      )}
+      className="relative flex h-full min-w-0 min-h-0 flex-1 overflow-hidden bg-gray-50"
       data-testid="full-chat"
     >
       {showProgressTracker ? (

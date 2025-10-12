@@ -135,11 +135,11 @@ export function ChatMessages({
       role="list"
       aria-roledescription="chat messages"
       className={cn(
-        'relative pt-14 w-full h-full',
-        sections.length > 0 ? 'flex-1 overflow-y-auto' : ''
+        'relative pt-14 w-full h-full flex-1 overflow-y-auto',
+        'scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent'
       )}
     >
-      <div className="relative mx-auto w-full max-w-3xl px-4">
+      <div className="relative mx-auto w-full max-w-3xl px-4 pb-32">
         {sections.map((section, sectionIndex) => (
           <div
             key={section.id}
@@ -147,7 +147,7 @@ export function ChatMessages({
             className="chat-section mb-8"
             style={
               sectionIndex === sections.length - 1
-                ? { minHeight: 'calc(-228px + 100dvh)' }
+                ? { minHeight: '50vh' }
                 : {}
             }
           >
@@ -168,8 +168,8 @@ export function ChatMessages({
             </div>
 
             {/* Assistant messages */}
-            {section.assistantMessages.map(assistantMessage => (
-              <div key={assistantMessage.id} className="flex flex-col gap-4">
+            {section.assistantMessages.map((assistantMessage, idx) => (
+              <div key={`${assistantMessage.id}-${idx}`} className="flex flex-col gap-4">
                 <RenderMessage
                   message={assistantMessage}
                   messageId={assistantMessage.id}

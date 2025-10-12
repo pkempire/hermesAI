@@ -1,9 +1,7 @@
-import { Chat } from '@/components/chat'
+import { HermesApp } from '@/components/hermes-app'
 import { getModels } from '@/lib/config/models'
-import { generateId } from 'ai'
 
 export default async function Page() {
-  const id = generateId()
   const models = await getModels()
-  return <Chat id={id} models={models} />
+  return <HermesApp models={models} />
 }

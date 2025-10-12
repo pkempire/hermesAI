@@ -2,7 +2,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { getStripeCheckoutUrl } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Grid3x3, List, Users } from 'lucide-react';
 import { useState } from 'react';
@@ -90,6 +89,27 @@ export function ProspectGrid({ prospects, onSelectionChange, onReviewComplete }:
 
   // effects defined above. do not duplicate
 
+  const handleSelectAll = () => {
+    if (selectedProspects.size === prospects.length) {
+      // Deselect all
+      setSelectedProspects(new Set());
+      onSelectionChange?.([]);
+    } else {
+      // Select all
+      const allIds = new Set(prospects.map(p => p.id));
+      setSelectedProspects(allIds);
+      onSelectionChange?.(Array.from(allIds));
+    }
+  };
+
+  const handleDraftEmails = () => {
+    window.dispatchEvent(new CustomEvent('chat-system-suggest', {
+      detail: {
+        text: `Draft personalized emails for the ${selectedProspects.size} selected prospects`
+      }
+    }));
+  };
+
   if (viewMode === 'grid') {
     return (
       <div className="space-y-6">
@@ -97,12 +117,20 @@ export function ProspectGrid({ prospects, onSelectionChange, onReviewComplete }:
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <Users className="w-5 h-5" />
+              <Users className="w-5 h-5 text-amber-600" />
               {prospects.length} Prospects Found
             </h3>
-            <Badge variant="secondary">
+            <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-amber-200">
               {selectedProspects.size} Selected
             </Badge>
+            <Button
+              onClick={handleSelectAll}
+              variant="outline"
+              size="sm"
+              className="text-xs"
+            >
+              {selectedProspects.size === prospects.length ? 'Deselect All' : 'Select All'}
+            </Button>
           </div>
           <Button
             onClick={() => setViewMode('single')}
@@ -141,25 +169,21 @@ export function ProspectGrid({ prospects, onSelectionChange, onReviewComplete }:
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-xl border p-4 flex items-center gap-4"
+            className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-xl border-2 border-amber-200 p-4 flex items-center gap-4 z-50"
           >
-            <span className="text-sm font-medium text-gray-700">
-              {selectedProspects.size} prospects selected
+            <span className="text-sm font-medium text-gray-900">
+              {selectedProspects.size} {selectedProspects.size === 1 ? 'prospect' : 'prospects'} selected
             </span>
-            <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-              Create Campaign
-            </Button>
-            <Button size="sm" variant="outline">
-              Export List
-            </Button>
-            <a
-              href={getStripeCheckoutUrl()}
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs px-3 py-2 rounded-md border bg-white hover:bg-muted transition-colors"
+            <Button 
+              size="sm" 
+              className="bg-amber-500 hover:bg-amber-600 text-amber-950"
+              onClick={handleDraftEmails}
             >
-              Upgrade $39/mo
-            </a>
+              Draft Emails for Selected
+            </Button>
+            <Button size="sm" variant="outline" className="border-gray-300">
+              Export CSV
+            </Button>
           </motion.div>
         )}
       </div>

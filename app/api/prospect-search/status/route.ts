@@ -1,6 +1,9 @@
 import Exa from 'exa-js';
 import { NextRequest, NextResponse } from 'next/server';
 
+// Cache Exa client to avoid recreating on each request
+let cachedExa: Exa | null = null;
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url!);
@@ -8,8 +11,12 @@ export async function GET(req: NextRequest) {
     const targetParam = searchParams.get('target');
     const targetCount = targetParam ? Number(targetParam) : undefined;
     if (!websetId) return NextResponse.json({ error: 'Missing websetId' }, { status: 400 });
-    
-    const exa = new Exa(process.env.EXA_API_KEY!);
+
+    // Reuse cached Exa client for speed
+    if (!cachedExa) {
+      cachedExa = new Exa(process.env.EXA_API_KEY!);
+    }
+    const exa = cachedExa;
     
     console.log(`[GET /api/prospect-search/status] Checking webset: ${websetId}`);
     
@@ -107,102 +114,62 @@ export async function GET(req: NextRequest) {
                 console.log(`[GET /api/prospect-search/status] Raw enrichments for ${item.id}:`, JSON.stringify(item.enrichments, null, 2));
                 
                 // Handle different enrichment formats
+                // Store all enrichments properly
+                const structuredEnrichments: Array<{title: string; value: any; format?: string}> = [];
+                
                 if (Array.isArray(item.enrichments)) {
-                  // Array format - iterate through enrichment objects
-                  item.enrichments.forEach((enrichment: any, index: number) => {
-                    console.log(`[GET /api/prospect-search/status] Processing enrichment ${index}:`, enrichment);
-                    
-                    console.log(`[GET /api/prospect-search/status] Enrichment ${index} status:`, enrichment.status, 'ID:', enrichment.enrichmentId);
-                    
-                    if (enrichment.status === 'completed' && enrichment.result) {
-                      const value = Array.isArray(enrichment.result) ? enrichment.result[0] : enrichment.result;
-                      const enrichmentId = enrichment.enrichmentId || '';
-                      
-                      console.log(`[GET /api/prospect-search/status] Enrichment ${index} completed with value:`, value, 'ID:', enrichmentId);
-                      
-                      const valueStr = typeof value === 'string' ? value : String(value ?? '');
-                      const lower = valueStr.toLowerCase();
-                      const fmt = enrichment.format as string | undefined;
-                      const isEmail = fmt === 'email' || valueStr.includes('@');
-                      const isLinkedIn = valueStr.includes('linkedin.com');
-                      const isJobTitle = /(founder|ceo|chief|principal|director|manager|head|vp|president|admissions|strategist|consultant|teacher)/i.test(valueStr) || valueStr.includes(' at ');
-                      const isCompany = /(inc\.|inc\b|llc\b|corp\b|corporation|company|academy|school|counseling|education|consulting|group|partners|college)/i.test(lower) && !isJobTitle;
-                      const isLikelyAddress = /\d{2,}.*\b(AZ|AL|AK|AR|CA|CO|CT|DC|DE|FL|GA|HI|IA|ID|IL|IN|KS|KY|LA|MA|MD|ME|MI|MN|MO|MS|MT|NC|ND|NE|NH|NJ|NM|NV|NY|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VA|VT|WA|WI|WV)\b/i.test(valueStr);
-                      const looksLikeName = valueStr.split(' ').length <= 4 && valueStr.split(' ').every(w => /^(?:[A-Z][a-z'-]+|&|of|and)$/.test(w)) && !isJobTitle && !isCompany;
-                      
-                      if (isEmail) {
-                        prospect.email = valueStr;
-                        console.log(`[GET /api/prospect-search/status] Set email to:`, valueStr);
-                      } else if (isLinkedIn) {
-                        prospect.linkedinUrl = valueStr;
-                        console.log(`[GET /api/prospect-search/status] Set LinkedIn to:`, valueStr);
-                      } else if (isJobTitle) {
-                        prospect.jobTitle = valueStr;
-                        console.log(`[GET /api/prospect-search/status] Set jobTitle to:`, valueStr);
-                      } else if (looksLikeName) {
-                        prospect.fullName = valueStr;
-                        console.log(`[GET /api/prospect-search/status] Set fullName to:`, valueStr);
-                      } else if (isCompany) {
-                        prospect.company = valueStr;
-                        console.log(`[GET /api/prospect-search/status] Set company to:`, valueStr);
-                      } else if (isLikelyAddress) {
-                        prospect.location = valueStr;
-                        console.log(`[GET /api/prospect-search/status] Set location (address) to:`, valueStr);
-                      }
-                    } else if (enrichment.status === 'canceled' || enrichment.status === 'failed') {
-                      console.log(`[GET /api/prospect-search/status] Enrichment ${index} ${enrichment.status}, may retry later`);
-                      // For canceled/failed enrichments, we continue processing other data
-                      // The prospect will still be returned but with limited enrichment data
-                    } else if (enrichment.status === 'pending' || enrichment.status === 'running') {
-                      console.log(`[GET /api/prospect-search/status] Enrichment ${index} still ${enrichment.status}`);
+                  // Get the first enrichment for company name (it's always first)
+                  const firstEnrich = item.enrichments[0];
+                  if (firstEnrich?.status === 'completed' && firstEnrich.result) {
+                    const companyName = Array.isArray(firstEnrich.result) ? firstEnrich.result[0] : firstEnrich.result;
+                    if (companyName && companyName !== 'null') {
+                      prospect.company = String(companyName);
+                      prospect.fullName = String(companyName); // For companies, fullName = company name
                     }
-                    
+                  }
+                  
+                  // Process all enrichments and store them properly
+                  item.enrichments.forEach((enrichment: any, index: number) => {
                     if (enrichment.status === 'completed' && enrichment.result) {
                       const value = Array.isArray(enrichment.result) ? enrichment.result[0] : enrichment.result;
-                      const enrichmentId = enrichment.enrichmentId || '';
+                      // Heuristic title mapping to avoid generic labels
+                      let title = enrichment.description || `Enrichment ${index + 1}`;
+                      const valueStr = String(value || '').toLowerCase();
+                      if (valueStr.includes('linkedin.com')) title = 'LinkedIn';
+                      else if (valueStr.includes('@')) title = 'Email';
+                      else if (/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(valueStr)) title = 'Domain';
+                      else if (/employee|headcount|employees/.test((enrichment.description || '').toLowerCase())) title = 'Employees';
+                      else if (/funding|series|raised|invest/.test((enrichment.description || '').toLowerCase())) title = 'Funding';
+                      else if (/tech|stack|technology/.test((enrichment.description || '').toLowerCase())) title = 'Tech Stack';
                       
                       if (value && value !== 'null' && value !== 'None') {
-                        // Map by enrichmentId patterns or value content
-                        if (enrichmentId.includes('cjr01') || (typeof value === 'string' && !value.includes('@') && !value.includes('http') && !/founder|principal|director|manager|ceo/i.test(String(value)) && value.length < 60)) {
-                          // Company name enrichment
-                          prospect.company = value as string | undefined;
-                          console.log(`[GET /api/prospect-search/status] Set company to:`, value);
-                        } else if (enrichmentId.includes('ajr01') || (typeof value === 'string' && value.includes('@'))) {
-                          // Email enrichment
-                          prospect.email = value as string | undefined;
-                          console.log(`[GET /api/prospect-search/status] Set email to:`, value);
-                        } else if (enrichmentId.includes('bjr01') || (typeof value === 'string' && value.includes('linkedin.com'))) {
-                          // LinkedIn URL enrichment
-                          prospect.linkedinUrl = String(value);
-                          console.log(`[GET /api/prospect-search/status] Set LinkedIn to:`, value);
-                          
-                          // Extract name from LinkedIn URL if we don't have a better name
-                          if (prospect.fullName === 'Profile Found' && (value as string).includes('/in/')) {
-                            const urlPart = (value as string).split('/in/')[1]?.split('/')[0];
-                            if (urlPart) {
-                              const extractedName = urlPart
-                                .replace(/-/g, ' ')
-                                .replace(/\b\w/g, (l: string) => l.toUpperCase())
-                                .replace(/[0-9]/g, '')
-                                .trim();
-                              if (extractedName.length > 2) {
-                                prospect.fullName = extractedName;
-                                console.log(`[GET /api/prospect-search/status] Extracted name from LinkedIn:`, extractedName);
-                              }
-                            }
-                          }
-                        } else if (enrichmentId.includes('djr01') || (typeof value === 'string' && (/(United States|[A-Z]{2})/i.test(String(value)) || /\d/.test(String(value))))) {
-                          // Location enrichment
-                          prospect.location = value as string | undefined;
-                          console.log(`[GET /api/prospect-search/status] Set location to:`, value);
-                        } else if (enrichmentId.includes('ejr01') || (typeof value === 'string' && ((value as string).includes('Director') || (value as string).includes('Manager') || (value as string).includes('VP') || (value as string).includes('Head of')))) {
-                          // Job title enrichment
-                          prospect.jobTitle = value as string | undefined;
-                          console.log(`[GET /api/prospect-search/status] Set jobTitle to:`, value);
+                        const valueStrRaw = String(value);
+                        
+                        // Extract CORE fields only
+                        if (valueStrRaw.includes('@') && !prospect.email) {
+                          prospect.email = valueStrRaw;
+                        } else if (valueStrRaw.includes('linkedin.com') && !prospect.linkedinUrl) {
+                          prospect.linkedinUrl = valueStrRaw;
+                        } else if (valueStrRaw.match(/^\d{1,6}$/) && title.toLowerCase().includes('employee')) {
+                          // Employee count - store as companySize
+                          prospect.companySize = valueStrRaw;
+                        } else if (valueStrRaw.match(/^[a-z0-9.-]+\.[a-z]{2,}$/i) && title.toLowerCase().includes('domain')) {
+                          // Domain - store as website
+                          prospect.website = valueStrRaw.startsWith('http') ? valueStrRaw : `https://${valueStrRaw}`;
                         }
+                        
+                        // Store ALL enrichments with their proper titles
+                        structuredEnrichments.push({
+                          title: title,
+                          value: value,
+                          format: enrichment.format
+                        });
                       }
                     }
                   });
+                  
+                  // Assign structured enrichments to prospect
+                  prospect.enrichments = structuredEnrichments;
                 } else if (typeof item.enrichments === 'object') {
                   // Object format - check for different possible structures
                   const enrichments = item.enrichments as Record<string, any>;
@@ -270,7 +237,27 @@ export async function GET(req: NextRequest) {
                 }
               } catch (enrichmentError) {
                 console.error(`[GET /api/prospect-search/status] Error processing enrichments for item ${item.id}:`, enrichmentError);
-              }
+                }
+                // Compute a quick fit score (0-100)
+                try {
+                  const scoreSignals = [
+                    prospect.email ? 25 : 0,
+                    prospect.linkedinUrl ? 20 : 0,
+                    prospect.companySize ? 10 : 0,
+                    prospect.industry ? 10 : 0,
+                    prospect.website ? 10 : 0,
+                    Array.isArray(prospect.enrichments) && prospect.enrichments.length > 3 ? 10 : 0,
+                    prospect.company && prospect.company !== 'Unknown' ? 15 : 0
+                  ];
+                  const base = scoreSignals.reduce((a,b)=>a+b,0);
+                  prospect.fitScore = Math.min(100, base);
+                  // Cheap summary from available fields
+                  const parts: string[] = [];
+                  if (prospect.company) parts.push(prospect.company);
+                  if (prospect.industry) parts.push(prospect.industry);
+                  if (prospect.companySize) parts.push(`${prospect.companySize} employees`);
+                  prospect.summary = parts.join(' • ');
+                } catch {}
             }
             
             console.log(`[GET /api/prospect-search/status] Converted prospect:`, {

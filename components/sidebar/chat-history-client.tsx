@@ -1,9 +1,9 @@
 'use client'
 
 import {
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarMenu
+    SidebarGroup,
+    SidebarGroupLabel,
+    SidebarMenu
 } from '@/components/ui/sidebar'
 import { Chat } from '@/lib/types'
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
@@ -115,7 +115,7 @@ export function ChatHistoryClient() {
     <div className="flex flex-col flex-1 h-full">
       <SidebarGroup>
         <div className="flex items-center justify-between w-full">
-          <SidebarGroupLabel className="p-0">History</SidebarGroupLabel>
+          <SidebarGroupLabel className="p-0">Campaign Manager • Chat History</SidebarGroupLabel>
           <ClearHistoryAction empty={isHistoryEmpty} />
         </div>
       </SidebarGroup>

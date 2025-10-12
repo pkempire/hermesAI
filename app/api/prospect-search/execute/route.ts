@@ -1,14 +1,18 @@
 import { getCurrentUserId } from '@/lib/auth/get-current-user'
+import { createOrReuseWebset } from '@/lib/clients/exa-cache'
 import { createExaWebsetsClient, createProspectSearchCriteria } from '@/lib/clients/exa-websets'
+import { getCachedProspects } from '@/lib/performance/redis-cache'
 import { createClient } from '@/lib/supabase/server'
 import { requireQuota } from '@/lib/utils/quota'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
   try {
-    const { criteria, enrichments, entityType, targetCount, originalQuery, preview = false } = await req.json()
+    const { criteria, enrichments, entityType, targetCount, originalQuery, preview = false, evidenceMode } = await req.json()
     const userId = await getCurrentUserId()
-    if (!userId) return NextResponse.json({ type: 'error', message: 'Unauthorized' }, { status: 401 })
+    if (!userId || userId === 'anonymous') {
+      return NextResponse.json({ type: 'error', message: 'Unauthorized' }, { status: 401 })
+    }
     if (!originalQuery || typeof originalQuery !== 'string') {
       return NextResponse.json({ error: 'Missing query' }, { status: 400 })
     }
@@ -24,6 +28,26 @@ export async function POST(req: NextRequest) {
       preview
     })
 
+    // Check cache first for significant performance boost
+    if (!preview) {
+      const cachedResults = await getCachedProspects(originalQuery, criteria || [], entityType || 'person')
+      if (cachedResults && cachedResults.length >= (targetCount || 25)) {
+        console.log(`⚡ [POST /api/prospect-search/execute] Serving ${cachedResults.length} cached prospects`)
+        return NextResponse.json({
+          type: 'cached_results',
+          prospects: cachedResults.slice(0, targetCount || 25),
+          message: `Found ${cachedResults.length} cached prospects matching your criteria.`,
+          searchCriteria: {
+            query: originalQuery,
+            targetCount,
+            entityType,
+            criteriaCount: criteria?.length || 0,
+            enrichmentsCount: enrichments?.length || 0
+          }
+        })
+      }
+    }
+
     // Quota: cost = number of targets requested (min 1)
     const cost = Math.max(1, preview ? 1 : (targetCount || 25))
     const quota = await requireQuota({ userId, cost, kind: 'prospect_search', idempotencyKey: `ps:${userId}:${originalQuery}:${cost}` })
@@ -32,12 +56,13 @@ export async function POST(req: NextRequest) {
     }
 
     const exa = createExaWebsetsClient()
+    const PROMPT_ONLY = process.env.EXA_PROMPT_ONLY === 'true'
     
     // Convert our detailed criteria format to Exa format
     const searchCriteria = {
       query: originalQuery,
       targetCount: preview ? 1 : targetCount,
-      entityType: entityType || 'person',
+      entityType: entityType || 'company',
       includeEnrichments: enrichments?.map((e: any) => e.value) || [],
       // Pass through ALL extracted criteria for Exa
       allCriteria: criteria || [],
@@ -52,55 +77,66 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Create Exa webset search config
-    const websetSearchConfig = createProspectSearchCriteria(searchCriteria)
-    
-    // Create enrichments for Exa
-    const enrichmentMapping: Record<string, string> = {
-      'email': 'email address',
-      'linkedin': 'LinkedIn profile URL',
-      'phone': 'phone number',
-      'location': 'location',
-      'job_title': 'job title',
-      'company_info': 'company name',
-      'full_name': 'full name'
+    let websetId: string
+    let isReused = false
+
+    if (PROMPT_ONLY) {
+      // Minimal prompt-only search; let Exa infer criteria
+      const webset = await exa.createWebset({
+        search: {
+          query: originalQuery,
+          count: preview ? 1 : targetCount,
+          entity: { type: (entityType || 'company') as any }
+        }
+      })
+      websetId = webset.id
+    } else {
+      // Build criteria + optional enrichments
+      const websetSearchConfig = createProspectSearchCriteria(searchCriteria)
+
+      const enrichmentMapping: Record<string, string> = {
+        'email': 'email address',
+        'linkedin': 'LinkedIn profile URL',
+        'phone': 'phone number',
+        'location': 'location',
+        'job_title': 'job title',
+        'company_info': 'company name',
+        'full_name': 'full name'
+      }
+
+      const websetEnrichmentsUncapped = enrichments?.map((e: any) => {
+        const enrichmentKey = typeof e === 'string' ? e : e.value || e.label?.toLowerCase()
+        const enrichmentLabel = enrichmentMapping[enrichmentKey] || enrichmentKey
+        return {
+          description: `Extract the person's ${enrichmentLabel}`,
+          format: 'text' as const,
+          instructions: `Look for and extract the ${enrichmentLabel} from the profile or page content.`
+        }
+      }).filter(Boolean) || []
+
+      const seen = new Set<string>()
+      const websetEnrichments: { description: string; format: 'text'; instructions: string }[] = []
+      for (const e of websetEnrichmentsUncapped) {
+        if (!seen.has(e.description)) {
+          websetEnrichments.push(e)
+          seen.add(e.description)
+        }
+        if (websetEnrichments.length >= 10) break
+      }
+
+      console.log('🔧 [POST /api/prospect-search/execute] Creating or reusing webset...')
+      const result = await createOrReuseWebset({
+        query: originalQuery,
+        criteria: criteria || [],
+        entityType: entityType || 'person',
+        enrichments: enrichments || [],
+        targetCount: preview ? 1 : targetCount
+      }, exa)
+      websetId = result.websetId
+      isReused = result.isReused
     }
 
-    const websetEnrichmentsUncapped = enrichments?.map((e: any) => {
-      // Handle both string and object formats
-      const enrichmentKey = typeof e === 'string' ? e : e.value || e.label?.toLowerCase()
-      const enrichmentLabel = enrichmentMapping[enrichmentKey] || enrichmentKey
-      
-      return {
-        description: `Extract the person's ${enrichmentLabel}`,
-        format: 'text' as const,
-        instructions: `Look for and extract the ${enrichmentLabel} from the profile or page content.`
-      }
-    }).filter(Boolean) || []
-
-    // De-duplicate by description and cap at 10 per Exa limits
-    const seen = new Set<string>()
-    const websetEnrichments: { description: string; format: 'text'; instructions: string }[] = []
-    for (const e of websetEnrichmentsUncapped) {
-      if (!seen.has(e.description)) {
-        websetEnrichments.push(e)
-        seen.add(e.description)
-      }
-      if (websetEnrichments.length >= 10) break
-    }
-
-    console.log('🔧 [POST /api/prospect-search/execute] Creating webset with config:', {
-      search: websetSearchConfig,
-      enrichments: websetEnrichments.length
-    })
-
-    // Create the webset
-    const webset = await exa.createWebset({
-      search: websetSearchConfig,
-      enrichments: websetEnrichments
-    })
-
-    console.log('✅ [POST /api/prospect-search/execute] Webset created:', webset.id)
+    console.log(`✅ [POST /api/prospect-search/execute] Webset ${isReused ? 'reused' : 'created'}:`, websetId)
 
     // Persist minimal campaign record (best-effort) — guard against duplicates
     try {
@@ -113,7 +149,7 @@ export async function POST(req: NextRequest) {
           .from('campaigns')
           .select('id, settings')
           .eq('user_id', user.id)
-          .contains('settings', { exa_webset_id: webset.id } as any)
+          .contains('settings', { exa_webset_id: websetId } as any)
           .maybeSingle()
 
         if (!existing) {
@@ -126,9 +162,9 @@ export async function POST(req: NextRequest) {
               prospect_query: { query: originalQuery, criteria },
               entity_type: entityType || 'person',
               enrichments: enrichments || [],
-              filters: searchCriteria.filters || {},
+              filters: {},
               target_count: targetCount,
-              settings: { exa_webset_id: webset.id }
+              settings: { exa_webset_id: websetId, reused: isReused, evidence_mode: Boolean(evidenceMode) }
             })
             .select('id')
             .single()
@@ -144,21 +180,21 @@ export async function POST(req: NextRequest) {
     if (preview) {
       // For preview, wait for completion and return results immediately
       console.log('⏳ [POST /api/prospect-search/execute] Waiting for preview to complete...')
-      
+
       try {
-        const completedWebset = await exa.waitUntilIdle(webset.id, {
+        const completedWebset = await exa.waitUntilIdle(websetId, {
           timeout: 60000, // 1 minute timeout for preview
           pollInterval: 2000
         })
 
-        const itemsResponse = await exa.listItems(webset.id, { limit: 1 })
+        const itemsResponse = await exa.listItems(websetId, { limit: 1 })
         const prospects = itemsResponse.data.map(item => exa.convertToProspect(item))
 
         return NextResponse.json({
           type: 'preview_result',
-          websetId: webset.id,
+          websetId: websetId,
           prospects,
-          message: prospects.length > 0 
+          message: prospects.length > 0
             ? 'Preview complete! Here\'s 1 example prospect that matches your criteria.'
             : 'No prospects found matching your criteria. Consider adjusting your search parameters.',
           summary: {
@@ -173,7 +209,7 @@ export async function POST(req: NextRequest) {
         console.error('❌ [POST /api/prospect-search/execute] Preview timeout or error:', error)
         return NextResponse.json({
           type: 'preview_timeout',
-          websetId: webset.id,
+          websetId: websetId,
           message: 'Preview is taking longer than expected. You can check the full search results or try again.',
           error: error instanceof Error ? error.message : 'Preview timeout'
         })
@@ -182,7 +218,7 @@ export async function POST(req: NextRequest) {
       // For full search, return streaming configuration
       return NextResponse.json({
         type: 'streaming_search',
-        websetId: webset.id,
+        websetId: websetId,
         searchCriteria: {
           query: originalQuery,
           targetCount,

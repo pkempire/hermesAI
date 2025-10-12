@@ -3,9 +3,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { getStripeCheckoutUrl } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Building2, CheckCircle, CheckCircle2, ExternalLink, Mail, MapPin, MessageSquare, Phone, User, XCircle } from 'lucide-react';
 import Image from 'next/image';
+import { useState } from 'react';
 import { Prospect } from './prospect-grid';
 
 export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, onNoteChange }: {
@@ -26,27 +27,66 @@ export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, o
   ].filter(Boolean).length;
   
   const qualityScore = Math.round((dataCompleteness / 5) * 100);
+  const fitScore = (prospect as any).fitScore as number | undefined
+  
+  const [showFullEnrichments, setShowFullEnrichments] = useState(false);
   
   return (
-    <Card className={`group relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-[1.02] ${
-      selected ? 'ring-2 ring-blue-500 bg-blue-50/50' : 'bg-gradient-to-br from-white to-gray-50/50'
+    <Card className={`group relative overflow-hidden glass lift-on-hover gradient-border ${
+      selected ? 'ring-2 ring-amber-500 border-amber-300' : 'border-gray-200'
     }`}>
-      {/* Avatar / Company logo */}
-      <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full opacity-10 overflow-hidden">
+      {/* Avatar / Company logo with glassmorphism */}
+      <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full opacity-10 overflow-hidden blur-layer-1">
         <Image
-          src={prospect.avatarUrl || prospect.companyLogoUrl || '/images/placeholder-image.png'}
+          src={prospect.companyLogoUrl || prospect.avatarUrl || '/images/placeholder-image.png'}
           alt="Profile"
           width={96}
           height={96}
           className="object-cover"
         />
       </div>
-      {/* Quality Score Badge */}
-      <div className="absolute top-4 right-4 z-10">
-        <Badge variant={qualityScore >= 80 ? "default" : qualityScore >= 60 ? "secondary" : "destructive"}>
-          {qualityScore}% Complete
-        </Badge>
-      </div>
+      
+      {/* Fit/Quality Score with radial progress */}
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="absolute top-4 right-4 z-10 cursor-help">
+              <div className="relative">
+                {/* Radial progress circle */}
+                <svg className="w-16 h-16 transform -rotate-90">
+                  <circle
+                    cx="32"
+                    cy="32"
+                    r="28"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    fill="none"
+                    className="text-gray-200"
+                  />
+                  <circle
+                    cx="32"
+                    cy="32"
+                    r="28"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    fill="none"
+                    strokeDasharray={`${2 * Math.PI * 28}`}
+                    strokeDashoffset={`${2 * Math.PI * 28 * (1 - (fitScore ?? qualityScore) / 100)}`}
+                    className={(fitScore ?? qualityScore) >= 80 ? "text-green-500" : (fitScore ?? qualityScore) >= 60 ? "text-amber-500" : "text-orange-500"}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-xs font-bold">{Math.round(fitScore ?? qualityScore)}</span>
+                </div>
+              </div>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="font-semibold">Fit Score: {Math.round(fitScore ?? qualityScore)}%</p>
+            <p className="text-xs text-gray-500">Data completeness: {dataCompleteness}/5</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
       {/* Selection Checkbox */}
       {onSelect && (
@@ -55,7 +95,7 @@ export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, o
             type="checkbox" 
             checked={selected || false} 
             onChange={e => onSelect(e.target.checked)}
-            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+            className="w-4 h-4 text-hermes-sky bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
           />
         </div>
       )}
@@ -66,8 +106,11 @@ export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, o
           <h3 className="text-xl font-bold text-gray-900 leading-tight">
             {prospect.fullName || 'Unknown Prospect'}
           </h3>
+          {(prospect as any).summary && (
+            <p className="text-xs text-gray-600">{(prospect as any).summary}</p>
+          )}
           {prospect.jobTitle && (
-            <p className="text-sm font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full inline-block">
+            <p className="text-sm font-medium text-amber-700 bg-amber-50 px-2 py-1 rounded-full inline-block">
               {prospect.jobTitle}
             </p>
           )}
@@ -77,16 +120,18 @@ export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, o
       <CardContent className="space-y-4">
         {/* Company Information */}
         {prospect.company && (
-          <div className="flex items-center gap-3 p-3 bg-gray-50/50 rounded-lg">
-            <Building2 className="w-4 h-4 text-gray-600 flex-shrink-0" />
+          <div className="flex items-center gap-3 p-3 glass rounded-lg lift-on-hover">
+            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-amber-400/10 to-orange-400/10 flex items-center justify-center">
+              <Building2 className="w-5 h-5 text-amber-600 flex-shrink-0" />
+            </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900">{prospect.company}</p>
               {prospect.industry && (
-                <p className="text-xs text-gray-600">{prospect.industry}</p>
+                <p className="text-xs text-muted-foreground">{prospect.industry}</p>
               )}
             </div>
             {prospect.companySize && (
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-xs glass">
                 {prospect.companySize}
               </Badge>
             )}
@@ -97,54 +142,49 @@ export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, o
         <div className="grid grid-cols-1 gap-3">
           {/* Email */}
           {prospect.email && (
-            <div className="flex items-center gap-3 p-3 bg-green-50/50 rounded-lg border border-green-100">
-              <Mail className="w-4 h-4 text-green-600 flex-shrink-0" />
+            <div className="flex items-center gap-3 p-3 glass frosted-green rounded-lg lift-on-hover">
+              <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+                <Mail className="w-5 h-5 text-success flex-shrink-0" />
+              </div>
               <div className="flex-1 min-w-0">
                 <a 
                   href={`mailto:${prospect.email}`}
-                  className="text-sm font-medium text-green-700 hover:text-green-800 truncate block"
+                  className="text-sm font-medium text-success hover:text-green-800 truncate block transition-colors"
                 >
                   {prospect.email}
                 </a>
               </div>
-              <CheckCircle2 className="w-4 h-4 text-green-500" />
+              <CheckCircle2 className="w-5 h-5 text-green-500" />
             </div>
           )}
 
           {/* LinkedIn */}
-          <div className="flex items-center gap-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
-            <ExternalLink className="w-4 h-4 text-blue-600 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <a 
-                href={prospect.linkedinUrl || '#'}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`text-sm font-medium ${prospect.linkedinUrl ? 'text-blue-700 hover:text-blue-800' : 'text-gray-400 cursor-not-allowed'}`}
-                aria-disabled={!prospect.linkedinUrl}
-              >
-                LinkedIn Profile
-              </a>
-              <div className="text-[11px] text-blue-700/80 mt-1">
-                Auto‑message via LinkedIn coming soon — <a className="underline hover:no-underline" href={getStripeCheckoutUrl()} target="_blank" rel="noreferrer">upgrade $39/mo</a>
+          {prospect.linkedinUrl && (
+            <div className="flex items-center gap-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100 lift-on-hover">
+              <ExternalLink className="w-4 h-4 text-hermes-sky flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <a 
+                  href={prospect.linkedinUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-hermes-sky hover:text-blue-800 transition-colors"
+                >
+                  LinkedIn Profile
+                </a>
               </div>
+              <CheckCircle2 className="w-3 h-3 text-blue-500" />
             </div>
-            <ExternalLink className="w-3 h-3 text-blue-400" />
-          </div>
+          )}
 
           {/* Phone */}
-          <div className="flex items-center gap-3 p-3 bg-purple-50/50 rounded-lg border border-purple-100">
-            <Phone className="w-4 h-4 text-purple-600 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              {prospect.phone ? (
-                <span className="text-sm font-medium text-purple-700">{prospect.phone}</span>
-              ) : (
-                <span className="text-sm text-purple-700/70">Phone not yet enriched</span>
-              )}
-              <div className="text-[11px] text-purple-700/80 mt-1">
-                Auto‑dial and SMS outreach coming soon — <a className="underline hover:no-underline" href={getStripeCheckoutUrl()} target="_blank" rel="noreferrer">upgrade $39/mo</a>
+          {prospect.phone && (
+            <div className="flex items-center gap-3 p-3 bg-amber-50/50 rounded-lg border border-amber-100 lift-on-hover">
+              <Phone className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <span className="text-sm font-medium text-amber-700">{prospect.phone}</span>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Location */}
           {prospect.location && (
@@ -165,15 +205,32 @@ export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, o
               Additional Information
             </h4>
             <div className="space-y-2">
-              {prospect.enrichments.slice(0, 3).map((enrichment: any, i: number) => (
-                <div key={i} className="flex items-start gap-2 p-2 bg-gray-50 rounded">
-                  <div className="text-xs text-gray-600 flex-1">
-                    <span className="font-medium">{enrichment.title || 'Info'}: </span>
-                    {Array.isArray(enrichment.result) ? enrichment.result.join(', ') : enrichment.result}
+              {prospect.enrichments.slice(0, showFullEnrichments ? undefined : 3).map((enrichment: any, i: number) => {
+                const resultText = Array.isArray(enrichment.result) ? enrichment.result.join(', ') : enrichment.result;
+                const isTruncated = resultText && resultText.length > 150;
+                const displayText = isTruncated && !showFullEnrichments ? resultText.slice(0, 150) + '...' : resultText;
+                
+                return (
+                  <div key={i} className="flex items-start gap-2 p-2 bg-gray-50 rounded">
+                    <div className="text-xs text-gray-600 flex-1">
+                      <span className="font-medium text-amber-700">{enrichment.title || 'Info'}: </span>
+                      <span>{displayText}</span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
+            {(prospect.enrichments.length > 3 || prospect.enrichments.some((e: any) => {
+              const text = Array.isArray(e.result) ? e.result.join(', ') : e.result;
+              return text && text.length > 150;
+            })) && (
+              <button
+                onClick={() => setShowFullEnrichments(!showFullEnrichments)}
+                className="text-xs text-amber-600 hover:text-amber-700 font-medium transition-colors"
+              >
+                {showFullEnrichments ? 'Show less' : `Show all ${prospect.enrichments.length} enrichments`}
+              </button>
+            )}
           </div>
         )}
 

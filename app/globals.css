@@ -2,74 +2,82 @@
 @tailwind components;
 @tailwind utilities;
 
-/* HermesAI Custom Styles */
-.hermes-bg {
-  background: 
-    radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(147, 51, 234, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 40% 40%, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
-}
-
-.hermes-card-glow {
-  box-shadow: 
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 0 20px rgba(59, 130, 246, 0.1),
-    0 0 40px rgba(147, 51, 234, 0.05);
-}
-
 @layer base {
   :root {
-    /* Greek-inspired light theme */
-    --background: 48 33% 98%; /* warm white */
-    --foreground: 210 15% 12%; /* onyx */
+    --background: 45 10% 98%;
+    --foreground: 20 14% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 20 14% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 14% 10%;
+    --primary: 43 96% 56%;
+    --primary-foreground: 26 83% 14%;
+    --secondary: 45 12% 92%;
+    --secondary-foreground: 20 14% 10%;
+    --muted: 45 12% 92%;
+    --muted-foreground: 25 5% 45%;
+    --accent: 43 96% 56%;
+    --accent-foreground: 26 83% 14%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 45 12% 88%;
+    --input: 45 12% 88%;
+    --ring: 43 96% 56%;
+    --radius: 0.375rem;
+    
+    /* Greek/Hermes theme - Divine Gold & Classical Elements */
+    --hermes-gold: 43 96% 56%;
+    --hermes-gold-dark: 38 92% 50%;
+    --hermes-gold-light: 45 100% 70%;
+    --hermes-bronze: 30 60% 50%;
+    --hermes-marble: 45 10% 98%;
+    --hermes-laurel: 67 56% 58%;
+    --hermes-sky: 197 71% 73%;
+    --hermes-divine-glow: 43 100% 50%;
 
-    --card: 48 33% 99%;
-    --card-foreground: 210 10% 30%;
+    /* Divine shadows with golden undertones */
+    --elevation-1: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --elevation-2: 0 2px 8px 0 rgba(0, 0, 0, 0.08);
+    --elevation-3: 0 4px 16px 0 rgba(0, 0, 0, 0.10);
+    --elevation-4: 0 8px 32px 0 rgba(0, 0, 0, 0.12);
+    --hermes-glow: 0 4px 20px 0 rgba(251, 191, 36, 0.15);
+    --hermes-glow-strong: 0 8px 32px 0 rgba(251, 191, 36, 0.25);
 
-    --popover: 48 33% 98%;
-    --popover-foreground: 210 15% 12%;
-
-    --primary: 45 85% 45%; /* gold */
-    --primary-foreground: 48 33% 98%;
-
-    --secondary: 210 14% 94%;
-    --secondary-foreground: 210 20% 20%;
-
-    --muted: 210 14% 94%;
-    --muted-foreground: 210 10% 40%;
-
-    --accent: 210 14% 94%;
-    --accent-foreground: 210 15% 20%;
-
-    --destructive: 0 72% 48%;
-    --destructive-foreground: 48 33% 98%;
-
-    --border: 48 10% 88%;
-    --input: 48 10% 88%;
-    --ring: 45 85% 45%;
-
-    --radius: 0.75rem;
-
-    --chart-1: 45 85% 45%;
-    --chart-2: 210 60% 35%;
-    --chart-3: 200 25% 35%;
-    --chart-4: 30 70% 55%;
-    --chart-5: 0 60% 50%;
-
-    --accent-blue: 210 100% 97%;
-    --accent-blue-foreground: 210 100% 40%;
-    --accent-blue-border: 210 100% 88%;
-    --sidebar-background: 48 33% 98%;
-    --sidebar-foreground: 210 15% 20%;
-    --sidebar-primary: 45 85% 45%;
-    --sidebar-primary-foreground: 48 33% 98%;
-    --sidebar-accent: 210 14% 94%;
-    --sidebar-accent-foreground: 210 15% 20%;
-    --sidebar-border: 48 10% 88%;
-    --sidebar-ring: 45 85% 45%;
+    /* Divine animations */
+    --animate-divine-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 
-  /* Dark theme disabled for now (light-only) */
+  .dark {
+    --background: 20 14% 8%;
+    --foreground: 45 10% 95%;
+    --card: 20 14% 10%;
+    --card-foreground: 45 10% 95%;
+    --popover: 20 14% 10%;
+    --popover-foreground: 45 10% 95%;
+    --primary: 43 96% 56%;
+    --primary-foreground: 26 83% 14%;
+    --secondary: 20 14% 15%;
+    --secondary-foreground: 45 10% 95%;
+    --muted: 20 14% 15%;
+    --muted-foreground: 45 5% 60%;
+    --accent: 43 96% 56%;
+    --accent-foreground: 20 14% 8%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 45 10% 95%;
+    --border: 20 14% 18%;
+    --input: 20 14% 18%;
+    --ring: 43 96% 56%;
+    
+    /* Dark mode - Keep gold accent */
+    --hermes-gold: 43 96% 56%;
+    --hermes-gold-dark: 38 92% 50%;
+    
+    /* Dark mode subtle shadows */
+    --elevation-1: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --elevation-2: 0 2px 8px 0 rgba(0, 0, 0, 0.4);
+    --elevation-3: 0 4px 16px 0 rgba(0, 0, 0, 0.5);
+    --elevation-4: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
+  }
 }
 
 @layer base {
@@ -78,5 +86,710 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
   }
+}
+
+/* Enterprise-grade utility classes */
+@layer utilities {
+  .glass {
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--elevation-2);
+  }
+  
+  .glass-hover {
+    @apply transition-all duration-200 ease-in-out;
+  }
+  
+  .glass-hover:hover {
+    box-shadow: var(--elevation-3);
+  }
+  
+  .elevation-1 {
+    box-shadow: var(--elevation-1);
+  }
+  
+  .elevation-2 {
+    box-shadow: var(--elevation-2);
+  }
+  
+  .elevation-3 {
+    box-shadow: var(--elevation-3);
+  }
+  
+  .elevation-4 {
+    box-shadow: var(--elevation-4);
+  }
+  
+  /* Subtle professional interactions */
+  .lift-on-hover {
+    @apply transition-all duration-200 ease-in-out;
+  }
+  
+  .lift-on-hover:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--elevation-3);
+  }
+  
+  .scale-on-press:active {
+    transform: scale(0.99);
+  }
+  
+  /* Gold accent borders */
+  .gold-border {
+    border: 1px solid hsl(var(--hermes-gold) / 0.2);
+  }
+  
+  .gold-accent {
+    color: hsl(var(--hermes-gold));
+  }
+  
+  /* Floating animation for assistant bubble */
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+  
+  .float-animation {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  /* Shimmer effect for loading states */
+  @keyframes shimmer {
+    0% {
+      background-position: -1000px 0;
+    }
+    100% {
+      background-position: 1000px 0;
+    }
+  }
+  
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(138, 92, 246, 0.1),
+      transparent
+    );
+    background-size: 1000px 100%;
+    animation: shimmer 2s infinite;
+  }
+  
+  /* Blur layers for depth */
+  .blur-layer-1 {
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  
+  .blur-layer-2 {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  
+  .blur-layer-3 {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+  
+  /* Classical Greek-inspired backgrounds */
+  .hermes-gold-bg {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--hermes-gold) / 0.05) 0%,
+      hsl(var(--hermes-gold) / 0.1) 100%
+    );
+  }
+  
+  .hermes-bronze-bg {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--hermes-bronze) / 0.05) 0%,
+      hsl(var(--hermes-bronze) / 0.1) 100%
+    );
+  }
+  
+  .marble-bg {
+    background: hsl(var(--hermes-marble));
+  }
+}
+
+/* Custom scrollbar with glassmorphism */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--glass-border);
+  border-radius: 4px;
+  backdrop-filter: blur(8px);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(138, 92, 246, 0.3);
+}
+
+/* Smooth scrolling behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+#scroll-container {
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(138, 92, 246, 0.2) transparent;
+}
+
+/* Smooth transitions for all interactive elements */
+button,
+a,
+input,
+textarea,
+select {
+  @apply transition-all duration-200 ease-out;
+}
+
+/* SICK NEW ANIMATIONS FOR HERMES */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(59, 130, 246, 0.8);
+    transform: scale(1.02);
+  }
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes bounce-gentle {
+  0%, 20%, 53%, 80%, 100% { transform: translate3d(0,0,0); }
+  40%, 43% { transform: translate3d(0,-8px,0); }
+  70% { transform: translate3d(0,-4px,0); }
+  90% { transform: translate3d(0,-2px,0); }
+}
+
+@keyframes typewriter {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes blink {
+  from, to { border-color: transparent; }
+  50% { border-color: rgb(59, 130, 246); }
+}
+
+@keyframes magnetic-pull {
+  0% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.02) rotate(1deg); }
+  50% { transform: scale(1.03) rotate(0deg); }
+  75% { transform: scale(1.02) rotate(-1deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+@keyframes ripple-effect {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+@keyframes slide-in-from-bottom {
+  0% {
+    opacity: 0;
+    transform: translateY(40px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes sparkle {
+  0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1) rotate(180deg); }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.animate-gradient-shift {
+  background-size: 400% 400%;
+  animation: gradient-shift 8s ease infinite;
+}
+
+.animate-bounce-gentle {
+  animation: bounce-gentle 2s ease-in-out infinite;
+}
+
+.animate-typewriter {
+  overflow: hidden;
+  border-right: 2px solid rgb(59, 130, 246);
+  white-space: nowrap;
+  animation: typewriter 3s steps(40, end), blink 0.75s step-end infinite;
+}
+
+.animate-magnetic {
+  animation: magnetic-pull 0.6s ease-in-out;
+}
+
+.animate-ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.animate-ripple::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  background: rgba(59, 130, 246, 0.3);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: ripple-effect 0.6s ease-out;
+}
+
+.animate-slide-in-bottom {
+  animation: slide-in-from-bottom 0.5s ease-out;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out;
+}
+
+.animate-sparkle {
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+.animate-divine-pulse {
+  animation: divine-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-divine-shimmer {
+  animation: golden-shimmer 2s ease-in-out infinite;
+}
+
+/* Interactive hover effects */
+.hover-magnetic {
+  transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.hover-magnetic:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.hover-glow {
+  transition: all 0.3s ease;
+}
+
+.hover-glow:hover {
+  box-shadow: 0 0 30px rgba(59, 130, 246, 0.6);
+  filter: brightness(1.1);
+}
+
+.hover-scale {
+  transition: transform 0.2s ease;
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+.hover-tilt {
+  transition: transform 0.3s ease;
+}
+
+.hover-tilt:hover {
+  transform: perspective(1000px) rotateX(5deg) rotateY(5deg);
+}
+
+/* Gradient animations */
+.gradient-animated {
+  background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+  background-size: 400% 400%;
+  animation: gradient-shift 15s ease infinite;
+}
+
+/* Neon effects */
+.neon-blue {
+  text-shadow: 0 0 5px #03e9f4, 0 0 10px #03e9f4, 0 0 15px #03e9f4;
+}
+
+.neon-glow {
+  box-shadow: 0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px currentColor;
+}
+
+/* Glass morphism enhanced */
+.glass-enhanced {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+}
+
+.glass-dark-enhanced {
+  background: rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+/* Stagger animations for lists */
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+.stagger-5 { animation-delay: 0.5s; }
+
+/* Parallax and depth effects */
+.parallax-slow {
+  transform: translateZ(-1px) scale(2);
+}
+
+.parallax-medium {
+  transform: translateZ(-2px) scale(3);
+}
+
+.parallax-fast {
+  transform: translateZ(-3px) scale(4);
+}
+
+/* Loading states */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.pulse-breathing {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Button special effects */
+.btn-holographic {
+  background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #feca57, #ff9ff3);
+  background-size: 400% 400%;
+  animation: gradient-shift 3s ease infinite;
+}
+
+.btn-cyberpunk {
+  background: linear-gradient(45deg, #0f3460, #16213e);
+  border: 1px solid #00d4ff;
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+  color: #00d4ff;
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.8);
+}
+
+.btn-cyberpunk:hover {
+  box-shadow: 0 0 30px rgba(0, 212, 255, 0.6);
+  text-shadow: 0 0 20px rgba(0, 212, 255, 1);
+}
+
+/* =========================== */
+/* HERMES/GREEK THEME CLASSES */
+/* =========================== */
+
+/* Divine glow animations */
+@keyframes divine-pulse {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(251, 191, 36, 0.6);
+    transform: scale(1.02);
+  }
+}
+
+@keyframes hermes-float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  33% {
+    transform: translateY(-8px) rotate(1deg);
+  }
+  66% {
+    transform: translateY(-4px) rotate(-1deg);
+  }
+}
+
+@keyframes golden-shimmer {
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 100% 0;
+  }
+}
+
+/* Hermes-specific utility classes */
+.divine-glow {
+  box-shadow: var(--hermes-glow);
+}
+
+.divine-glow-strong {
+  box-shadow: var(--hermes-glow-strong);
+}
+
+.divine-pulse {
+  animation: divine-pulse 3s ease-in-out infinite;
+}
+
+.hermes-float {
+  animation: hermes-float 4s ease-in-out infinite;
+}
+
+.golden-text {
+  background: linear-gradient(135deg, hsl(var(--hermes-gold)), hsl(var(--hermes-gold-light)));
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.golden-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(251, 191, 36, 0.4),
+    transparent
+  );
+  background-size: 200% 100%;
+  animation: golden-shimmer 2s infinite;
+}
+
+.hermes-gradient-bg {
+  background: linear-gradient(135deg,
+    hsl(var(--hermes-marble)) 0%,
+    hsl(var(--hermes-gold) / 0.05) 25%,
+    hsl(var(--hermes-gold) / 0.1) 50%,
+    hsl(var(--hermes-gold) / 0.05) 75%,
+    hsl(var(--hermes-marble)) 100%
+  );
+}
+
+.hermes-card {
+  @apply bg-gradient-to-br from-white via-amber-50/30 to-yellow-50/30;
+  @apply border border-amber-200/40 shadow-md;
+  @apply hover:border-amber-300/60 hover:shadow-lg hover:shadow-amber-500/10;
+  @apply transition-all duration-300;
+}
+
+.hermes-button {
+  @apply bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600;
+  @apply hover:from-amber-600 hover:via-yellow-600 hover:to-amber-700;
+  @apply text-amber-950 font-semibold;
+  @apply shadow-md hover:shadow-lg hover:shadow-amber-500/30;
+  @apply transition-all duration-200 hover:scale-[1.02];
+  @apply border border-amber-400/30;
+}
+
+.divine-avatar {
+  @apply relative rounded-full;
+  @apply shadow-lg border-2 border-amber-400/30;
+  @apply hover:border-amber-400/50 transition-all;
+}
+
+.divine-avatar::before {
+  content: '';
+  @apply absolute inset-0 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500;
+  @apply rounded-full blur-sm opacity-30;
+  @apply group-hover:opacity-40 transition-opacity;
+}
+
+.divine-avatar::after {
+  content: '';
+  @apply absolute -inset-2 bg-gradient-to-r from-amber-400/10 via-yellow-400/10 to-amber-500/10;
+  @apply rounded-full opacity-0 group-hover:opacity-100;
+  @apply transition-opacity duration-300 blur-md;
+}
+
+/* Greek pattern borders */
+.greek-border {
+  position: relative;
+}
+
+.greek-border::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent,
+    hsl(var(--hermes-gold)) 20%,
+    hsl(var(--hermes-gold)) 80%,
+    transparent
+  );
+}
+
+/* Message styling for divine responses */
+.divine-message {
+  @apply bg-gradient-to-br from-amber-50/80 to-yellow-50/80;
+  @apply border border-amber-200/60 rounded-lg;
+  @apply shadow-sm hover:shadow-md;
+  @apply transition-all duration-200;
+}
+
+/* Olympian loading state */
+.olympian-loading {
+  @apply relative overflow-hidden bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-50;
+}
+
+.olympian-loading::after {
+  content: '';
+  @apply absolute inset-0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(251, 191, 36, 0.3),
+    transparent
+  );
+  @apply animate-pulse;
+}
+
+/* Hermes brand color utilities */
+.text-hermes {
+  color: hsl(var(--hermes-gold));
+}
+
+.text-hermes-dark {
+  color: hsl(var(--hermes-gold-dark));
+}
+
+.text-hermes-light {
+  color: hsl(var(--hermes-gold-light));
+}
+
+.text-hermes-bronze {
+  color: hsl(var(--hermes-bronze));
+}
+
+.text-hermes-laurel {
+  color: hsl(var(--hermes-laurel));
+}
+
+.text-hermes-sky {
+  color: hsl(var(--hermes-sky));
+}
+
+.bg-hermes {
+  background-color: hsl(var(--hermes-gold));
+}
+
+.bg-hermes-dark {
+  background-color: hsl(var(--hermes-gold-dark));
+}
+
+.bg-hermes-light {
+  background-color: hsl(var(--hermes-gold-light) / 0.1);
+}
+
+.bg-hermes-marble {
+  background-color: hsl(var(--hermes-marble));
+}
+
+.bg-hermes-laurel {
+  background-color: hsl(var(--hermes-laurel) / 0.1);
+}
+
+.bg-hermes-sky {
+  background-color: hsl(var(--hermes-sky) / 0.1);
+}
+
+.border-hermes {
+  border-color: hsl(var(--hermes-gold));
+}
+
+.border-hermes-light {
+  border-color: hsl(var(--hermes-gold) / 0.3);
+}
+
+.border-hermes-laurel {
+  border-color: hsl(var(--hermes-laurel) / 0.3);
+}
+
+.border-hermes-sky {
+  border-color: hsl(var(--hermes-sky) / 0.3);
+}
+
+/* Hermes status colors */
+.text-success { color: hsl(var(--hermes-laurel)); }
+.text-info { color: hsl(var(--hermes-sky)); }
+.text-warning { color: hsl(var(--hermes-gold)); }
+.text-error { color: rgb(220 38 38); } /* Keep red for errors */
+
+.bg-success { background-color: hsl(var(--hermes-laurel) / 0.1); }
+.bg-info { background-color: hsl(var(--hermes-sky) / 0.1); }
+.bg-warning { background-color: hsl(var(--hermes-gold) / 0.1); }
+.bg-error { background-color: rgb(254 242 242); }
+
+.border-success { border-color: hsl(var(--hermes-laurel) / 0.3); }
+.border-info { border-color: hsl(var(--hermes-sky) / 0.3); }
+.border-warning { border-color: hsl(var(--hermes-gold) / 0.3); }
+.border-error { border-color: rgb(252 165 165); }
+
+/* Divine credits styling */
+.divine-credits {
+  @apply inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg;
+  @apply border border-amber-200/60 bg-gradient-to-r from-amber-50 to-yellow-50;
+  @apply text-amber-900 font-medium;
+  @apply shadow-sm hover:shadow-md transition-all duration-200;
+}
+
+/* Mythological scroll animations */
+.scroll-divine {
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(251, 191, 36, 0.3) transparent;
+}
+
+.scroll-divine::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scroll-divine::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll-divine::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, hsl(var(--hermes-gold) / 0.5), hsl(var(--hermes-gold-dark) / 0.5));
+  border-radius: 3px;
+}
+
+.scroll-divine::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, hsl(var(--hermes-gold) / 0.7), hsl(var(--hermes-gold-dark) / 0.7));
 }
