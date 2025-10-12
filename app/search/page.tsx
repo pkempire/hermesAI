@@ -1,19 +1,18 @@
-import { Chat } from '@/components/chat'
-import { getModels } from '@/lib/config/models'
-import { generateId } from 'ai'
-import { redirect } from 'next/navigation'
+import { ProspectSearchSection } from '@/components/prospect-search-section'
+import { Suspense } from 'react'
 
 export const maxDuration = 60
 
 export default async function SearchPage(props: {
   searchParams: Promise<{ q: string }>
 }) {
-  const { q } = await props.searchParams
-  if (!q) {
-    redirect('/')
-  }
-
-  const id = generateId()
-  const models = await getModels()
-  return <Chat id={id} query={q} models={models} />
+  // Minimal shell that hosts the prospect search section via agent tools
+  // For now, render a placeholder; the section is injected by the chat flow
+  return (
+    <Suspense>
+      <div className="max-w-5xl mx-auto w-full p-4">
+        <div className="text-sm text-muted-foreground">Configure Prospect Search</div>
+      </div>
+    </Suspense>
+  )
 }
