@@ -238,14 +238,33 @@ export function OnboardingModal() {
   const [isOpen, setIsOpen] = useState(false)
   const [currentStep, setCurrentStep] = useState(0)
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false)
+  const [isUser, setIsUser] = useState<boolean | null>(null)
 
   useEffect(() => {
-    const seen = localStorage.getItem('hermes_onboarding_completed')
-    if (!seen) {
-      setIsOpen(true)
-    } else {
-      setHasSeenOnboarding(true)
+    // Check if user is logged in
+    const checkUser = async () => {
+      try {
+        const res = await fetch('/api/auth/me', { cache: 'no-store' })
+        const data = await res.json()
+        const userExists = !!data?.user?.id
+        setIsUser(userExists)
+        
+        // Only show onboarding if user hasn't seen it AND is not logged in
+        const seen = localStorage.getItem('hermes_onboarding_completed')
+        if (!seen && !userExists) {
+          setIsOpen(true)
+        } else {
+          setHasSeenOnboarding(true)
+        }
+      } catch {
+        setIsUser(false)
+        const seen = localStorage.getItem('hermes_onboarding_completed')
+        if (!seen) {
+          setIsOpen(true)
+        }
+      }
     }
+    checkUser()
   }, [])
 
   const handleNext = () => {
@@ -270,25 +289,34 @@ export function OnboardingModal() {
   const progress = ((currentStep + 1) / ONBOARDING_STEPS.length) * 100
   const step = ONBOARDING_STEPS[currentStep]
 
+  // Don't render if user is logged in or has seen onboarding
+  if (isUser === true || hasSeenOnboarding) {
+    return null
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="max-w-3xl bg-white/95 backdrop-blur-xl border-2 border-amber-200/30 shadow-2xl">
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open) {
+        handleSkip()
+      }
+    }}>
+      <DialogContent className="max-w-2xl bg-white border border-gray-200 shadow-xl" hideCloseButton>
         <DialogHeader className="space-y-4 pb-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-500 flex items-center justify-center shadow-lg shadow-amber-500/20">
-                <step.icon className="h-7 w-7 text-amber-950" />
+              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-500 flex items-center justify-center shadow-lg shadow-amber-500/20">
+                <step.icon className="h-6 w-6 text-amber-950" />
               </div>
               <div>
-                <DialogTitle className="text-2xl font-bold text-gray-900">{step.title}</DialogTitle>
-                <DialogDescription className="text-base text-gray-600 mt-1">{step.description}</DialogDescription>
+                <DialogTitle className="text-xl font-bold text-gray-900">{step.title}</DialogTitle>
+                <DialogDescription className="text-sm text-gray-600 mt-1">{step.description}</DialogDescription>
               </div>
             </div>
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={handleSkip}
-              className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
+              className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg h-8 w-8 p-0"
             >
               <span className="sr-only">Skip</span>
               ✕

@@ -100,7 +100,7 @@ export default async function RootLayout({
           enableSystem={false}
           disableTransitionOnChange
         >
-          <SidebarProvider defaultOpen={false}>
+          <SidebarProvider defaultOpen={true}>
             <AppSidebar />
             <div className="flex flex-col flex-1">
               <Header user={user} />

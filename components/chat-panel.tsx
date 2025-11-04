@@ -191,12 +191,13 @@ export function ChatPanel({
         messages.length > 0 ? 'px-4 pb-4' : 'px-4 sm:px-8 pb-8'
       )}
     >
-      {/* Title header (only when there is no conversation yet) - Match production design */}
+      {/* Title header (only when there is no conversation yet) - Compact design */}
       {messages.length === 0 && (
-        <div className={cn('max-w-4xl w-full mx-auto mb-6 mt-8')}>
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
+        <div className={cn('max-w-4xl w-full mx-auto mb-4 mt-4')}>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">
             Find your <span className="text-amber-600">AI sales engineer</span>
           </h1>
+          <p className="text-sm text-gray-600 mt-1">Describe who you want to reach. I'll find them, verify details, and craft personalized emails.</p>
         </div>
       )}
       <form

@@ -3,8 +3,10 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { ArrowRight, Mail, Target, TrendingUp, Users } from 'lucide-react'
+import { ArrowRight, Copy, Mail, Target, TrendingUp, Users } from 'lucide-react'
 import { memo, useCallback, useEffect, useState } from 'react'
+import { toast } from 'sonner'
+import { useCopyToClipboard } from '@/lib/hooks/use-copy-to-clipboard'
 
 type Template = {
   id: string
@@ -124,6 +126,7 @@ export const TemplateMarketplace = memo(function TemplateMarketplace({
   const TemplateCard = memo(({ template }: { template: Template }) => {
     const Icon = categoryIcons[template.category as keyof typeof categoryIcons] || Target
     const [values, setValues] = useState<Record<string, string>>({})
+    const [, copy] = useCopyToClipboard()
 
     // Render description with inline inputs (matching production design exactly)
     const renderDescription = () => {
@@ -157,7 +160,7 @@ export const TemplateMarketplace = memo(function TemplateMarketplace({
               value={values[param.key] ?? ''}
               onChange={(e) => setValues(prev => ({ ...prev, [param.key]: e.target.value }))}
               placeholder={param.placeholder || ''}
-              className="inline-block w-auto min-w-[100px] max-w-[180px] h-7 px-2 py-0.5 text-sm border border-gray-300 rounded bg-white focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400 mx-0.5 align-middle"
+              className="inline-block w-auto min-w-[100px] max-w-[180px] h-6 px-2 py-0.5 text-xs border border-gray-300 rounded bg-white focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400 mx-0.5 align-middle"
             />
           )
           
@@ -192,36 +195,52 @@ export const TemplateMarketplace = memo(function TemplateMarketplace({
     const allParamsFilled = template.params ? template.params.every(p => (values[p.key] ?? '').trim().length > 0) : true
 
     return (
-      <Card className="group relative bg-white border border-gray-200 hover:border-gray-300 transition-all duration-200 overflow-hidden h-full flex flex-col shadow-sm hover:shadow-md">
-        <CardHeader className="pb-3">
-          <div className="flex items-start gap-3">
-            <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-              <Icon className="w-5 h-5 text-gray-600" />
+      <Card className="group relative bg-white border border-gray-200 hover:border-amber-300 transition-all duration-200 overflow-hidden h-full flex flex-col shadow-sm hover:shadow-md">
+        <CardHeader className="pb-2 pt-4">
+          <div className="flex items-start gap-2.5">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-amber-100 to-yellow-100 flex items-center justify-center flex-shrink-0">
+              <Icon className="w-4 h-4 text-amber-700" />
             </div>
             <div className="flex-1 min-w-0">
-              <CardTitle className="text-base font-semibold text-gray-900 mb-2">
+              <CardTitle className="text-sm font-semibold text-gray-900 mb-1.5">
                 {template.name}
               </CardTitle>
-              <div className="text-sm text-gray-600 leading-relaxed">
+              <div className="text-xs text-gray-600 leading-relaxed">
                 {renderDescription()}
               </div>
             </div>
           </div>
         </CardHeader>
 
-        <CardContent className="pt-0 pb-4">
-          <Button
-            onClick={(e) => {
-              e.preventDefault()
-              const filledMessage = getFilledMessage()
-              handleUseTemplate(template, filledMessage)
-            }}
-            disabled={!allParamsFilled}
-            className="w-full bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Load into chat
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
+        <CardContent className="pt-0 pb-3 space-y-2">
+          <div className="flex gap-2">
+            <Button
+              onClick={(e) => {
+                e.preventDefault()
+                const filledMessage = getFilledMessage()
+                copy(filledMessage)
+                toast.success('Copied to clipboard')
+              }}
+              variant="outline"
+              size="sm"
+              className="flex-1 h-7 text-xs border-gray-300 hover:bg-gray-50"
+            >
+              <Copy className="w-3 h-3 mr-1" />
+              Copy
+            </Button>
+            <Button
+              onClick={(e) => {
+                e.preventDefault()
+                const filledMessage = getFilledMessage()
+                handleUseTemplate(template, filledMessage)
+              }}
+              disabled={!allParamsFilled}
+              className="flex-1 bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 text-white text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed h-7"
+            >
+              Load into chat
+              <ArrowRight className="w-3 h-3 ml-1.5" />
+            </Button>
+          </div>
         </CardContent>
       </Card>
     )
@@ -242,9 +261,9 @@ export const TemplateMarketplace = memo(function TemplateMarketplace({
   }
 
   return (
-    <div className={`space-y-6 ${className}`}>
+    <div className={`space-y-4 ${className}`}>
       {popularTemplates.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {popularTemplates.map((template) => (
             <TemplateCard key={template.id} template={template} />
           ))}
