@@ -126,7 +126,7 @@ export const TemplateMarketplace = memo(function TemplateMarketplace({
   const TemplateCard = memo(({ template }: { template: Template }) => {
     const Icon = categoryIcons[template.category as keyof typeof categoryIcons] || Target
     const [values, setValues] = useState<Record<string, string>>({})
-    const [, copy] = useCopyToClipboard()
+    const { copyToClipboard } = useCopyToClipboard()
 
     // Render description with inline inputs (matching production design exactly)
     const renderDescription = () => {
@@ -218,7 +218,7 @@ export const TemplateMarketplace = memo(function TemplateMarketplace({
               onClick={(e) => {
                 e.preventDefault()
                 const filledMessage = getFilledMessage()
-                copy(filledMessage)
+                copyToClipboard(filledMessage)
                 toast.success('Copied to clipboard')
               }}
               variant="outline"
