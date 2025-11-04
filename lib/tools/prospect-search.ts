@@ -172,82 +172,30 @@ You can **preview with 1 company** first to validate the approach, or **run the 
       try {
         console.log('🔍 [prospectSearchTool] Executing immediate search...')
         
+        // FAST: Skip slow GPT generation, use simple defaults
         // Create the Exa client
         const exaClient = createExaWebsetsClient()
         
-        // Generate intelligent criteria and enrichments using GPT-4o
-        const { generateObject } = await import('ai')
-        const { getModel } = await import('@/lib/utils/registry')
-        const { z } = await import('zod')
+        // Use simple, fast extraction instead of slow GPT-5 call
+        console.log('⚡ [prospectSearchTool] Using fast extraction (no GPT call)...')
         
-        const model = getModel('openai:gpt-5')
-        
-        const websetPlanSchema = z.object({
-          entityType: z.enum(['person', 'company']).describe('Whether searching for people or companies'),
-          searchCriteria: z.array(z.object({
-            description: z.string().describe('Specific verification criterion'),
-            successRate: z.number().min(50).max(95).describe('Expected success rate %')
-          })).max(5).describe('Up to 5 search criteria for Exa Websets'),
-          enrichments: z.array(z.object({
-            name: z.string().describe('Human-readable field name'),
-            description: z.string().describe('What data to extract from each prospect'),
-            format: z.enum(['text', 'json', 'number']).describe('Data format'),
-            instructions: z.string().describe('Detailed extraction instructions'),
-            required: z.boolean().default(false).describe('Is this field essential?')
-          })).describe('Data enrichment fields to extract')
-        })
-        
-        console.log('🤖 [prospectSearchTool] Generating webset plan with GPT-4o...')
-        const websetPlan = await generateObject({
-          model,
-          schema: websetPlanSchema,
-          prompt: `Create a focused search plan for: "${query}"
-
-          Target: ${targetPersona || 'decision maker'}
-          Context: ${offer ? offer.slice(0, 100) : 'business proposal'}
-
-          Create:
-          1. Entity type: "company" (for B2B)
-          2. 3-4 specific criteria (keep concise)
-          3. Essential enrichments only
-
-          ALWAYS include these enrichments:
-          - Company Name (required)
-          - Company Domain (required)
-          - ${targetPersona || 'Decision Maker'} Contact (required) - LinkedIn profile URL and role verification
-          - Employee Count (required)
-
-          Add 2-3 relevant enrichments:
-          ${offer?.includes('partner') ? '- Partner Program Details\n- Integration Options' : ''}
-          ${offer?.includes('sales') || offer?.includes('CRM') ? '- Tech Stack\n- Recent Growth' : ''}
-          ${offer?.includes('recruit') ? '- Job Postings\n- Hiring Activity' : ''}
-
-          Keep criteria short and focused. Example:
-          Criteria: ["Fintech company", "50-500 employees", "US-based"]
-          Not: ["Company operates primarily in financial technology services sector with demonstrated API infrastructure and modern development practices"]`,
-          temperature: 0.3
-        })
-        
-        console.log('✅ [prospectSearchTool] Generated webset plan:', websetPlan.object)
-        
-        // Create webset search configuration with AI-generated criteria
+        // Simple webset config without GPT generation
         const websetSearchConfig = {
           query: query,
-          count: Math.min(targetCount, 1000), // Respect API limits
-          entity: { type: websetPlan.object.entityType },
-          criteria: websetPlan.object.searchCriteria,
+          count: Math.min(targetCount, 1000),
+          entity: { type: 'company' as const },
+          criteria: [],
           behavior: 'override' as const
         }
         
-        // Convert our enrichments to Exa API format
-        const websetEnrichments = websetPlan.object.enrichments.map(enrichment => ({
-          title: enrichment.name,
-          description: enrichment.description,
-          format: enrichment.format || 'text',
-          instructions: enrichment.instructions
-        }))
+        // Standard enrichments (no GPT needed)
+        const websetEnrichments = [
+          { title: 'Company Name', description: 'Official company name', format: 'text' as const, instructions: 'Extract the official company name' },
+          { title: 'Company Domain', description: 'Company website domain', format: 'text' as const, instructions: 'Extract the primary domain' },
+          { title: 'Decision Maker LinkedIn', description: 'LinkedIn profile URL for target persona', format: 'text' as const, instructions: `Find LinkedIn profile for ${targetPersona || 'decision maker'}` }
+        ]
         
-        console.log('🔧 [prospectSearchTool] Creating webset with AI-generated config:', {
+        console.log('🔧 [prospectSearchTool] Creating webset with fast config:', {
           searchConfig: websetSearchConfig,
           enrichmentsCount: websetEnrichments.length
         })

@@ -51,7 +51,10 @@ export function Chat({
     body: {
       id
     },
-    onFinish: () => {
+    onFinish: async () => {
+      // Wait a bit for chat to be saved before redirecting
+      // The handleStreamFinish saves the chat asynchronously
+      await new Promise(resolve => setTimeout(resolve, 500))
       try {
         router.replace(`/search/${id}`)
       } catch {

@@ -61,8 +61,16 @@ export default async function SearchPage(props: {
   // convertToUIMessages for useChat hook
   const messages = convertToUIMessages(chat?.messages || [])
 
-  if (!chat) {
-    redirect('/')
+  // Allow loading even if chat doesn't exist yet (might be saving)
+  // Don't redirect immediately - let the chat component handle it
+  if (!chat && messages.length === 0) {
+    // Only redirect if we're sure there's no chat and no messages
+    // Wait a moment for async save to complete
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    const retryChat = await getChat(id, userId)
+    if (!retryChat) {
+      redirect('/')
+    }
   }
 
   if (chat?.userId !== userId && chat?.userId !== 'anonymous') {
