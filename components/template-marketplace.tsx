@@ -3,10 +3,10 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { useCopyToClipboard } from '@/lib/hooks/use-copy-to-clipboard'
 import { ArrowRight, Copy, Mail, Target, TrendingUp, Users } from 'lucide-react'
 import { memo, useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { useCopyToClipboard } from '@/lib/hooks/use-copy-to-clipboard'
 
 type Template = {
   id: string

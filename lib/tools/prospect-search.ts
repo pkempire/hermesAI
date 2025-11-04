@@ -43,75 +43,19 @@ export function createProspectSearchTool(model: string) {
         let initialEntityType: 'person' | 'company' = 'person'
         let initialCustomEnrichments: Array<{ label: string; value: string; description: string }> = []
 
-        // Use GPT-4o to intelligently extract search criteria from natural language
+        // Skip slow GPT extraction - use simple parsing instead
         const extractParametersFromQuery = async (queryText: string) => {
-          console.log('🤖 [prospectSearchTool] Using GPT-4o to extract criteria from:', queryText)
+          // FAST: Simple extraction without GPT call
+          initialEntityType = 'company' // Always company for B2B
           
-          try {
-            const { generateObject } = await import('ai')
-            const { getModel } = await import('@/lib/utils/registry')
-            const { z } = await import('zod')
-            
-            const model = getModel('openai:gpt-5')
-            
-            const criteriaSchema = z.object({
-              entityType: z.enum(['person', 'company']).describe('Whether searching for people or companies'),
-              criteria: z.array(z.object({
-                description: z.string().describe('Natural language description of this search criterion')
-              })).describe('List of specific search criteria extracted from the query')
-            })
-            
-            const result = await generateObject({
-              model,
-              schema: criteriaSchema,
-              prompt: `Extract COMPANY search criteria from this query: "${queryText}"
-
-IMPORTANT: For B2B outbound, we ALWAYS search for COMPANIES first, then find the right person later.
-
-Convert this query into company-level criteria. Examples:
-
-Bad (person-level):
-- "Find CTOs at fintech companies"
-
-Good (company-level):
-- "Company operates in fintech industry"
-- "Company has raised Series A funding"
-- "Company has integration marketplace"
-- "Company has 50-500 employees"
-- "Company recently announced partnerships"
-
-Focus on COMPANY attributes that qualify them as good targets.
-Set entityType to 'company' always.`,
-              temperature: 0.3
-            })
-            
-            console.log('✅ [prospectSearchTool] GPT-4o extracted criteria:', result.object)
-            
-            // Convert to our format
-            const criteria = result.object.criteria.map(c => ({
-              label: c.description,
-              value: c.description,
-              type: 'other' as const
-            }))
-            
-            initialEntityType = result.object.entityType
-            
-            return { criteria, enrichments: [] }
-          } catch (error) {
-            console.error('❌ [prospectSearchTool] Error using GPT-4o for criteria extraction:', error)
-            
-            // Fallback: ALWAYS search companies (B2B workflow)
-            initialEntityType = 'company'
-            
-            return {
-              criteria: [{
-                label: queryText,
-                value: queryText,
-                type: 'other' as const
-              }],
-              enrichments: []
-            }
-          }
+          // Simple criteria extraction
+          const criteria = [{
+            label: queryText.substring(0, 100) || queryText,
+            value: queryText,
+            type: 'other' as const
+          }]
+          
+          return { criteria, enrichments: [] }
         }
 
         // If prompt-only mode is OFF and the prompt is short, prefer Exa preview/minimal criteria
@@ -143,115 +87,26 @@ Set entityType to 'company' always.`,
           } catch {}
         }
 
-        // Use the same GPT-4o generation for interactive mode
+        // FAST: Skip slow GPT generation, use simple defaults
         try {
-          const { generateObject } = await import('ai')
-          const { getModel } = await import('@/lib/utils/registry')
-          const { z } = await import('zod')
-          
-          const model = getModel('openai:gpt-5')
-          
-          const websetPlanSchema = z.object({
-            entityType: z.enum(['person', 'company']).describe('Whether searching for people or companies'),
-            searchCriteria: z.array(z.object({
-              description: z.string().describe('Specific verification criterion'),
-              type: z.enum(['job_title', 'company_type', 'industry', 'location', 'technology', 'activity', 'other']).describe('Criterion category'),
-              successRate: z.number().min(50).max(95).describe('Expected success rate %')
-            })).max(5).describe('Up to 5 search criteria for Exa Websets'),
-            enrichments: z.array(z.object({
-              name: z.string().describe('Human-readable field name'),
-              description: z.string().describe('What data to extract'),
-              required: z.boolean().describe('Is this field essential?')
-            })).describe('Data enrichment fields to extract')
-          })
-          
-          console.log('🤖 [prospectSearchTool] Generating interactive webset plan with GPT-4o...')
-          const websetPlan = await generateObject({
-            model,
-            schema: websetPlanSchema,
-            prompt: `Create a COMPANY-FIRST Exa Websets plan:
-
-Company Query: "${query}"
-${targetPersona ? `Target Person: "${targetPersona}"` : ''}
-${offer ? `What We Offer: "${offer}"` : ''}
-
-WORKFLOW:
-1. Find COMPANIES matching criteria (entity type: company)
-2. Exa will later find the right person at each company
-3. Generate enrichments that help qualify companies AND personalize outreach
-
-Generate:
-1. Entity type: ALWAYS "company"
-2. Up to 5 COMPANY-level criteria (NOT person criteria!)
-3. Enrichments that are useful for ${offer ? 'our offer' : 'qualifying prospects'}
-
-CRITERIA EXAMPLES (Good - Company-level):
-- {description: "Company operates in fintech industry", type: "industry", successRate: 85}
-- {description: "Company has 50-500 employees", type: "company_type", successRate: 80}
-- {description: "Company has integration marketplace", type: "technology", successRate: 70}
-- {description: "Company recently announced partnerships", type: "activity", successRate: 65}
-
-CRITERIA EXAMPLES (Bad - Person-level, don't do this):
-- {description: "Person is a VP of Engineering", type: "job_title", successRate: 90}
-
-ENRICHMENT EXAMPLES (context-aware):
-${offer?.toLowerCase().includes('partnership') ? `
-For partnerships:
-- {name: "Marketplace URL", description: "URL of their integration marketplace", required: false}
-- {name: "Recent Partnerships", description: "Partnership announcements in last 6 months", required: false}
-- {name: "Tech Stack", description: "Technologies they integrate with", required: false}
-` : offer?.toLowerCase().includes('api') || offer?.toLowerCase().includes('infrastructure') ? `
-For API/infrastructure products:
-- {name: "Tech Stack", description: "Current technologies and APIs used", required: false}
-- {name: "Engineering Blog", description: "URL of engineering blog or tech posts", required: false}
-- {name: "API Scale", description: "API usage scale or growth signals", required: false}
-` : `
-Generic useful enrichments:
-- {name: "Recent Funding", description: "Latest funding round details", required: false}
-- {name: "Growth Signals", description: "Recent hiring, expansion, or growth indicators", required: false}
-- {name: "Tech Stack", description: "Technologies they use", required: false}
-`}
-
-Core enrichments (always include):
-- {name: "Company Name", description: "Official company name", required: true}
-- {name: "Company Domain", description: "Company website domain", required: true}
-- {name: "Company LinkedIn", description: "Company LinkedIn page URL", required: false}
-
-Make sure EVERY enrichment has "required" boolean field.`,
-            temperature: 0.3
-          })
-          
-          console.log('✅ [prospectSearchTool] Generated interactive webset plan:', websetPlan.object)
-          
-          // Convert to UI format
-          initialEntityType = websetPlan.object.entityType
-          initialCriteria = websetPlan.object.searchCriteria.map(c => ({
-            label: c.description,
-            value: c.description,
-            type: c.type
-          }))
-          // Map, lowercase keys, de-duplicate, and cap to 10
-          const mapped = websetPlan.object.enrichments.map(e => ({
-            label: e.name,
-            value: e.name.toLowerCase().replace(/\s+/g, '_'),
-            required: e.required
-          }))
-          const seen = new Set<string>()
-          initialEnrichments = []
-          for (const e of mapped) {
-            if (!seen.has(e.value)) {
-              initialEnrichments.push(e)
-              seen.add(e.value)
-            }
-            if (initialEnrichments.length >= 10) break
-          }
-          
-        } catch (error) {
-          console.error('❌ [prospectSearchTool] Error generating interactive webset plan:', error)
-          
-          // Fallback to simple extraction
+          // Use simple extraction instead of slow GPT call
           const extracted = await extractParametersFromQuery(query)
           initialCriteria = extracted.criteria
+          initialEntityType = 'company'
+          
+          // Use standard enrichments (fast, no GPT needed)
+          initialEnrichments = [
+            { label: 'Company Name', value: 'company_name', required: true },
+            { label: 'Company Domain', value: 'company_domain', required: true },
+            { label: 'Company LinkedIn', value: 'company_linkedin', required: false },
+            { label: 'Industry', value: 'industry', required: false },
+            { label: 'Company Size', value: 'company_size', required: false },
+            { label: 'Location', value: 'location', required: false }
+          ]
+        } catch (error) {
+          console.error('❌ [prospectSearchTool] Error in fast extraction:', error)
+          initialEntityType = 'company'
+          initialCriteria = [{ label: query, value: query, type: 'other' as const }]
         }
 
         // Ensure our core COMPANY enrichments are present

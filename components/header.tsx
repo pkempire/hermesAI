@@ -1,6 +1,6 @@
 'use client'
 
-import { useSidebar } from '@/components/ui/sidebar'
+import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar'
 import { cn } from '@/lib/utils'
 import { User } from '@supabase/supabase-js'
 import Link from 'next/link'
@@ -41,25 +41,28 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
         open ? 'md:pl-[calc(var(--sidebar-width)+1rem)]' : 'md:pl-4'
       )}
     >
-      <div className="flex items-center justify-between py-3 px-4 md:px-6">
-        {/* Branding */}
-        <Link 
-          href="/" 
-          className="flex items-center gap-3 transition-all duration-200 hover:opacity-80 group"
-        >
-          <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-full blur-sm opacity-0 group-hover:opacity-30 transition-opacity duration-300" />
-            <img
-              src="/images/hermes-avatar.png"
-              alt="Hermes"
-              className="relative h-8 w-8 md:h-9 md:w-9 rounded-full border-2 border-amber-200 shadow-sm group-hover:border-amber-300 transition-colors"
-              onError={(e) => { e.currentTarget.style.display = 'none' }}
-            />
-          </div>
-          <div className="hidden sm:block">
-            <span className="text-base md:text-lg font-semibold text-gray-900">HermesAI</span>
-          </div>
-        </Link>
+      <div className="flex items-center justify-between py-2 px-4 md:px-6">
+        {/* Left: Sidebar toggle + Branding */}
+        <div className="flex items-center gap-2">
+          <SidebarTrigger className="mr-1" />
+          <Link 
+            href="/" 
+            className="flex items-center gap-2 transition-all duration-200 hover:opacity-80 group"
+          >
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-full blur-sm opacity-0 group-hover:opacity-30 transition-opacity duration-300" />
+              <img
+                src="/images/hermes-avatar.png"
+                alt="Hermes"
+                className="relative h-7 w-7 md:h-8 md:w-8 rounded-full border-2 border-amber-200 shadow-sm group-hover:border-amber-300 transition-colors"
+                onError={(e) => { e.currentTarget.style.display = 'none' }}
+              />
+            </div>
+            <div className="hidden sm:block">
+              <span className="text-sm md:text-base font-semibold text-gray-900">HermesAI</span>
+            </div>
+          </Link>
+        </div>
 
         {/* Actions */}
         <div className="flex items-center gap-3">
