@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ProspectCriteriaEditor } from './prospect-criteria-editor';
 import { ProspectEnrichmentsEditor } from './prospect-enrichments-editor';
 import { ProspectGrid } from './prospect-grid';
@@ -29,31 +29,15 @@ export function ProspectSearchBuilder({
   initialCount = 25,
   onRunSearch
 }: ProspectSearchBuilderProps) {
-  const [criteria, setCriteria] = useState<any[]>(initialCriteria);
-  const [enrichments, setEnrichments] = useState<any[]>(initialEnrichments);
-  const [customEnrichments, setCustomEnrichments] = useState<any[]>(initialCustomEnrichments);
-  const [entityType, setEntityType] = useState<'person' | 'company'>(initialEntityType);
-  const [count, setCount] = useState<number>(initialCount);
+  const [criteria, setCriteria] = useState<any[]>(() => initialCriteria);
+  const [enrichments, setEnrichments] = useState<any[]>(() => initialEnrichments);
+  const [customEnrichments, setCustomEnrichments] = useState<any[]>(() => initialCustomEnrichments);
+  const [entityType, setEntityType] = useState<'person' | 'company'>(() => initialEntityType);
+  const [count, setCount] = useState<number>(() => initialCount);
   const [staged, setStaged] = useState(false);
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<any[]>([]);
   const [progress, setProgress] = useState<{ analyzed: number; found: number; status: string } | null>(null);
-
-  useEffect(() => {
-    setCriteria(initialCriteria);
-  }, [initialCriteria]);
-  useEffect(() => {
-    setEnrichments(initialEnrichments);
-  }, [initialEnrichments]);
-  useEffect(() => {
-    setCustomEnrichments(initialCustomEnrichments);
-  }, [initialCustomEnrichments]);
-  useEffect(() => {
-    setEntityType(initialEntityType);
-  }, [initialEntityType]);
-  useEffect(() => {
-    setCount(initialCount);
-  }, [initialCount]);
 
   const handleRunSearch = async () => {
     setStaged(true);

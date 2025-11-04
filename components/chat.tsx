@@ -2,9 +2,9 @@
 
 import { CHAT_ID } from '@/lib/constants'
 import { Model } from '@/lib/types/models'
-import { cn } from '@/lib/utils'
 import { useChat } from '@ai-sdk/react'
 import { ChatRequestOptions, JSONValue, type UIMessage as Message } from 'ai'
+import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { ChatMessages } from './chat-messages'
@@ -28,6 +28,7 @@ export function Chat({
   query?: string
   models?: Model[]
 }) {
+  const router = useRouter()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [isAtBottom, setIsAtBottom] = useState(true)
   const [showProgressTracker, setShowProgressTracker] = useState(false)
@@ -51,17 +52,21 @@ export function Chat({
       id
     },
     onFinish: () => {
-      window.history.replaceState({}, '', `/search/${id}`)
-      window.dispatchEvent(new CustomEvent('chat-history-updated'))
+      try {
+        router.replace(`/search/${id}`)
+      } catch {
+        // Fallback for rare cases where router isn't ready yet
+        try { window.history.replaceState({}, '', `/search/${id}`) } catch {}
+      }
+      try { window.dispatchEvent(new CustomEvent('chat-history-updated')) } catch {}
     },
     onData: (part: any) => {
       try {
         const data = (part as any)?.data ?? part
         if (!data) return
-        // Normalize v5 custom chunks to a flat shape in uiData
-        if ((part as any)?.type === 'message-metadata' && (part as any)?.messageMetadata?.type === 'tool_call') {
-          setUiData(prev => [...prev, { type: 'tool_call', data: (part as any).messageMetadata.data }])
-        } else if ((part as any)?.type?.startsWith?.('data-')) {
+        // Handle custom data parts (pipeline events, etc.)
+        // Tool-call and tool-result parts are handled automatically by useChat hook
+        if ((part as any)?.type?.startsWith?.('data-')) {
           const normalizedType = (part as any).type.replace('data-', '')
           setUiData(prev => [...prev, { type: normalizedType, data: (part as any).data }])
         } else if (data) {
@@ -75,8 +80,7 @@ export function Chat({
       console.error('🔧 [Chat] useChat error:', error)
       toast.error(`Error in chat: ${error.message}`)
     },
-    sendExtraMessageFields: false, // Disable extra message fields,
-    experimental_throttle: 100
+    sendExtraMessageFields: false // Disable extra message fields
   } as any)
 
   // AI SDK v5 returns sendMessage, not append - and no input management
@@ -170,10 +174,30 @@ export function Chat({
 
   // Surface short assistant suggestions emitted by sections
   useEffect(() => {
+    const lastSuggestionTextRef = { current: '' as string }
     const handler = (e: any) => {
       const text = e?.detail?.text
       if (!text) return
-      setMessages((prev: any) => ([...prev, { id: crypto.randomUUID?.() || String(Date.now()), role: 'assistant', parts: [{ type: 'text', text }] }]))
+      // Prevent duplicate suggestions from rapid successive events
+      if (lastSuggestionTextRef.current === text) return
+      lastSuggestionTextRef.current = text
+      setMessages((prev: any) => {
+        const last = prev[prev.length - 1] as any
+        if (last?.role === 'assistant') {
+          const lastText = Array.isArray(last?.parts)
+            ? (last.parts[last.parts.length - 1]?.text || '')
+            : ''
+          if (lastText === text) return prev
+        }
+        return [
+          ...prev,
+          {
+            id: crypto.randomUUID?.() || String(Date.now()),
+            role: 'assistant',
+            parts: [{ type: 'text', text }]
+          }
+        ]
+      })
     }
     window.addEventListener('chat-system-suggest', handler as any)
     return () => window.removeEventListener('chat-system-suggest', handler as any)

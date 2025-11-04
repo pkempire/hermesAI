@@ -36,41 +36,9 @@ export function RenderMessage({
     return annotations?.filter(a => a?.type === 'related-questions')
   }, [(message as any)?.annotations])
 
-  // Render for manual tool call
-  const toolData = useMemo(() => {
-    const collected: any[] = []
-    // 1) From annotations (legacy path)
-    const annotations = ((message as any)?.annotations as any[] | undefined) || []
-    for (const ann of annotations) {
-      if (ann?.type === 'tool_call' && ann?.data) collected.push(ann.data)
-    }
-    // 2) From message.metadata (v5 message-metadata path)
-    const meta = (message as any)?.metadata
-    if (meta) {
-      if (Array.isArray(meta)) {
-        for (const m of meta) if (m?.type === 'tool_call' && m?.data) collected.push(m.data)
-      } else if (meta?.type === 'tool_call' && meta?.data) {
-        collected.push(meta.data)
-      }
-    }
-
-    const map = new Map<string, any>()
-    for (const raw of collected) {
-      const data = raw || {}
-      const existing = map.get(data.toolCallId)
-      if (!existing || data.state === 'result') {
-        map.set(data.toolCallId, {
-          ...data,
-          args: data.args ? JSON.parse(data.args) : {},
-          result:
-            data.result && data.result !== 'undefined'
-              ? JSON.parse(data.result)
-              : undefined
-        } as any)
-      }
-    }
-    return Array.from(map.values())
-  }, [(message as any)?.annotations, (message as any)?.metadata])
+  // Tool calls and results are now handled directly from message.parts
+  // No need to parse from annotations or metadata
+  // Legacy toolData removed - using native AI SDK parts instead
 
   // Extract the unified reasoning annotation directly.
   const reasoningAnnotation = null
@@ -102,15 +70,7 @@ export function RenderMessage({
   // New way: Use parts instead of toolInvocations
   return (
     <>
-      {toolData.map(tool => (
-        <ToolSection
-          key={tool.toolCallId}
-          tool={tool}
-          isOpen={getIsOpen(tool.toolCallId)}
-          onOpenChange={open => onOpenChange(tool.toolCallId, open)}
-          addToolResult={addToolResult}
-        />
-      ))}
+      {/* Tool calls/results are now rendered from message.parts below */}
       {message.parts?.map((part, index) => {
         // Check if this is the last part in the array
         const isLastPart = index === (message.parts?.length ?? 0) - 1
@@ -146,24 +106,12 @@ export function RenderMessage({
             )
           }
           case 'tool-result': {
-            const output = (part as any).output
-            let result: any = undefined
-            try {
-              if (output?.type === 'json') {
-                result = JSON.stringify(output.value)
-              } else if (output?.type === 'text') {
-                result = output.value
-              } else if (output) {
-                result = JSON.stringify(output)
-              }
-            } catch {
-              result = undefined
-            }
+            // Output is already structured, no need to parse
             const tool: any = {
               state: 'result',
               toolCallId: (part as any).toolCallId,
               toolName: (part as any).toolName,
-              result
+              result: (part as any).output  // Already structured, no parsing needed
             } as any
             return (
               <ToolSection
@@ -171,6 +119,7 @@ export function RenderMessage({
                 tool={tool}
                 isOpen={getIsOpen(tool.toolCallId)}
                 onOpenChange={open => onOpenChange(tool.toolCallId, open)}
+                addToolResult={addToolResult}
               />
             )
           }

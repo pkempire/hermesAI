@@ -1,9 +1,10 @@
-import { CoreMessage, smoothStream, streamText } from 'ai'
+import { CoreMessage, streamText } from 'ai'
 import { createEmailDrafterTool } from '../tools/email-drafter'
 import { createProspectSearchTool } from '../tools/prospect-search'
 import { createQuestionTool } from '../tools/question'
 import { createScrapeSiteTool } from '../tools/scrape'
 import { createSearchTool } from '../tools/search'
+import { logger } from '../utils/logger'
 import { getModel } from '../utils/registry'
 
 const SYSTEM_PROMPT = `You are HermesAI — an outbound GTM copilot. Your job is to turn vague growth goals into precise actions: find qualified prospects, enrich them, and help draft concise, high‑converting outreach.
@@ -80,50 +81,28 @@ export function researcher({
   searchMode: boolean
 }): ResearcherReturn {
   try {
-    console.log('🔧 [researcher] =================== RESEARCHER INITIALIZATION ===================')
-    console.log('🔧 [researcher] Creating researcher with model:', model)
-    console.log('🔧 [researcher] Search mode:', searchMode)
-    console.log('🔧 [researcher] Messages count:', messages.length)
-    console.log('🔧 [researcher] Last message:', messages[messages.length - 1]?.content)
+    logger.debug('[researcher] Initializing with model:', model, 'searchMode:', searchMode)
+    logger.debug('[researcher] Messages count:', messages.length)
     
     const currentDate = new Date().toLocaleString()
 
     // Create model-specific tools
-    console.log('🔧 [researcher] Creating search tool...')
+    logger.tool('search', 'Creating search tool...')
     const searchTool = createSearchTool(model)
     
-    console.log('🔧 [researcher] Creating ask question tool...')
+    logger.tool('ask_question', 'Creating ask question tool...')
     const askQuestionTool = createQuestionTool(model)
     
-    console.log('🔧 [researcher] Creating prospect search tool...')
+    logger.tool('prospect_search', 'Creating prospect search tool...')
     const prospectSearchTool = createProspectSearchTool(model)
 
-    console.log('🔧 [researcher] Creating scrape site tool...')
+    logger.tool('scrape_site', 'Creating scrape site tool...')
     const scrapeSiteTool = createScrapeSiteTool()
-    console.log('🔧 [researcher] Creating email drafter tool...')
+    
+    logger.tool('email_drafter', 'Creating email drafter tool...')
     const emailDrafterTool = createEmailDrafterTool()
     
-    console.log('✅ [researcher] All tools created successfully')
-    // Debug tool schemas (AI SDK v5 expects Zod schemas)
-    try {
-      // @ts-ignore
-      console.log('🔍 [researcher] search.inputSchema defined:', !!searchTool?.inputSchema)
-      // @ts-ignore
-      console.log('🔍 [researcher] ask_question.inputSchema defined:', !!askQuestionTool?.inputSchema)
-      // @ts-ignore
-      console.log('🔍 [researcher] prospect_search.inputSchema defined:', !!prospectSearchTool?.inputSchema)
-      // @ts-ignore
-      console.log('🔍 [researcher] email_drafter.inputSchema defined:', !!emailDrafterTool?.inputSchema)
-    } catch (e) {
-      console.warn('⚠️ [researcher] Tool schema debug failed:', e)
-    }
-    console.log('🔧 [researcher] Available tools:', Object.keys({
-      search: searchTool,
-      ask_question: askQuestionTool,
-      prospect_search: prospectSearchTool,
-      scrape_site: scrapeSiteTool,
-      email_drafter: emailDrafterTool
-    }))
+    logger.debug('[researcher] All tools created successfully')
     
     // TEMP: Narrow tools to prospect_search only to isolate schema issues
     return {
@@ -136,11 +115,10 @@ export function researcher({
         prospect_search: prospectSearchTool,
         scrape_site: scrapeSiteTool,
         email_drafter: emailDrafterTool
-      },
-      experimental_transform: smoothStream()
+      }
     }
   } catch (error) {
-    console.error('💥 [researcher] Error in chatResearcher:', error)
+    logger.error('[researcher] Error:', error)
     throw error
   }
 }

@@ -32,11 +32,12 @@ export function ChatArtifactContainer({
 
   return (
     <div className="flex-1 min-h-0 h-screen flex">
-      <div className="absolute p-4 z-50 transition-opacity duration-1000">
-        {(!open || isMobileSidebar) && (
+      {/* Show floating sidebar trigger only on mobile to avoid duplicate desktop toggle */}
+      {isMobile && (
+        <div className="absolute p-4 z-50 transition-opacity duration-1000">
           <SidebarTrigger className="animate-fade-in" />
-        )}
-      </div>
+        </div>
+      )}
       {/* Desktop: Resizable panels (Do not render on mobile) */}
       {!isMobile && (
         <ResizablePanelGroup

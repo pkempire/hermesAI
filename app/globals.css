@@ -258,6 +258,109 @@ select {
   @apply transition-all duration-200 ease-out;
 }
 
+/* ========================================== */
+/* TYPOGRAPHY SCALE - REFERENCE SITE INSPIRED */
+/* ========================================== */
+
+.hero-title {
+  font-size: clamp(3rem, 8vw, 6rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.hero-subtitle {
+  font-size: clamp(1.25rem, 3vw, 2rem);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.section-title {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.body-large {
+  font-size: 1.125rem;
+  line-height: 1.7;
+}
+
+/* ========================================== */
+/* ENHANCED SPACING SYSTEM */
+/* ========================================== */
+
+.space-section {
+  @apply py-12 md:py-16 lg:py-24;
+}
+
+.space-container {
+  @apply px-4 md:px-6 lg:px-8;
+}
+
+.space-card {
+  @apply p-6 md:p-8;
+}
+
+/* ========================================== */
+/* SMOOTH STAGGER ANIMATIONS */
+/* ========================================== */
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-stagger {
+  animation: fade-in-up 0.6s ease-out backwards;
+}
+
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+
+/* ========================================== */
+/* REFINED MICRO-INTERACTIONS */
+/* ========================================== */
+
+.interactive-card {
+  @apply transition-all duration-200 ease-out;
+  @apply hover:shadow-lg hover:-translate-y-1;
+  @apply active:scale-[0.98];
+  @apply focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2;
+}
+
+.interactive-button {
+  @apply transition-all duration-200 ease-out;
+  @apply hover:scale-[1.02] hover:shadow-md;
+  @apply active:scale-[0.98];
+  @apply focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2;
+}
+
+/* ========================================== */
+/* LOADING SKELETONS - REFERENCE QUALITY */
+/* ========================================== */
+
+.skeleton-card {
+  @apply animate-pulse bg-gradient-to-r from-gray-100 via-gray-50 to-gray-100;
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
 /* SICK NEW ANIMATIONS FOR HERMES */
 @keyframes pulse-glow {
   0%, 100% {

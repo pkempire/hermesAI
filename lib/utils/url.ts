@@ -9,7 +9,8 @@ export async function getBaseUrlFromHeaders(): Promise<URL> {
   const baseUrl = headersList.get('x-base-url')
   const url = headersList.get('x-url')
   const host = headersList.get('x-host')
-  const protocol = headersList.get('x-protocol') || 'http:'
+  const forwardedHost = headersList.get('x-forwarded-host')
+  const protocol = headersList.get('x-protocol') || 'https:'
 
   try {
     // Try to use the pre-constructed base URL if available
@@ -17,17 +18,37 @@ export async function getBaseUrlFromHeaders(): Promise<URL> {
       return new URL(baseUrl)
     } else if (url) {
       return new URL(url)
+    } else if (forwardedHost) {
+      // Use forwarded host in production (Vercel)
+      const constructedUrl = `https://${forwardedHost}`
+      return new URL(constructedUrl)
     } else if (host) {
       const constructedUrl = `${protocol}${
         protocol.endsWith(':') ? '//' : '://'
       }${host}`
       return new URL(constructedUrl)
     } else {
-      return new URL('http://localhost:3000')
+      // Only use localhost in development
+      const isDev = process.env.NODE_ENV === 'development'
+      if (isDev) {
+        return new URL('http://localhost:3000')
+      }
+      // In production, try to construct from vercel URL
+      const vercelUrl = process.env.VERCEL_URL
+      if (vercelUrl) {
+        return new URL(`https://${vercelUrl}`)
+      }
+      // Last resort: throw error instead of localhost
+      throw new Error('Unable to determine base URL')
     }
   } catch (urlError) {
-    // Fallback to default URL if any error occurs during URL construction
-    return new URL('http://localhost:3000')
+    // Only fallback to localhost in development
+    const isDev = process.env.NODE_ENV === 'development'
+    if (isDev) {
+      return new URL('http://localhost:3000')
+    }
+    // In production, throw error to prevent localhost redirects
+    throw new Error('Unable to determine base URL in production')
   }
 }
 

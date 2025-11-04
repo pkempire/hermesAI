@@ -46,13 +46,15 @@ export function ChatMessages({
 
   useEffect(() => {
     // Open manual tool call when the last section is a user message
-    if (sections.length > 0) {
-      const lastSection = sections[sections.length - 1]
-      if (lastSection.userMessage.role === 'user') {
-        setOpenStates({ [manualToolCallId]: true })
-      }
-    }
-  }, [sections])
+    if (sections.length === 0) return
+    const lastSection = sections[sections.length - 1]
+    if (lastSection.userMessage.role !== 'user') return
+    setOpenStates(prev => {
+      // Avoid resetting other open states on each render
+      if (prev[manualToolCallId]) return prev
+      return { ...prev, [manualToolCallId]: true }
+    })
+  }, [sections, manualToolCallId])
 
   // get last tool data for manual tool call
   const lastToolData = useMemo(() => {
@@ -135,16 +137,16 @@ export function ChatMessages({
       role="list"
       aria-roledescription="chat messages"
       className={cn(
-        'relative pt-14 w-full h-full flex-1 overflow-y-auto',
+        'relative pt-6 md:pt-10 w-full h-full flex-1 overflow-y-auto',
         'scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent'
       )}
     >
-      <div className="relative mx-auto w-full max-w-3xl px-4 pb-32">
+      <div className="relative mx-auto w-full max-w-3xl px-3 md:px-4 pb-24">
         {sections.map((section, sectionIndex) => (
           <div
             key={section.id}
             id={`section-${section.id}`}
-            className="chat-section mb-8"
+            className="chat-section mb-6 md:mb-7"
             style={
               sectionIndex === sections.length - 1
                 ? { minHeight: '50vh' }

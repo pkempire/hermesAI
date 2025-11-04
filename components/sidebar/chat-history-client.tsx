@@ -115,7 +115,7 @@ export function ChatHistoryClient() {
     <div className="flex flex-col flex-1 h-full">
       <SidebarGroup>
         <div className="flex items-center justify-between w-full">
-          <SidebarGroupLabel className="p-0">Campaign Manager • Chat History</SidebarGroupLabel>
+          <SidebarGroupLabel className="p-0">History</SidebarGroupLabel>
           <ClearHistoryAction empty={isHistoryEmpty} />
         </div>
       </SidebarGroup>

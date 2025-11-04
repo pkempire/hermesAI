@@ -1,0 +1,493 @@
+
+> morphic@0.1.0 dev
+> next dev --turbo
+
+   ▲ Next.js 15.3.1 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://10.6.167.168:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Compiled middleware in 200ms
+ ✓ Ready in 2.1s
+ ○ Compiling / ...
+ ✓ Compiled / in 5.8s
+Loading default model for server-side rendering
+🔧 [Chat] AI SDK v5 hook values: {
+  sendMessageExists: true,
+  inputValue: '',
+  setInputExists: true,
+  messagesLength: 0,
+  status: 'ready',
+  isLoading: false,
+  error: undefined
+}
+ GET / 200 in 7080ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 1155ms
+ GET /favicon.ico?favicon.abbb70b2.ico 200 in 1358ms
+ GET /api/subscription 200 in 1777ms
+ GET /api/chats?offset=0&limit=20 200 in 1619ms
+Loading default model for server-side rendering
+🔧 [Chat] AI SDK v5 hook values: {
+  sendMessageExists: true,
+  inputValue: '',
+  setInputExists: true,
+  messagesLength: 0,
+  status: 'ready',
+  isLoading: false,
+  error: undefined
+}
+ GET / 200 in 267ms
+ GET /api/subscription 200 in 358ms
+ GET /api/chats?offset=0&limit=20 200 in 336ms
+ ✓ Compiled /api/templates/use in 411ms
+Error tracking template usage: {
+  code: 'PGRST202',
+  details: 'Searched for the function public.increment_template_uses with parameter template_id or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache.',
+  hint: null,
+  message: 'Could not find the function public.increment_template_uses(template_id) in the schema cache'
+}
+ POST /api/templates/use 500 in 574ms
+ ✓ Compiled in 377ms
+ ✓ Compiled in 194ms
+ ○ Compiling /prospect-search ...
+ ✓ Compiled /prospect-search in 2.2s
+ GET /prospect-search 200 in 3046ms
+ GET /api/subscription 200 in 503ms
+ GET /api/chats?offset=0&limit=20 200 in 616ms
+ GET /prospect-search 200 in 429ms
+ GET /api/subscription 200 in 734ms
+ GET /api/chats?offset=0&limit=20 200 in 526ms
+Loading default model for server-side rendering
+🔧 [Chat] AI SDK v5 hook values: {
+  sendMessageExists: true,
+  inputValue: '',
+  setInputExists: true,
+  messagesLength: 0,
+  status: 'ready',
+  isLoading: false,
+  error: undefined
+}
+ GET / 200 in 2344ms
+ GET /api/subscription 200 in 298ms
+ GET /api/chats?offset=0&limit=20 200 in 442ms
+ GET /prospect-search 200 in 690ms
+ GET /api/subscription 200 in 1002ms
+ GET /api/chats?offset=0&limit=20 200 in 768ms
+ ⚠ Fast Refresh had to perform a full reload when ./components/ui/sidebar.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ ✓ Compiled in 3.6s
+ GET /prospect-search 200 in 1118ms
+ GET /favicon.ico?favicon.abbb70b2.ico 200 in 417ms
+ GET /api/subscription 200 in 464ms
+ GET /api/chats?offset=0&limit=20 200 in 417ms
+Loading default model for server-side rendering
+🔧 [Chat] AI SDK v5 hook values: {
+  sendMessageExists: true,
+  inputValue: '',
+  setInputExists: true,
+  messagesLength: 0,
+  status: 'ready',
+  isLoading: false,
+  error: undefined
+}
+ GET / 200 in 1379ms
+ GET /api/subscription 200 in 318ms
+ GET /api/chats?offset=0&limit=20 200 in 281ms
+ GET /prospect-search 200 in 1273ms
+ GET /api/subscription 200 in 1189ms
+ GET /api/chats?offset=0&limit=20 200 in 1533ms
+ ✓ Compiled in 7.1s
+ GET /prospect-search 200 in 1199ms
+ GET /api/subscription 200 in 456ms
+ GET /api/chats?offset=0&limit=20 200 in 483ms
+Loading default model for server-side rendering
+🔧 [Chat] AI SDK v5 hook values: {
+  sendMessageExists: true,
+  inputValue: '',
+  setInputExists: true,
+  messagesLength: 0,
+  status: 'ready',
+  isLoading: false,
+  error: undefined
+}
+ GET / 200 in 400ms
+ GET /api/subscription 200 in 352ms
+ GET /api/chats?offset=0&limit=20 200 in 361ms
+ ✓ Compiled in 3s
+ ⚠ Fast Refresh had to perform a full reload when ./components/ui/sidebar.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+Loading default model for server-side rendering
+🔧 [Chat] AI SDK v5 hook values: {
+  sendMessageExists: true,
+  inputValue: '',
+  setInputExists: true,
+  messagesLength: 0,
+  status: 'ready',
+  isLoading: false,
+  error: undefined
+}
+ GET / 200 in 1996ms
+ GET /favicon.ico?favicon.abbb70b2.ico 200 in 292ms
+ GET /api/subscription 200 in 402ms
+ GET /api/chats?offset=0&limit=20 200 in 445ms
+ ✓ Compiled in 940ms
+ ✓ Compiled in 1625ms
+ ⚠ Fast Refresh had to perform a full reload when ./components/ui/sidebar.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+Loading default model for server-side rendering
+🔧 [Chat] AI SDK v5 hook values: {
+  sendMessageExists: true,
+  inputValue: '',
+  setInputExists: true,
+  messagesLength: 0,
+  status: 'ready',
+  isLoading: false,
+  error: undefined
+}
+ GET / 200 in 984ms
+ GET /favicon.ico?favicon.abbb70b2.ico 200 in 243ms
+ GET /api/subscription 200 in 312ms
+ GET /api/chats?offset=0&limit=20 200 in 312ms
+ ⚠ Fast Refresh had to perform a full reload when ./components/ui/sidebar.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ ✓ Compiled in 1763ms
+Loading default model for server-side rendering
+🔧 [Chat] AI SDK v5 hook values: {
+  sendMessageExists: true,
+  inputValue: '',
+  setInputExists: true,
+  messagesLength: 0,
+  status: 'ready',
+  isLoading: false,
+  error: undefined
+}
+ GET / 200 in 1053ms
+ GET /favicon.ico?favicon.abbb70b2.ico 200 in 281ms
+ GET /api/subscription 200 in 318ms
+ GET /api/chats?offset=0&limit=20 200 in 317ms
+ ✓ Compiled in 1967ms
+ ○ Compiling /api/auth/me ...
+ ✓ Compiled /api/auth/me in 4.5s
+ GET /api/auth/me 200 in 5117ms
+ GET /api/auth/me 200 in 1643ms
+Loading default model for server-side rendering
+ GET / 200 in 544ms
+ GET /favicon.ico?favicon.abbb70b2.ico 200 in 310ms
+ GET /api/auth/me 200 in 391ms
+ ○ Compiling /api/chat ...
+ ✓ Compiled /api/chat in 4.8s
+🔧 [API] =================== CHAT API REQUEST ===================
+🔧 [API] Chat ID: dev
+🔧 [API] Messages count: 1
+🔧 [API] Last message: hello
+🔧 [API] User ID: c093de15-280d-4c3d-bf63-6d09720a209f
+🔧 [API] Selected model: GPT-5 Mini
+🔧 [API] Search mode: false
+🔧 [API] Supports tool calling: true
+🔧 [createToolCallingStreamResponse] Config received: {
+  hasMessages: true,
+  messagesType: 'object',
+  messagesLength: 1,
+  hasModel: true,
+  hasChatId: true,
+  searchMode: false,
+  userId: 'c093de15-280d-4c3d-bf63-6d09720a209f'
+}
+🔧 [createToolCallingStreamResponse] =================== STREAM STARTING ===================
+🔧 [createToolCallingStreamResponse] Model ID: openai:gpt-5-mini
+🔧 [createToolCallingStreamResponse] Search Mode: false
+🔧 [createToolCallingStreamResponse] Messages: 1
+🔧 [createToolCallingStreamResponse] Messages type: object
+🔧 [createToolCallingStreamResponse] Messages is array: true
+🔧 [createToolCallingStreamResponse] Messages content: [ { role: 'user', content: 'hello' } ]
+🔧 [createToolCallingStreamResponse] Valid messages for conversion: 1
+✅ [createToolCallingStreamResponse] Messages converted successfully: 1
+🔧 [researcher] =================== RESEARCHER INITIALIZATION ===================
+🔧 [researcher] Creating researcher with model: openai:gpt-5-mini
+🔧 [researcher] Search mode: false
+🔧 [researcher] Messages count: 1
+🔧 [researcher] Last message: hello
+🔧 [researcher] Creating search tool...
+🔧 [researcher] Creating ask question tool...
+🔧 [researcher] Creating prospect search tool...
+🔧 [createProspectSearchTool] Creating prospect search tool for model: openai:gpt-5-mini
+✅ [createProspectSearchTool] Prospect search tool created successfully
+🔧 [researcher] Creating scrape site tool...
+🔧 [researcher] Creating email drafter tool...
+✅ [researcher] All tools created successfully
+🔍 [researcher] search.inputSchema defined: true
+🔍 [researcher] ask_question.inputSchema defined: true
+🔍 [researcher] prospect_search.inputSchema defined: true
+🔍 [researcher] email_drafter.inputSchema defined: true
+🔧 [researcher] Available tools: [
+  'search',
+  'ask_question',
+  'prospect_search',
+  'scrape_site',
+  'email_drafter'
+]
+🔧 [createToolCallingStreamResponse] About to call streamText with tools: [
+  'search',
+  'ask_question',
+  'prospect_search',
+  'scrape_site',
+  'email_drafter'
+]
+🔧 [createToolCallingStreamResponse] Active tools: undefined
+🔧 [streamText] Step finished
+🔧 [streamText] Step details: DefaultStepResult {
+  content: [
+    { type: 'reasoning', text: '', providerMetadata: [Object] },
+    {
+      type: 'text',
+      text: 'Hi — I’m HermesAI, your outbound GTM copilot. What do you want to do next?\n' +
+        '\n' +
+        'Options:\n' +
+        '1) Start a prospect/company search\n' +
+        '2) Analyze a website to extract ICP/offers\n' +
+        '3) Draft outreach for existing prospects\n' +
+        '4) Something else (describe)\n' +
+        '\n' +
+        'Reply with the option number or a short description.',
+      providerMetadata: [Object]
+    }
+  ],
+  finishReason: 'stop',
+  usage: {
+    inputTokens: 1427,
+    outputTokens: 394,
+    totalTokens: 1821,
+    reasoningTokens: 320,
+    cachedInputTokens: 0
+  },
+  warnings: [],
+  request: {
+    body: {
+      model: 'gpt-5-mini',
+      input: [Array],
+      temperature: undefined,
+      top_p: undefined,
+      max_output_tokens: undefined,
+      metadata: undefined,
+      parallel_tool_calls: undefined,
+      previous_response_id: undefined,
+      store: undefined,
+      user: undefined,
+      instructions: undefined,
+      service_tier: undefined,
+      include: undefined,
+      prompt_cache_key: undefined,
+      safety_identifier: undefined,
+      top_logprobs: undefined,
+      tools: [Array],
+      tool_choice: 'auto'
+    }
+  },
+  response: {
+    id: 'resp_079ec784edde259d0068f562169b048195b21150fa3bdf4165',
+    timestamp: 2025-10-19T22:11:35.000Z,
+    modelId: 'gpt-5-mini-2025-08-07',
+    headers: {
+      'alt-svc': 'h3=":443"; ma=86400',
+      'cf-cache-status': 'DYNAMIC',
+      'cf-ray': '99139c9b2db0d0cc-IAD',
+      connection: 'keep-alive',
+      'content-type': 'text/event-stream; charset=utf-8',
+      date: 'Sun, 19 Oct 2025 22:11:35 GMT',
+      'openai-organization': 'user-bs7nnt3d10yybiicm0mne13p',
+      'openai-processing-ms': '712',
+      'openai-project': 'proj_uKrqqYSfhnpqm4CgnBl8Rt2g',
+      'openai-version': '2020-10-01',
+      server: 'cloudflare',
+      'set-cookie': '_cfuvid=I0XuR9Wb2x2F6vVYpmvwm3aWSgSlAK6y6JK3G6mM94s-1760911895277-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None',
+      'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+      'transfer-encoding': 'chunked',
+      'x-content-type-options': 'nosniff',
+      'x-envoy-upstream-service-time': '728',
+      'x-request-id': 'req_516ffc257220491bb7cdcd00754a48b0'
+    },
+    messages: [ [Object] ]
+  },
+  providerMetadata: {
+    openai: {
+      responseId: 'resp_079ec784edde259d0068f562169b048195b21150fa3bdf4165',
+      logprobs: [Array]
+    }
+  }
+}
+ POST /api/chat 200 in 21966ms
+ GET /api/auth/me 200 in 199ms
+🔧 [API] =================== CHAT API REQUEST ===================
+🔧 [API] Chat ID: search
+🔧 [API] Messages count: 1
+🔧 [API] Last message: undefined
+🔧 [API] User ID: c093de15-280d-4c3d-bf63-6d09720a209f
+🔧 [API] Selected model: GPT-5 Mini
+🔧 [API] Search mode: false
+🔧 [API] Supports tool calling: true
+🔧 [createToolCallingStreamResponse] Config received: {
+  hasMessages: true,
+  messagesType: 'object',
+  messagesLength: 1,
+  hasModel: true,
+  hasChatId: true,
+  searchMode: false,
+  userId: 'c093de15-280d-4c3d-bf63-6d09720a209f'
+}
+🔧 [createToolCallingStreamResponse] =================== STREAM STARTING ===================
+🔧 [createToolCallingStreamResponse] Model ID: openai:gpt-5-mini
+🔧 [createToolCallingStreamResponse] Search Mode: false
+🔧 [createToolCallingStreamResponse] Messages: 1
+🔧 [createToolCallingStreamResponse] Messages type: object
+🔧 [createToolCallingStreamResponse] Messages is array: true
+🔧 [createToolCallingStreamResponse] Messages content: [ { role: 'user', parts: [ [Object] ], id: 'iTP6zC4osv6oKTMv' } ]
+🔧 [createToolCallingStreamResponse] Valid messages for conversion: 1
+✅ [createToolCallingStreamResponse] Messages converted successfully: 1
+🔧 [researcher] =================== RESEARCHER INITIALIZATION ===================
+🔧 [researcher] Creating researcher with model: openai:gpt-5-mini
+🔧 [researcher] Search mode: false
+🔧 [researcher] Messages count: 1
+🔧 [researcher] Last message: [
+  {
+    type: 'text',
+    text: 'Find 3 fintech startups hiring data engineers; draft first outreach email.'
+  }
+]
+🔧 [researcher] Creating search tool...
+🔧 [researcher] Creating ask question tool...
+🔧 [researcher] Creating prospect search tool...
+🔧 [createProspectSearchTool] Creating prospect search tool for model: openai:gpt-5-mini
+✅ [createProspectSearchTool] Prospect search tool created successfully
+🔧 [researcher] Creating scrape site tool...
+🔧 [researcher] Creating email drafter tool...
+✅ [researcher] All tools created successfully
+🔍 [researcher] search.inputSchema defined: true
+🔍 [researcher] ask_question.inputSchema defined: true
+🔍 [researcher] prospect_search.inputSchema defined: true
+🔍 [researcher] email_drafter.inputSchema defined: true
+🔧 [researcher] Available tools: [
+  'search',
+  'ask_question',
+  'prospect_search',
+  'scrape_site',
+  'email_drafter'
+]
+🔧 [createToolCallingStreamResponse] About to call streamText with tools: [
+  'search',
+  'ask_question',
+  'prospect_search',
+  'scrape_site',
+  'email_drafter'
+]
+🔧 [createToolCallingStreamResponse] Active tools: undefined
+🔧 [streamText] Step finished
+🔧 [streamText] Step details: DefaultStepResult {
+  content: [
+    { type: 'reasoning', text: '', providerMetadata: [Object] },
+    {
+      type: 'text',
+      text: 'I need two quick details to target the search: who should I reach at these fintech startups, and what are you offering in the outreach? (Pick one or enter your own.)',
+      providerMetadata: [Object]
+    },
+    {
+      type: 'tool-call',
+      toolCallId: 'call_C3uqcKRjsjF7K90qSJ8JiJib',
+      toolName: 'ask_question',
+      input: [Object],
+      providerExecuted: undefined,
+      providerMetadata: [Object]
+    }
+  ],
+  finishReason: 'tool-calls',
+  usage: {
+    inputTokens: 1440,
+    outputTokens: 1140,
+    totalTokens: 2580,
+    reasoningTokens: 960,
+    cachedInputTokens: 0
+  },
+  warnings: [],
+  request: {
+    body: {
+      model: 'gpt-5-mini',
+      input: [Array],
+      temperature: undefined,
+      top_p: undefined,
+      max_output_tokens: undefined,
+      metadata: undefined,
+      parallel_tool_calls: undefined,
+      previous_response_id: undefined,
+      store: undefined,
+      user: undefined,
+      instructions: undefined,
+      service_tier: undefined,
+      include: undefined,
+      prompt_cache_key: undefined,
+      safety_identifier: undefined,
+      top_logprobs: undefined,
+      tools: [Array],
+      tool_choice: 'auto'
+    }
+  },
+  response: {
+    id: 'resp_094b851626e14e4a0068f5626874dc81978ce9a43a7ab3c55f',
+    timestamp: 2025-10-19T22:12:56.000Z,
+    modelId: 'gpt-5-mini-2025-08-07',
+    headers: {
+      'alt-svc': 'h3=":443"; ma=86400',
+      'cf-cache-status': 'DYNAMIC',
+      'cf-ray': '99139eaa8a50c993-IAD',
+      connection: 'keep-alive',
+      'content-type': 'text/event-stream; charset=utf-8',
+      date: 'Sun, 19 Oct 2025 22:12:56 GMT',
+      'openai-organization': 'user-bs7nnt3d10yybiicm0mne13p',
+      'openai-processing-ms': '207',
+      'openai-project': 'proj_uKrqqYSfhnpqm4CgnBl8Rt2g',
+      'openai-version': '2020-10-01',
+      server: 'cloudflare',
+      'set-cookie': '_cfuvid=t5GAMxcAG0ND9Oi0nzoMEt1r.WsY_8wBtBSYYPxVP5M-1760911976692-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None',
+      'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+      'transfer-encoding': 'chunked',
+      'x-content-type-options': 'nosniff',
+      'x-envoy-upstream-service-time': '225',
+      'x-request-id': 'req_c46a38b8f3004b73b1a10984a0879c74'
+    },
+    messages: [ [Object] ]
+  },
+  providerMetadata: {
+    openai: {
+      responseId: 'resp_094b851626e14e4a0068f5626874dc81978ce9a43a7ab3c55f',
+      logprobs: [Array]
+    }
+  }
+}
+ POST /api/chat 200 in 15573ms
+ GET /api/chats?offset=0&limit=20 200 in 409ms
+ ✓ Compiled in 1980ms
+ GET /api/auth/me 200 in 203ms
+ ✓ Compiled in 705ms
+ ○ Compiling /search/[id] ...
+ ✓ Compiled /search/[id] in 10.8s
+Loading default model for server-side rendering
+Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem.
+ ⨯ [TypeError: Cannot read properties of null (reading 'useContext')] {
+  digest: '876283327'
+}
+Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem.
+[TypeError: Cannot read properties of null (reading 'use')]
+Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem.
+[TypeError: Cannot read properties of null (reading 'use')]
+ GET / 500 in 2238ms
+ GET /api/subscription 200 in 372ms
+ GET /favicon.ico?favicon.abbb70b2.ico 200 in 243ms
+ GET /api/chats?offset=0&limit=20 200 in 402ms

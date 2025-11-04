@@ -13,7 +13,7 @@ export function HermesApp({ models }: HermesAppProps) {
   const [chatId] = useState(() => generateId())
 
   return (
-    <div className="h-screen w-full hermes-gradient-bg">
+    <div className="h-full w-full hermes-gradient-bg">
       <Chat
         id={chatId}
         models={models}

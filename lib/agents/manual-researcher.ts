@@ -1,4 +1,4 @@
-import { CoreMessage, smoothStream, streamText } from 'ai'
+import { CoreMessage, streamText } from 'ai'
 import { getModel } from '../utils/registry'
 
 const BASE_SYSTEM_PROMPT = `
@@ -58,9 +58,8 @@ export function manualResearcher({
       model: getModel(model),
       system: `${systemPrompt}\nCurrent date and time: ${currentDate}`,
       messages,
-      temperature: 0.6, // GPT-4 supports temperature parameter
-      topP: 1,
-      experimental_transform: smoothStream()
+      temperature: 0.6,
+      topP: 1
     }
   } catch (error) {
     console.error('Error in manualResearcher:', error)

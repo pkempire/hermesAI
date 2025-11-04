@@ -9,18 +9,18 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetHeader,
+    SheetTitle
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger
 } from '@/components/ui/tooltip'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { cn } from '@/lib/utils/index'
@@ -98,7 +98,8 @@ const SidebarProvider = React.forwardRef<
       const cookieState =
         cookieValue !== null ? cookieValue === 'true' : defaultOpen
 
-      _setOpen(cookieState)
+      // Only update if value actually changes to avoid unnecessary renders
+      _setOpen(prev => (prev !== cookieState ? cookieState : prev))
       setIsHydrated(true)
     }, [defaultOpen])
 
@@ -109,7 +110,7 @@ const SidebarProvider = React.forwardRef<
         if (setOpenProp) {
           setOpenProp(openState)
         } else {
-          _setOpen(openState)
+          _setOpen(prev => (prev !== openState ? openState : prev))
         }
 
         // This sets the cookie to keep the sidebar state.
@@ -271,7 +272,7 @@ const Sidebar = React.forwardRef<
         />
         <div
           className={cn(
-            'fixed inset-y-0 z-10 hidden h-svh w-[--sidebar-width] transition-[left,right,width] duration-200 ease-linear md:flex',
+            'fixed inset-y-0 z-40 hidden h-svh w-[--sidebar-width] transition-[left,right,width] duration-200 ease-linear md:flex',
             side === 'left'
               ? 'left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]'
               : 'right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]',
@@ -337,12 +338,12 @@ const SidebarRail = React.forwardRef<
       onClick={toggleSidebar}
       title="Toggle Sidebar"
       className={cn(
-        'absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] hover:after:bg-sidebar-border group-data-[side=left]:-right-4 group-data-[side=right]:left-0 sm:flex',
+        'absolute inset-y-0 z-50 pointer-events-auto hidden w-4 -translate-x-1/2 transition-all ease-linear after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] hover:after:bg-sidebar-border group-data-[side=left]:right-0 group-data-[side=right]:left-0 sm:flex',
         '[[data-side=left]_&]:cursor-w-resize [[data-side=right]_&]:cursor-e-resize',
         '[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize',
         'group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:left-full group-data-[collapsible=offcanvas]:hover:bg-sidebar',
-        '[[data-side=left][data-collapsible=offcanvas]_&]:-right-2',
-        '[[data-side=right][data-collapsible=offcanvas]_&]:-left-2',
+        '[[data-side=left][data-collapsible=offcanvas]_&]:right-0',
+        '[[data-side=right][data-collapsible=offcanvas]_&]:left-0',
         className
       )}
       {...props}
@@ -771,28 +772,29 @@ const SidebarMenuSubButton = React.forwardRef<
 SidebarMenuSubButton.displayName = 'SidebarMenuSubButton'
 
 export {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupAction,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarInput,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuAction,
-  SidebarMenuBadge,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarMenuSkeleton,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
-  SidebarProvider,
-  SidebarRail,
-  SidebarSeparator,
-  SidebarTrigger,
-  useSidebar
+    Sidebar,
+    SidebarContent,
+    SidebarFooter,
+    SidebarGroup,
+    SidebarGroupAction,
+    SidebarGroupContent,
+    SidebarGroupLabel,
+    SidebarHeader,
+    SidebarInput,
+    SidebarInset,
+    SidebarMenu,
+    SidebarMenuAction,
+    SidebarMenuBadge,
+    SidebarMenuButton,
+    SidebarMenuItem,
+    SidebarMenuSkeleton,
+    SidebarMenuSub,
+    SidebarMenuSubButton,
+    SidebarMenuSubItem,
+    SidebarProvider,
+    SidebarRail,
+    SidebarSeparator,
+    SidebarTrigger,
+    useSidebar
 }
+

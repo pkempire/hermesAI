@@ -1,11 +1,9 @@
 'use client'
 
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { ArrowRight, Bookmark, Eye, Mail, Target, TrendingUp, Users, Zap } from 'lucide-react'
+import { ArrowRight, Mail, Target, TrendingUp, Users } from 'lucide-react'
 import { memo, useCallback, useEffect, useState } from 'react'
 
 type Template = {
@@ -15,11 +13,6 @@ type Template = {
   message: string
   category: string
   params?: Array<{ key: string; label: string; placeholder?: string }>
-  save_count: number
-  use_count: number
-  tags: string[]
-  is_featured?: boolean
-  saved_at?: string
 }
 
 const categoryIcons = {
@@ -27,43 +20,65 @@ const categoryIcons = {
   'Sales': TrendingUp,
   'Recruiting': Users,
   'Networking': Mail,
-  'Growth': Zap
+  'Growth': TrendingUp
 }
 
-// Fallback templates when database is not available
+// Match production templates exactly
 const fallbackTemplates: Template[] = [
   {
     id: 'fallback-1',
     name: 'Partnership Finder',
-    description: 'Find potential channel partners and directories for your business',
+    description: 'Use my website {{url}} to infer our ICP/offer and find channel partners and directories that could list us. Start with top 20 high-fit partners and pull contacts to reach out.',
     message: 'Use my website {{url}} to infer our ICP/offer and find channel partners and directories that could list us. Start with top 20 high-fit partners and pull contacts to reach out.',
     category: 'Partnerships',
-    save_count: 1247,
-    use_count: 3891,
-    tags: ['partnerships', 'business development', 'channels'],
-    is_featured: true
+    params: [{ key: 'url', label: 'Business URL', placeholder: 'https://example.com' }]
   },
   {
     id: 'fallback-2',
-    name: 'Localized Outreach',
-    description: 'Target companies in specific geographic locations',
+    name: 'Localized Finder',
+    description: 'Find {{niche}} companies in {{city}}. Start with 25 and enrich email + LinkedIn.',
     message: 'Find {{niche}} companies in {{city}}. Start with 25 and enrich email + LinkedIn.',
     category: 'Sales',
-    save_count: 987,
-    use_count: 2456,
-    tags: ['local', 'geographic', 'sales'],
-    is_featured: true
+    params: [
+      { key: 'niche', label: 'Niche', placeholder: 'property managers' },
+      { key: 'city', label: 'City/Region', placeholder: 'Austin, TX' }
+    ]
   },
   {
     id: 'fallback-3',
     name: 'Tech Recruiting',
-    description: 'Find decision-makers for technical recruitment',
-    message: 'Find {{role}} at {{company_type}} companies in {{location}} who recently posted about {{topic}} on LinkedIn. Pitch {{your_offer}}.',
-    category: 'Recruiting',
-    save_count: 756,
-    use_count: 1923,
-    tags: ['recruiting', 'technical', 'hiring'],
-    is_featured: true
+    description: 'Find VPs of Engineering at Series A-B fintech companies who recently posted on LinkedIn about hiring challenges. Pitch our AI-powered developer assessment platform.',
+    message: 'Find VPs of Engineering at Series A-B fintech companies who recently posted on LinkedIn about hiring challenges. Pitch our AI-powered developer assessment platform.',
+    category: 'Recruiting'
+  },
+  {
+    id: 'fallback-4',
+    name: 'SaaS Sales',
+    description: 'Find CTOs at mid-market companies using Postgres databases who mentioned API performance issues. Pitch our monitoring tool that helped Stripe reduce latency by 40%.',
+    message: 'Find CTOs at mid-market companies using Postgres databases who mentioned API performance issues. Pitch our monitoring tool that helped Stripe reduce latency by 40%.',
+    category: 'Sales'
+  },
+  {
+    id: 'fallback-5',
+    name: 'Event Follow-up',
+    description: 'From {{event}} speakers and sponsors in {{topic}} track, find contacts and draft tailored follow-ups.',
+    message: 'From {{event}} speakers and sponsors in {{topic}} track, find contacts and draft tailored follow-ups.',
+    category: 'Networking',
+    params: [
+      { key: 'event', label: 'Event Name', placeholder: 'Event Name' },
+      { key: 'topic', label: 'Topic/Track', placeholder: 'Topic/Track' }
+    ]
+  },
+  {
+    id: 'fallback-6',
+    name: 'Competitor Poach',
+    description: 'Find users mentioning {{competitor}} who fit {{role}} roles and draft switch pitch.',
+    message: 'Find users mentioning {{competitor}} who fit {{role}} roles and draft switch pitch.',
+    category: 'Sales',
+    params: [
+      { key: 'competitor', label: 'Competitor', placeholder: 'Competitor' },
+      { key: 'role', label: 'Role', placeholder: 'CTO' }
+    ]
   }
 ]
 
@@ -86,18 +101,13 @@ export const TemplateMarketplace = memo(function TemplateMarketplace({
     try {
       setPopularTemplates(fallbackTemplates)
     } catch (error) {
-      console.error('Error loading templates:', error)
       setPopularTemplates(fallbackTemplates)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleSaveTemplate = useCallback(async (_templateId: string, _isSaved: boolean) => {
-    // Saved templates disabled in this build
-  }, [])
-
-  const handleUseTemplate = useCallback(async (template: Template) => {
+  const handleUseTemplate = useCallback(async (template: Template, filledMessage: string) => {
     try {
       await fetch('/api/templates/use', {
         method: 'POST',
@@ -105,121 +115,112 @@ export const TemplateMarketplace = memo(function TemplateMarketplace({
         body: JSON.stringify({ templateId: template.id })
       })
     } catch (error) {
-      console.error('Error tracking template usage:', error)
+      // Silent error
     }
 
-    onSelectTemplate(template)
+    onSelectTemplate({ ...template, message: filledMessage })
   }, [onSelectTemplate])
-
-  const formatNumber = useCallback((num: number) => {
-    if (num >= 1000) {
-      return `${(num / 1000).toFixed(1)}k`
-    }
-    return num.toString()
-  }, [])
 
   const TemplateCard = memo(({ template }: { template: Template }) => {
     const Icon = categoryIcons[template.category as keyof typeof categoryIcons] || Target
     const [values, setValues] = useState<Record<string, string>>({})
 
-    const renderPreview = () => {
-      if (!template.params || template.params.length === 0) return template.message
+    // Render description with inline inputs (matching production design exactly)
+    const renderDescription = () => {
+      if (!template.params || template.params.length === 0) {
+        return <span className="text-sm text-gray-600">{template.description}</span>
+      }
+
+      // Split description by params and render inline inputs
+      const parts: (string | JSX.Element)[] = []
+      let remainingText = template.description
+      let partIndex = 0
+
+      template.params.forEach((param, idx) => {
+        const placeholder = `{{${param.key}}}`
+        const placeholderIndex = remainingText.indexOf(placeholder)
+        
+        if (placeholderIndex !== -1) {
+          // Add text before placeholder
+          if (placeholderIndex > 0) {
+            parts.push(
+              <span key={`text-${partIndex++}`} className="text-sm text-gray-600">
+                {remainingText.substring(0, placeholderIndex)}
+              </span>
+            )
+          }
+          
+          // Add inline input (styled to match production - minimal, clean)
+          parts.push(
+            <Input
+              key={`input-${idx}`}
+              value={values[param.key] ?? ''}
+              onChange={(e) => setValues(prev => ({ ...prev, [param.key]: e.target.value }))}
+              placeholder={param.placeholder || ''}
+              className="inline-block w-auto min-w-[100px] max-w-[180px] h-7 px-2 py-0.5 text-sm border border-gray-300 rounded bg-white focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400 mx-0.5 align-middle"
+            />
+          )
+          
+          // Update remaining text
+          remainingText = remainingText.substring(placeholderIndex + placeholder.length)
+        }
+      })
+      
+      // Add remaining text
+      if (remainingText) {
+        parts.push(
+          <span key={`text-${partIndex++}`} className="text-sm text-gray-600">
+            {remainingText}
+          </span>
+        )
+      }
+
+      return <div className="text-sm text-gray-600 leading-relaxed flex flex-wrap items-center gap-0.5">{parts}</div>
+    }
+
+    const getFilledMessage = () => {
       let msg = template.message
-      for (const p of template.params) {
-        const v = values[p.key] ?? ''
-        msg = msg.replace(new RegExp(`\\{\\{${p.key}\\}\\}`, 'g'), v.length ? v : (p.placeholder || `{{${p.key}}}`))
+      if (template.params && template.params.length > 0) {
+        for (const p of template.params) {
+          const v = (values[p.key] ?? '').trim() || (p.placeholder || `{{${p.key}}}`)
+          msg = msg.replace(new RegExp(`\\{\\{${p.key}\\}\\}`, 'g'), v)
+        }
       }
       return msg
     }
 
+    const allParamsFilled = template.params ? template.params.every(p => (values[p.key] ?? '').trim().length > 0) : true
+
     return (
-      <Card className="group relative bg-white hover:shadow-xl hover:shadow-amber-200/20 transition-all duration-300 border-2 hover:border-amber-300 hover:scale-[1.02] cursor-pointer overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 to-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-50/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out" />
+      <Card className="group relative bg-white border border-gray-200 hover:border-gray-300 transition-all duration-200 overflow-hidden h-full flex flex-col shadow-sm hover:shadow-md">
         <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-3 flex-1">
-              <div className="h-10 w-10 bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg flex items-center justify-center border border-amber-200 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 group-hover:shadow-lg group-hover:shadow-amber-200/30">
-                <Icon className="w-5 h-5 text-amber-600 group-hover:text-amber-700 transition-colors duration-300" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <CardTitle className="text-lg font-semibold text-gray-900 mb-1 group-hover:text-amber-700 transition-colors">
-                  {template.name}
-                  {template.is_featured && (
-                    <Badge variant="secondary" className="ml-2 bg-amber-100 text-amber-800 text-xs">
-                      Featured
-                    </Badge>
-                  )}
-                </CardTitle>
-                <CardDescription className="text-sm text-gray-600 line-clamp-2">
-                  {template.description}
-                </CardDescription>
+          <div className="flex items-start gap-3">
+            <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+              <Icon className="w-5 h-5 text-gray-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <CardTitle className="text-base font-semibold text-gray-900 mb-2">
+                {template.name}
+              </CardTitle>
+              <div className="text-sm text-gray-600 leading-relaxed">
+                {renderDescription()}
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleSaveTemplate(template.id, false)}
-              className="shrink-0 hover:bg-amber-50"
-            >
-              <Bookmark className="w-4 h-4 text-gray-300" />
-            </Button>
           </div>
         </CardHeader>
-        <CardContent className="pt-0 space-y-4">
-          <div className="flex items-center gap-4 mb-4 text-xs text-gray-500">
-            <div className="flex items-center gap-1">
-              <Bookmark className="w-3 h-3" />
-              <span>{formatNumber(template.save_count)} saves</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Eye className="w-3 h-3" />
-              <span>{formatNumber(template.use_count)} uses</span>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-1 mb-4">
-            {template.tags?.slice(0, 3).map((tag, idx) => (
-              <Badge key={idx} variant="outline" className="text-xs bg-gray-50 text-gray-600 border-gray-200">
-                {tag}
-              </Badge>
-            ))}
-          </div>
-          {template.params && template.params.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {template.params.map((p) => (
-                <div key={p.key} className="space-y-1">
-                  <Label className="text-xs text-gray-600">{p.label}</Label>
-                  <Input
-                    value={values[p.key] ?? ''}
-                    onChange={(e) => setValues(prev => ({ ...prev, [p.key]: e.target.value }))}
-                    placeholder={p.placeholder || ''}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded p-3 whitespace-pre-wrap">
-            {renderPreview()}
-          </div>
+
+        <CardContent className="pt-0 pb-4">
           <Button
             onClick={(e) => {
               e.preventDefault()
-              let msg = template.message
-              if (template.params && template.params.length > 0) {
-                for (const p of template.params) {
-                  const v = (values[p.key] ?? '').trim() || (p.placeholder || `{{${p.key}}}`)
-                  msg = msg.replace(new RegExp(`\\{\\{${p.key}\\}\\}`, 'g'), v)
-                }
-              }
-              handleUseTemplate({ ...template, message: msg })
+              const filledMessage = getFilledMessage()
+              handleUseTemplate(template, filledMessage)
             }}
-            className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-amber-950 font-medium shadow-md hover:shadow-lg hover:shadow-amber-300/30 transition-all duration-300 transform hover:scale-105 active:scale-95 relative overflow-hidden group/btn"
+            disabled={!allParamsFilled}
+            className="w-full bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span className="relative z-10 flex items-center justify-center">
-              Use Playbook
-              <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover/btn:translate-x-1" />
-            </span>
-            <div className="absolute inset-0 bg-gradient-to-r from-amber-300/30 to-yellow-300/30 scale-0 group-hover/btn:scale-100 transition-transform duration-500 rounded-md" />
+            Load into chat
+            <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </CardContent>
       </Card>
@@ -228,12 +229,11 @@ export const TemplateMarketplace = memo(function TemplateMarketplace({
 
   if (loading) {
     return (
-      <div className={`space-y-4 ${className}`}>
+      <div className={`space-y-6 ${className}`}>
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-48 bg-gray-200 rounded-lg"></div>
+              <div key={i} className="h-32 bg-gray-100 rounded-lg"></div>
             ))}
           </div>
         </div>
@@ -243,23 +243,17 @@ export const TemplateMarketplace = memo(function TemplateMarketplace({
 
   return (
     <div className={`space-y-6 ${className}`}>
-      <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Community Playbooks</h2>
-        <p className="text-gray-600">Curated playbooks from the community to jumpstart your workflows</p>
-      </div>
-      <div className="space-y-6">
-        {popularTemplates.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {popularTemplates.map((template) => (
-              <TemplateCard key={template.id} template={template} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12 text-gray-500">
-            No popular playbooks available
-          </div>
-        )}
-      </div>
+      {popularTemplates.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {popularTemplates.map((template) => (
+            <TemplateCard key={template.id} template={template} />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12 text-gray-500">
+          <p className="text-sm">No playbooks available</p>
+        </div>
+      )}
     </div>
   )
 })

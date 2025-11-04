@@ -142,15 +142,21 @@ export function ProspectGrid({ prospects, onSelectionChange, onReviewComplete }:
           </Button>
         </div>
 
-        {/* Grid View */}
+        {/* Grid View with smooth stagger animations */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          <AnimatePresence>
+          <AnimatePresence mode="popLayout">
             {prospects.map((prospect, index) => (
               <motion.div
                 key={prospect.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
+                initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ 
+                  delay: index * 0.05,
+                  duration: 0.4,
+                  ease: [0.4, 0, 0.2, 1]
+                }}
+                layout
               >
                 <ProspectCard
                   prospect={prospect}

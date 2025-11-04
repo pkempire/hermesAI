@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { motion } from 'framer-motion'
 import { AlertCircle, CheckCircle, ChevronDown, ChevronRight, Search, Users } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { EnhancedProspectSearchBuilder } from './enhanced-prospect-search-builder'
 import { InteractiveEmailDrafter } from './interactive-email-drafter'
 import { Prospect, ProspectGrid } from './prospect-grid'
@@ -23,13 +23,7 @@ export function ProspectSearchSection({
   isOpen,
   onOpenChange
 }: ProspectSearchSectionProps) {
-  console.log('🔧 [Frontend] =================== PROSPECT SEARCH SECTION RENDERED ===================')
-  console.log('🔧 [Frontend] Tool name:', tool.toolName)
-  console.log('🔧 [Frontend] Tool state:', tool.state)
-  console.log('🔧 [Frontend] Tool args:', tool.args)
-  console.log('🔧 [Frontend] Tool result exists:', !!(tool as any).result)
-  console.log('🔧 [Frontend] Tool result:', (tool as any).result)
-  console.log('🔧 [Frontend] Is open:', isOpen)
+  // Logging removed - use React DevTools or logger utility if needed
   
   const [prospects, setProspects] = useState<Prospect[]>([])
   const [searchStatus, setSearchStatus] = useState<'idle' | 'running' | 'completed' | 'failed'>('idle')
@@ -37,17 +31,13 @@ export function ProspectSearchSection({
   const [searchSummary, setSearchSummary] = useState<any>(null)
   const [uiType, setUiType] = useState<'idle' | 'interactive' | 'streaming' | 'results' | 'error'>('idle')
   const [streamingWebsetId, setStreamingWebsetId] = useState<string | null>(null)
-  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null)
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const [lastStatus, setLastStatus] = useState<'idle' | 'running' | 'completed' | 'failed'>('idle')
   const [showEmailDrafter, setShowEmailDrafter] = useState(false)
   const [evidenceMode, setEvidenceMode] = useState(false)
 
   // Parse the tool result to determine UI type and handle different response formats
   const parseToolResult = useCallback(() => {
-    console.log('🔍 [ProspectSearchSection] Parsing tool result...')
-    console.log('🔍 [ProspectSearchSection] Tool state is:', tool.state)
-    console.log('🔍 [ProspectSearchSection] Tool result is:', (tool as any).result)
-    console.log('🔍 [ProspectSearchSection] Full tool object:', JSON.stringify(tool, null, 2))
     
     // Check if result exists - try regardless of state for debugging
     const toolResult = (tool as any).result
@@ -58,56 +48,43 @@ export function ProspectSearchSection({
           try {
             result = JSON.parse(toolResult)
           } catch (parseError) {
-            console.error('❌ [ProspectSearchSection] JSON parse error:', parseError)
+            // JSON parse failed, use raw value
             result = toolResult
           }
         }
-        console.log('🔍 [ProspectSearchSection] Parsed result:', result)
-        console.log('🔍 [ProspectSearchSection] Result type:', result?.type)
         
         // Handle interactive UI configuration
         if (result.type === 'interactive_ui') {
-          console.log('🎨 [ProspectSearchSection] Interactive UI requested')
           return { type: 'interactive', props: { ...result.props, evidenceMode: Boolean(result.props?.evidenceMode) }, message: result.message }
         }
         
         // Handle streaming search configuration
         if (result.type === 'streaming_search') {
-          console.log('🔄 [ProspectSearchSection] Streaming search started')
           return { type: 'streaming', websetId: result.websetId, message: result.message }
         }
         
         // Handle completed search results
         if (result.type === 'search_results' || (result.success && result.prospects)) {
-          console.log('✅ [ProspectSearchSection] Search results received')
           const prospectsData = result.prospects || result.prospects || []
           return { type: 'results', prospects: prospectsData, summary: result.summary, message: result.message }
         }
         
         // Handle error
         if (result.type === 'error' || !result.success) {
-          console.log('❌ [ProspectSearchSection] Search failed:', result.message)
           return { type: 'error', message: result.message }
         }
         
       } catch (error) {
-        console.error('❌ [ProspectSearchSection] Error parsing prospect search result:', error)
         return { type: 'error', message: 'Failed to parse search results' }
       }
-    } else {
-      console.log('🔍 [ProspectSearchSection] Tool state is not "result" or no result available')
-      console.log('🔍 [ProspectSearchSection] Tool state:', tool.state)
-      console.log('🔍 [ProspectSearchSection] Tool result exists:', !!(tool as any).result)
     }
-    
-    console.log('❌ [ProspectSearchSection] No valid tool result found')
     return null
   }, [tool])  // Add dependencies for useCallback
 
   // Start polling for streaming search updates with faster polling
-  const startStreamingPolling = useCallback((websetId: string, target?: number) => {
-    if (pollingInterval) {
-      clearInterval(pollingInterval)
+  const startStreamingPolling = useCallback((websetId: string, target?: number, criteria?: { query?: string; entityType?: string; targetCount?: number }) => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current)
     }
 
     let pollCount = 0
@@ -115,31 +92,28 @@ export function ProspectSearchSection({
     let hasDispatchedSuggestion = false // Prevent duplicate messages
 
     const interval = setInterval(async () => {
-      try {
-        pollCount++
-        console.log(`📡 [ProspectSearchSection] Polling streaming search status (${pollCount}/${maxPolls})...`)
-        
-        // Use the server-side API to get status
-        const targetParam = target ? `&target=${target}` : ''
-        const response = await fetch(`/api/prospect-search/status?websetId=${websetId}${targetParam}`)
-        if (!response.ok) {
-          throw new Error(`API call failed: ${response.status}`)
-        }
-        
-        const data = await response.json()
-        console.log(`📊 [ProspectSearchSection] Poll ${pollCount}: Status=${data.status}, Prospects=${data.prospects?.length || 0}, Found=${data.found}, Analyzed=${data.analyzed}`)
-        setLastStatus(data.status as any)
-        
-        // Update progress messages
-        if (data.found > 0 || data.analyzed > 0) {
-          setSearchMessage(`Processing: ${data.analyzed} analyzed, ${data.found} prospects found...`)
-        } else if (pollCount > 5) {
-          setSearchMessage(`Still searching... (${pollCount * 3}s elapsed)`)
-        }
-        
-        // Update prospects if available
-        if (data.prospects && Array.isArray(data.prospects) && data.prospects.length > 0) {
-          console.log('📊 [ProspectSearchSection] Updating prospects list:', data.prospects.length)
+        try {
+          pollCount++
+          
+          // Use the server-side API to get status
+          const targetParam = target ? `&target=${target}` : ''
+          const response = await fetch(`/api/prospect-search/status?websetId=${websetId}${targetParam}`)
+          if (!response.ok) {
+            throw new Error(`API call failed: ${response.status}`)
+          }
+          
+          const data = await response.json()
+          setLastStatus(data.status as any)
+          
+          // Update progress messages
+          if (data.found > 0 || data.analyzed > 0) {
+            setSearchMessage(`Processing: ${data.analyzed} analyzed, ${data.found} prospects found...`)
+          } else if (pollCount > 5) {
+            setSearchMessage(`Still searching... (${pollCount * 3}s elapsed)`)
+          }
+          
+          // Update prospects if available
+          if (data.prospects && Array.isArray(data.prospects) && data.prospects.length > 0) {
           setProspects(prev => {
             // Merge by unique id to allow incremental growth without flicker
             const byId = new Map<string, Prospect>()
@@ -151,7 +125,7 @@ export function ProspectSearchSection({
 
         // Emit pipeline progress event for the campaign tracker (0-100)
         try {
-          const targetTotal = target || currentSearchCriteria.targetCount || 25
+          const targetTotal = target || criteria?.targetCount || 25
           const found = typeof data.found === 'number' ? data.found : (data.prospects?.length || 0)
           const percent = Math.max(0, Math.min(100, Math.round((found / Math.max(1, targetTotal)) * 100)))
           window.dispatchEvent(new CustomEvent('pipeline-progress', {
@@ -166,12 +140,10 @@ export function ProspectSearchSection({
         
         // Handle timeout (only after 5 minutes - rare case)
         if (pollCount >= maxPolls) {
-          console.warn('⏰ [ProspectSearchSection] Polling timeout reached after 5 minutes')
           setSearchStatus('failed')
           setSearchMessage('Search is taking longer than expected. Results may still arrive - check back soon or contact support.')
           clearInterval(interval)
-          setPollingInterval(null)
-          // Don't set uiType to error - keep showing whatever we have
+          pollingIntervalRef.current = null
           return
         }
         
@@ -179,7 +151,7 @@ export function ProspectSearchSection({
         if (data.status === 'completed' || data.status === 'idle') {
           setSearchStatus('completed')
           clearInterval(interval)
-          setPollingInterval(null)
+          pollingIntervalRef.current = null
           
           if (data.prospects?.length > 0) {
             // Switch to results UI for multiple prospects, keep streaming for single prospect preview
@@ -192,8 +164,8 @@ export function ProspectSearchSection({
             
             setSearchSummary({
               totalFound: data.prospects.length,
-              query: currentSearchCriteria.query || streamingWebsetId,
-              entityType: currentSearchCriteria.entityType || 'company',
+              query: (criteria?.query || streamingWebsetId),
+              entityType: (criteria?.entityType || 'company'),
               websetId: streamingWebsetId
             })
             try {
@@ -224,10 +196,10 @@ export function ProspectSearchSection({
               const campaigns = JSON.parse(localStorage.getItem('hermes-campaigns') || '[]')
               campaigns.unshift({
                 id: `camp_${Date.now()}`,
-                name: currentSearchCriteria.query || 'Untitled Campaign',
+                name: (criteria?.query || 'Untitled Campaign'),
                 websetId: streamingWebsetId,
-                query: currentSearchCriteria.query,
-                entityType: currentSearchCriteria.entityType,
+                query: criteria?.query,
+                entityType: criteria?.entityType,
                 totalFound: data.prospects.length,
                 createdAt: new Date().toISOString(),
                 status: 'completed'
@@ -257,18 +229,18 @@ export function ProspectSearchSection({
           setSearchStatus('failed')
           setSearchMessage(data.error || 'Search failed')
           clearInterval(interval)
-          setPollingInterval(null)
+          pollingIntervalRef.current = null
           setUiType('error')
         }
       } catch (error) {
-        console.error('❌ [ProspectSearchSection] Error polling streaming search:', error)
+        // Silent error handling - show user-friendly message instead
         
         // Only fail after multiple consecutive errors
         if (pollCount > 3) {
           setSearchStatus('failed')
           setSearchMessage(`Connection error: ${error instanceof Error ? error.message : 'Failed to get search updates'}`)
           clearInterval(interval)
-          setPollingInterval(null)
+          pollingIntervalRef.current = null
           setUiType('error')
         } else {
           setSearchMessage(`Retrying connection... (attempt ${pollCount})`)
@@ -276,17 +248,17 @@ export function ProspectSearchSection({
       }
     }, 200) // Ultra-fast polling for real-time updates (10x faster than typical)
 
-    setPollingInterval(interval)
-  }, [pollingInterval])  // Remove excessive dependencies that cause re-renders
+    pollingIntervalRef.current = interval
+  }, [])
 
   // Cleanup polling on unmount
   useEffect(() => {
     return () => {
-      if (pollingInterval) {
-        clearInterval(pollingInterval)
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current)
       }
     }
-  }, [pollingInterval])
+  }, [])
 
   // Parse tool result whenever tool changes
   useEffect(() => {
@@ -311,7 +283,7 @@ export function ProspectSearchSection({
       setSearchMessage(result.message || 'Search started...')
       if (result.websetId) {
         setStreamingWebsetId(result.websetId)
-        startStreamingPolling(result.websetId, currentSearchCriteria.targetCount)
+        startStreamingPolling(result.websetId, currentSearchCriteria.targetCount, currentSearchCriteria)
       }
     } else if (result.type === 'results') {
       setUiType('results')

@@ -32,8 +32,8 @@ export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, o
   const [showFullEnrichments, setShowFullEnrichments] = useState(false);
   
   return (
-    <Card className={`group relative overflow-hidden glass lift-on-hover gradient-border ${
-      selected ? 'ring-2 ring-amber-500 border-amber-300' : 'border-gray-200'
+    <Card className={`group relative overflow-hidden interactive-card ${
+      selected ? 'ring-2 ring-amber-500 border-amber-300 shadow-lg' : 'border-gray-200'
     }`}>
       {/* Avatar / Company logo with glassmorphism */}
       <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full opacity-10 overflow-hidden blur-layer-1">

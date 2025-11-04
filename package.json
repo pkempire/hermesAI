@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "next lint"
   },
+  
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.0",
     "@ai-sdk/openai": "^2.0.0",

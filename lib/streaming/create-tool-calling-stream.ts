@@ -1,10 +1,10 @@
 import { researcher } from '@/lib/agents/researcher'
 import {
-    CoreMessage,
-    createUIMessageStream,
-    createUIMessageStreamResponse,
-    stepCountIs,
-    streamText
+  CoreMessage,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  stepCountIs,
+  streamText
 } from 'ai'
 import { isReasoningModel } from '../utils/registry'
 import { handleStreamFinish } from './handle-stream-finish'
@@ -157,38 +157,23 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
         })
 
         DEBUG && console.log('🔧 [createToolCallingStreamResponse] About to call streamText with tools:', Object.keys(researcherConfig.tools || {}))
-        DEBUG && console.log('🔧 [createToolCallingStreamResponse] Active tools:', researcherConfig.experimental_activeTools)
 
         const result = streamText({
           ...researcherConfig,
           stopWhen: stepCountIs(5),
+          // Tool-call and tool-result parts are automatically included in the stream
+          // No need to manually intercept and re-write them
+          // Campaign progress events are emitted via custom data-pipeline parts
           onStepFinish: (step) => {
             DEBUG && console.log('🔧 [streamText] Step finished')
-            DEBUG && console.log('🔧 [streamText] Step details:', step)
-            // Mirror tool-call and tool-result into data chunks for immediate UI rendering
+            // Emit campaign progress events based on tool calls
+            // Tool parts are automatically in the stream, no manual copying needed
             try {
               const content = (step as any)?.content as any[] | undefined
               if (Array.isArray(content)) {
                 for (const item of content) {
-                  // Guard: drop consecutive identical tool-calls to avoid loops
-                  if (item?.type === 'tool-call' && item?.toolName === 'search') {
-                    // noop; we do not mirror 'search' tool-call metadata to UI to reduce churn
-                  }
                   if (item?.type === 'tool-call') {
-                    // Mirror tool-call to message metadata for UI
-                    writer.write({
-                      type: 'message-metadata',
-                      messageMetadata: {
-                        type: 'tool_call',
-                        data: {
-                          state: 'call',
-                          toolCallId: item.toolCallId,
-                          toolName: item.toolName,
-                          args: JSON.stringify(item.args ?? {})
-                        }
-                      }
-                    })
-                    // Emit concise pipeline guidance for chained flows
+                    // Only emit custom pipeline progress events (not tool data)
                     try {
                       if (item.toolName === 'scrape_site') {
                         writer.write({ type: 'data-pipeline', data: { scope: 'campaign', stepNumber: 1, totalSteps: 5, percent: 10, label: 'Analyze your website' } })
@@ -196,49 +181,21 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
                       if (item.toolName === 'ask_question') {
                         writer.write({ type: 'data-pipeline', data: { scope: 'campaign', stepNumber: 1, totalSteps: 5, percent: 15, label: 'Confirm targeting' } })
                       }
-                    } catch {}
-                    // Emit pipeline step (persistent campaign tracker)
-                    if (item.toolName === 'prospect_search') {
-                      writer.write({
-                        type: 'data-pipeline',
-                        data: {
-                          scope: 'campaign',
-                          stepNumber: 1,
-                          totalSteps: 5,
-                          percent: 20,
-                          label: 'Configure Prospect Search'
-                        }
-                      })
-                    }
-                    // Guard against scrape_site loop: after one scrape call, enable only ask_question or prospect_search
-                    if (item.toolName === 'scrape_site') {
-                      try {
-                        (result as any)?.update?.({
-                          activeTools: ['ask_question','prospect_search']
+                      if (item.toolName === 'prospect_search') {
+                        writer.write({
+                          type: 'data-pipeline',
+                          data: {
+                            scope: 'campaign',
+                            stepNumber: 1,
+                            totalSteps: 5,
+                            percent: 20,
+                            label: 'Configure Prospect Search'
+                          }
                         })
-                      } catch {}
-                    }
+                      }
+                    } catch {}
                   }
                   if (item?.type === 'tool-result') {
-                    const output = item.output
-                    let result: string | undefined
-                    try {
-                      if (output?.type === 'json') result = JSON.stringify(output.value)
-                      else if (output?.type === 'text') result = output.value
-                      else if (output) result = JSON.stringify(output)
-                    } catch {}
-                    writer.write({
-                      type: 'message-metadata',
-                      messageMetadata: {
-                        type: 'tool_call',
-                        data: {
-                          state: 'result',
-                          toolCallId: item.toolCallId,
-                          toolName: item.toolName,
-                          result
-                        }
-                      }
-                    })
                     // Advance pipeline for chained flows
                     try {
                       if (item.toolName === 'scrape_site') {
@@ -252,7 +209,7 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
                 }
               }
             } catch (e) {
-              console.warn('⚠️ [streamText] Failed to mirror tool data to UI:', e)
+              if (DEBUG) console.warn('⚠️ [streamText] Failed to emit pipeline events:', e)
             }
           },
           onFinish: async result => {

@@ -191,11 +191,12 @@ export function ChatPanel({
         messages.length > 0 ? 'px-4 pb-4' : 'px-4 sm:px-8 pb-8'
       )}
     >
-      {/* Title header (only when there is no conversation yet) */}
+      {/* Title header (only when there is no conversation yet) - Match production design */}
       {messages.length === 0 && (
-        <div className={cn('max-w-4xl w-full mx-auto mb-4 mt-2')}>
-          <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">Hermes — Prospecting Copilot</h2>
-          <p className="text-sm text-muted-foreground mt-1">Describe who you want to reach. I’ll research, rank prospects, and help draft outreach.</p>
+        <div className={cn('max-w-4xl w-full mx-auto mb-6 mt-8')}>
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
+            Find your <span className="text-amber-600">AI sales engineer</span>
+          </h1>
         </div>
       )}
       <form
@@ -236,8 +237,8 @@ export function ChatPanel({
         <div className="relative">
           {/* Divine messenger input container */}
           <div className={cn(
-            'relative z-[5] flex items-end w-full bg-white rounded-2xl border border-border shadow-sm transition-all duration-200',
-            'focus-within:border-primary focus-within:shadow-md hover:shadow-md'
+            'relative z-[5] flex items-end w-full bg-white rounded-xl border border-gray-200 shadow-sm transition-all duration-200',
+            'focus-within:border-gray-400 focus-within:shadow-md hover:shadow-md'
           )}>
             <div className="p-3 z-[10] flex items-center gap-2">
               <Button
@@ -269,7 +270,7 @@ export function ChatPanel({
               tabIndex={0}
               onCompositionStart={handleCompositionStart}
               onCompositionEnd={handleCompositionEnd}
-              placeholder="Tell me who you seek to reach, and I shall find them swiftly..."
+              placeholder="Describe your ideal prospects..."
               spellCheck={false}
               value={input}
               disabled={isLoading || isToolInvocationInProgress()}

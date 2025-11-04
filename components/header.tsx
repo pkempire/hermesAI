@@ -31,37 +31,50 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
     load()
     return () => { mounted = false }
   }, [user])
+  
   return (
     <header
-        className={cn(
-          'sticky top-0 right-0 left-0 p-4 flex justify-between items-center z-30 backdrop-blur-md bg-background/95 border-b border-border/50 shadow-sm transition-all duration-200',
-          open ? 'md:pl-[calc(var(--sidebar-width)+1rem)]' : 'md:pl-4'
-        )}
+      className={cn(
+        'sticky top-0 right-0 left-0 z-30 transition-all duration-200',
+        'backdrop-blur-xl bg-white/80 border-b border-gray-200/50',
+        'shadow-sm',
+        open ? 'md:pl-[calc(var(--sidebar-width)+1rem)]' : 'md:pl-4'
+      )}
     >
-      {/* Branding */}
-      <Link href="/" className="flex items-center gap-3 transition-transform duration-200">
-        <img
-          src="/images/hermes-avatar.png"
-          alt="Hermes"
-          className="h-8 w-8 rounded-full border border-border"
-          onError={(e) => { e.currentTarget.style.display = 'none' }}
-        />
-        <div className="hidden sm:block">
-          <h1 className="text-base font-semibold text-foreground">Hermes</h1>
-          <p className="text-xs text-muted-foreground">Prospecting Copilot</p>
-        </div>
-      </Link>
-
-      {/* Actions */}
-      <div className="flex items-center gap-2">
-        {user && credits !== null && (
-          <div className="hidden sm:inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border text-foreground/80">
-            <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
-            <span className="font-semibold">{credits}</span>
-            <span>credits</span>
+      <div className="flex items-center justify-between py-3 px-4 md:px-6">
+        {/* Branding */}
+        <Link 
+          href="/" 
+          className="flex items-center gap-3 transition-all duration-200 hover:opacity-80 group"
+        >
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-full blur-sm opacity-0 group-hover:opacity-30 transition-opacity duration-300" />
+            <img
+              src="/images/hermes-avatar.png"
+              alt="Hermes"
+              className="relative h-8 w-8 md:h-9 md:w-9 rounded-full border-2 border-amber-200 shadow-sm group-hover:border-amber-300 transition-colors"
+              onError={(e) => { e.currentTarget.style.display = 'none' }}
+            />
           </div>
-        )}
-        {user ? <UserMenu user={user} /> : <GuestMenu />}
+          <div className="hidden sm:block">
+            <span className="text-base md:text-lg font-semibold text-gray-900">HermesAI</span>
+          </div>
+        </Link>
+
+        {/* Actions */}
+        <div className="flex items-center gap-3">
+          {user && credits !== null && (
+            <div className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200/50 text-sm font-medium text-gray-700 shadow-sm">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </span>
+              <span className="font-bold text-gray-900">{credits}</span>
+              <span className="text-gray-600">credits</span>
+            </div>
+          )}
+          {user ? <UserMenu user={user} /> : <GuestMenu />}
+        </div>
       </div>
     </header>
   )
