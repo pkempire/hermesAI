@@ -126,7 +126,7 @@ export const TemplateMarketplace = memo(function TemplateMarketplace({
   const TemplateCard = memo(({ template }: { template: Template }) => {
     const Icon = categoryIcons[template.category as keyof typeof categoryIcons] || Target
     const [values, setValues] = useState<Record<string, string>>({})
-    const { copyToClipboard } = useCopyToClipboard()
+    const { copyToClipboard } = useCopyToClipboard({})
 
     // Render description with inline inputs (matching production design exactly)
     const renderDescription = () => {
