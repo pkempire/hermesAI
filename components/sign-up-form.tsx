@@ -44,11 +44,12 @@ export function SignUpForm({
       const { error } = await supabase.auth.signUp({ email, password })
       if (error) throw error
       // After account creation, redirect to Google sign-in to grant Gmail scopes and start trial
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
+      // Always use current deployment's origin (critical for preview branches)
+      const currentOrigin = typeof window !== 'undefined' ? window.location.origin : ''
       await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${baseUrl}/auth/oauth?next=/`,
+          redirectTo: `${currentOrigin}/auth/oauth?next=/`,
           scopes: 'https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.modify openid email profile'
         }
       })
