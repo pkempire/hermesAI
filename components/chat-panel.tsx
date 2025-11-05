@@ -9,7 +9,32 @@ import { useEffect, useRef, useState } from 'react'
 import Textarea from 'react-textarea-autosize'
 import { useArtifact } from './artifact/artifact-context'
 import { EmptyScreen } from './empty-screen'
+import { RotatingText } from './rotating-text'
 import { Button } from './ui/button'
+
+function RotatingHeroText() {
+  const useCases = [
+    'AI sales engineer',
+    'partnership finder',
+    'prospect researcher',
+    'email copywriter',
+    'channel partner scout',
+    'event speaker finder',
+    'competitor intelligence',
+    'lead enrichment engine'
+  ]
+
+  return (
+    <>
+      Find your{' '}
+      <RotatingText
+        words={useCases}
+        className="inline-block"
+        interval={2500}
+      />
+    </>
+  )
+}
 
 interface ChatPanelProps {
   input: string
@@ -193,9 +218,9 @@ export function ChatPanel({
     >
       {/* Title header (only when there is no conversation yet) - Compact design */}
       {messages.length === 0 && (
-        <div className={cn('max-w-4xl w-full mx-auto mb-4 mt-4')}>
+        <div className={cn('max-w-4xl w-full mx-auto mb-4')}>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">
-            Find your <span className="text-amber-600">AI sales engineer</span>
+            <RotatingHeroText />
           </h1>
           <p className="text-sm text-gray-600 mt-1">Describe who you want to reach. I'll find them, verify details, and craft personalized emails.</p>
         </div>

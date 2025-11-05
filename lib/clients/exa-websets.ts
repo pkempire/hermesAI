@@ -5,6 +5,7 @@
 
 import { ProspectCriteria } from '@/components/campaign-builder'
 import { Prospect } from '@/components/prospect-grid'
+import { logger } from '@/lib/utils/logger'
 import Exa from 'exa-js'
 
 // Exa Websets API Types (matching official SDK)
@@ -447,19 +448,23 @@ export function createProspectSearchCriteria(
 
   // Final safeguard: Ensure we never exceed Exa's 5-criteria limit
   if (verificationCriteria.length > 5) {
-    console.warn(`⚠️ [createProspectSearchCriteria] Too many criteria (${verificationCriteria.length}), trimming to 5`)
+    logger.warn(`Too many criteria (${verificationCriteria.length}), trimming to 5`)
     verificationCriteria.splice(5) // Keep only first 5
   }
 
   const searchConfig: WebsetSearchConfig = {
     query: criteria.query,
-    count: Math.min(criteria.targetCount || 100, 1000), // Respect API limits
+    count: Math.max(1, Math.min(criteria.targetCount || 100, 1000)), // Respect API limits (1-1000)
     entity: { type: entityType },
     criteria: verificationCriteria,
     behavior: 'override'
   }
   
-  console.log('✅ [createProspectSearchCriteria] Search config created with', verificationCriteria.length, 'criteria (max 5 allowed by Exa):', JSON.stringify(searchConfig, null, 2))
+  logger.debug('Search config created', { 
+    criteriaCount: verificationCriteria.length,
+    targetCount: searchConfig.count,
+    entityType
+  })
   return searchConfig
 }
 
@@ -467,7 +472,7 @@ export function createProspectSearchCriteria(
  * Create enrichments for prospect data
  */
 export function createProspectEnrichments(): WebsetEnrichment[] {
-  console.log('🔧 [createProspectEnrichments] Creating enrichments')
+  logger.debug('Creating enrichments')
   
   const enrichments: WebsetEnrichment[] = [
     {
@@ -497,12 +502,12 @@ export function createProspectEnrichments(): WebsetEnrichment[] {
     }
   ]
   
-  console.log('✅ [createProspectEnrichments] Created', enrichments.length, 'enrichments')
+  logger.debug('Created enrichments', { count: enrichments.length })
   return enrichments
 }
 
 export function convertToProspect(item: WebsetItem): Prospect {
-  console.log('🔄 [ExaWebsetsClient] Converting item to prospect:', item.id)
+  logger.debug('Converting item to prospect', { itemId: item.id })
   
   // Parse enrichments from the Exa API format
   const enrichments = item.enrichments || {}

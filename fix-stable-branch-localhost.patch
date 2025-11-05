@@ -1,0 +1,19 @@
+# Fix for stable-sept-29 branch: Add explicit API endpoint to prevent localhost routing
+
+This patch adds the `api: '/api/chat'` prop to useChat hook to ensure it uses relative paths
+instead of potentially falling back to localhost.
+
+Apply this to stable-sept-29 branch:
+
+```typescript
+// In components/chat.tsx, around line 48-50
+const chatHook = useChat({
+  id: CHAT_ID, // or id, depending on branch
+  api: '/api/chat', // ADD THIS LINE - ensures relative path
+  body: {
+    id
+  },
+  // ... rest of config
+})
+```
+

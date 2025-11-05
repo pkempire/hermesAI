@@ -21,7 +21,7 @@ import {
   User,
   X
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Prospect } from './prospect-grid'
 
 interface EmailTemplate {
@@ -60,6 +60,35 @@ export function InteractiveEmailDrafter({
   onEmailsGenerated,
   onPreviewEmail
 }: InteractiveEmailDrafterProps) {
+  // Ensure we have prospects - try to load from sessionStorage if props are empty
+  const [actualProspects, setActualProspects] = useState<Prospect[]>(prospects)
+  
+  useEffect(() => {
+    // If no prospects provided, try to load from sessionStorage
+    if (actualProspects.length === 0) {
+      try {
+        const stored = sessionStorage.getItem('hermes-latest-prospects')
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setActualProspects(parsed)
+          }
+        }
+      } catch (e) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('Failed to load prospects from sessionStorage:', e)
+        }
+      }
+    }
+  }, [prospects])
+  
+  // Update when props change
+  useEffect(() => {
+    if (prospects.length > 0) {
+      setActualProspects(prospects)
+    }
+  }, [prospects])
+  
   // Pre-fill campaign fields from search context
   const getInitialObjective = () => {
     try {
@@ -145,6 +174,16 @@ export function InteractiveEmailDrafter({
 
   // Generate AI-powered email content
   const generateEmailContent = async () => {
+    if (actualProspects.length === 0) {
+      alert('No prospects available. Please run a prospect search first.')
+      return
+    }
+    
+    if (!campaignObjective.trim()) {
+      alert('Please enter a campaign objective before generating emails.')
+      return
+    }
+    
     setIsGenerating(true)
     
     try {
@@ -152,13 +191,18 @@ export function InteractiveEmailDrafter({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prospects: prospects.slice(0, 3), // Sample prospects for context
+          prospects: actualProspects.slice(0, 3), // Sample prospects for context
           campaignObjective,
           valueProposition,
           personalization,
           emailTypes: emailTemplates.map(t => ({ type: t.type, tone: t.tone }))
         })
       })
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Failed to generate emails' }))
+        throw new Error(error.error || 'Failed to generate emails')
+      }
       
       const result = await response.json()
       
@@ -169,23 +213,32 @@ export function InteractiveEmailDrafter({
           body: result.templates[index]?.body || template.body
         }))
         setEmailTemplates(updatedTemplates)
+      } else {
+        throw new Error(result.error || 'Failed to generate email templates')
       }
     } catch (error) {
-      console.error('Failed to generate email content:', error)
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Failed to generate email content:', error)
+      }
+      alert(`Failed to generate emails: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsGenerating(false)
     }
   }
 
   const handlePreview = () => {
-    if (prospects.length > 0 && selectedTemplate < emailTemplates.length) {
-      onPreviewEmail?.(emailTemplates[selectedTemplate], prospects[0])
+    if (actualProspects.length > 0 && selectedTemplate < emailTemplates.length) {
+      onPreviewEmail?.(emailTemplates[selectedTemplate], actualProspects[0])
     }
   }
 
   const generatingRef = { current: false } as any
   const handleGenerate = () => {
     if (generatingRef.current) return
+    if (actualProspects.length === 0) {
+      alert('No prospects available. Please run a prospect search first.')
+      return
+    }
     generatingRef.current = true
     try {
       onEmailsGenerated?.(emailTemplates)
@@ -194,7 +247,7 @@ export function InteractiveEmailDrafter({
     }
   }
 
-  const sampleProspect = prospects[0]
+  const sampleProspect = actualProspects[0]
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -217,7 +270,7 @@ export function InteractiveEmailDrafter({
             <span>Prospects Found</span>
           </CardTitle>
           <CardDescription className="text-green-700">
-            Ready to draft personalized emails for {prospects.length} qualified prospects
+            Ready to draft personalized emails for {actualProspects.length} qualified prospect{actualProspects.length !== 1 ? 's' : ''}
           </CardDescription>
         </CardHeader>
         {sampleProspect && (
@@ -532,7 +585,7 @@ export function InteractiveEmailDrafter({
       {/* Action Buttons */}
       <div className="flex items-center justify-between p-6 border-t bg-muted/30">
         <div className="text-sm text-muted-foreground">
-          {emailTemplates.length} email{emailTemplates.length > 1 ? 's' : ''} • {prospects.length} prospects
+          {emailTemplates.length} email{emailTemplates.length > 1 ? 's' : ''} • {actualProspects.length} prospect{actualProspects.length !== 1 ? 's' : ''}
         </div>
         <div className="flex space-x-3">
           <Button variant="outline" onClick={handlePreview} disabled={!sampleProspect}>

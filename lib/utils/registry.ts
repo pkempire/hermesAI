@@ -40,7 +40,7 @@ export function getToolCallModel(model?: string) {
       return getModel('anthropic:claude-3-haiku-20240307')
     default:
       // Prefer a fast OpenAI helper model; allow override
-      return getModel(process.env.TOOLCALL_MODEL_ID ? `openai:${process.env.TOOLCALL_MODEL_ID}` : 'openai:gpt-5')
+      return getModel(process.env.TOOLCALL_MODEL_ID ? `openai:${process.env.TOOLCALL_MODEL_ID}` : 'openai:gpt-5-mini')
   }
 }
 

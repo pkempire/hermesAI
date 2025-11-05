@@ -18,10 +18,7 @@ export function ToolSection({
   onOpenChange,
   addToolResult
 }: ToolSectionProps) {
-  // concise debug in dev only
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('🔧 [ToolSection] Processing tool:', tool.toolName, 'state:', tool.state)
-  }
+  // Debug logging removed - use React DevTools for debugging
   
   // ask_question is rendered inline in chat; no special popup UI here.
 
@@ -49,7 +46,9 @@ export function ToolSection({
                       props.searchSummary = JSON.parse(storedSummary)
                     }
                   } catch (e) {
-                    console.warn('Failed to load prospects from storage:', e)
+                    if (process.env.NODE_ENV !== 'production') {
+                      console.warn('Failed to load prospects from storage:', e)
+                    }
                   }
                 }
                 
@@ -63,10 +62,11 @@ export function ToolSection({
         </div>
       )
     case 'ask_question':
-      // Render nothing; clarifying questions are asked inline in chat now
+      // Render question as plain text inline - it will appear naturally in chat
+      // The result is already formatted as text, so it will be shown in the answer section
+      // No special UI needed - questions flow naturally in conversation
       return null
     case 'search':
-      if (process.env.NODE_ENV !== 'production') console.log('🔧 [ToolSection] Rendering SearchSection')
       return (
         <SearchSection
           tool={tool}
@@ -75,7 +75,6 @@ export function ToolSection({
         />
       )
     case 'videoSearch':
-      if (process.env.NODE_ENV !== 'production') console.log('🔧 [ToolSection] Rendering VideoSearchSection')
       return (
         <VideoSearchSection
           tool={tool}
@@ -84,7 +83,6 @@ export function ToolSection({
         />
       )
     case 'retrieve':
-      if (process.env.NODE_ENV !== 'production') console.log('🔧 [ToolSection] Rendering RetrieveSection')
       return (
         <RetrieveSection
           tool={tool}
@@ -93,7 +91,6 @@ export function ToolSection({
         />
       )
     case 'prospect_search':
-      if (process.env.NODE_ENV !== 'production') console.log('🔧 [ToolSection] Rendering ProspectSearchSection')
       return (
         <ProspectSearchSection
           tool={tool}
@@ -102,13 +99,21 @@ export function ToolSection({
         />
       )
     case 'scrape_site':
-      if (process.env.NODE_ENV !== 'production') console.log('🔧 [ToolSection] Rendering ScrapeSection')
 
       // Parse the result to show key insights
       let siteData = null
       try {
         const result = typeof tool.result === 'string' ? JSON.parse(tool.result) : tool.result
+        // Handle both old format (siteData) and new format (direct properties)
         siteData = result?.siteData || result
+        // If result has site/summary/references structure, extract useful info
+        if (result?.site && result?.summary) {
+          siteData = {
+            site: result.site,
+            summary: result.summary,
+            companyName: result.site?.replace(/^https?:\/\/(www\.)?/, '').split('/')[0] || ''
+          }
+        }
       } catch {}
 
       return (
@@ -170,7 +175,6 @@ export function ToolSection({
         </div>
       )
     default:
-      if (process.env.NODE_ENV !== 'production') console.log('❌ [ToolSection] No handler for tool:', tool.toolName)
       // Generic fallback renderer so the user sees what's happening for unknown tools
       const resultText = (() => {
         try {

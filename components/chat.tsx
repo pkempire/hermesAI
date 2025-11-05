@@ -1,9 +1,8 @@
 'use client'
 
-import { CHAT_ID } from '@/lib/constants'
 import { Model } from '@/lib/types/models'
 import { useChat } from '@ai-sdk/react'
-import { ChatRequestOptions, JSONValue, type UIMessage as Message } from 'ai'
+import { ChatRequestOptions, DefaultChatTransport, JSONValue, type UIMessage as Message } from 'ai'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -47,19 +46,40 @@ export function Chat({
   const [uiData, setUiData] = useState<JSONValue[]>([])
 
   const chatHook = useChat({
-    id: CHAT_ID,
+    id: id, // Use the actual chat ID from the URL, not a constant
+    messages: savedMessages?.length ? savedMessages : undefined, // v5: renamed from initialMessages
+    transport: new DefaultChatTransport({
+      api: '/api/chat', // v5: use transport instead of direct api prop
+    }),
     body: {
       id
     },
     onFinish: async () => {
-      // Wait a bit for chat to be saved before redirecting
-      // The handleStreamFinish saves the chat asynchronously
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // CRITICAL: Don't redirect if we're already on the search page
+      // This prevents losing messages by reloading the page
+      if (typeof window === 'undefined') return
+      
+      const currentPath = window.location.pathname
+      const targetPath = `/search/${id}`
+      
+      // If we're already on the search page, DO NOT redirect - just update the URL silently
+      if (currentPath === targetPath) {
+        // Already on the right page, just dispatch event for sidebar updates
+        try { window.dispatchEvent(new CustomEvent('chat-history-updated')) } catch {}
+        return
+      }
+      
+      // Only redirect if we're on a different page (like homepage)
+      // Wait longer for chat to be saved and messages to persist
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      
       try {
-        router.replace(`/search/${id}`)
+        router.replace(targetPath)
       } catch {
         // Fallback for rare cases where router isn't ready yet
-        try { window.history.replaceState({}, '', `/search/${id}`) } catch {}
+        try { 
+          window.history.replaceState({}, '', targetPath)
+        } catch {}
       }
       try { window.dispatchEvent(new CustomEvent('chat-history-updated')) } catch {}
     },
@@ -80,10 +100,12 @@ export function Chat({
       }
     },
     onError: (error: any) => {
-      console.error('🔧 [Chat] useChat error:', error)
-      toast.error(`Error in chat: ${error.message}`)
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('🔧 [Chat] useChat error:', error)
+      }
+      toast.error(`Error in chat: ${error?.message || 'An unexpected error occurred'}`)
     },
-    sendExtraMessageFields: false // Disable extra message fields
+    // v5: sendExtraMessageFields removed - handled automatically
   } as any)
 
   // AI SDK v5 returns sendMessage, not append - and no input management
@@ -113,15 +135,18 @@ export function Chat({
 
   const isLoading = status === 'submitted' || status === 'streaming'
   
-  console.log('🔧 [Chat] AI SDK v5 hook values:', { 
-    sendMessageExists: typeof sendMessage === 'function',
-    inputValue: input,
-    setInputExists: typeof setInput === 'function',
-    messagesLength: messages.length,
-    status,
-    isLoading,
-    error: error
-  })
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('🔧 [Chat] AI SDK v5 hook values:', { 
+      sendMessageExists: typeof sendMessage === 'function',
+      inputValue: input,
+      setInputExists: typeof setInput === 'function',
+      messagesLength: messages.length,
+      status,
+      isLoading,
+      error: error,
+      savedMessagesLength: savedMessages?.length || 0
+    })
+  }
 
   // Detect when prospect search tool is being used
   useEffect(() => {
@@ -275,10 +300,28 @@ export function Chat({
     }
   }, [sections, messages])
 
+  // Sync saved messages immediately on mount if useChat hook didn't load them
   useEffect(() => {
-    if (savedMessages?.length) setMessages(savedMessages)
+    // Wait a tick to ensure useChat has initialized
+    const timer = setTimeout(() => {
+      if (savedMessages?.length && messages.length === 0) {
+        // useChat's initialMessages might not have loaded yet, force sync
+        setMessages(savedMessages)
+      }
+    }, 100)
+    return () => clearTimeout(timer)
+  }, []) // Run once on mount
+
+  // Also sync when savedMessages change (e.g., after navigation or refresh)
+  useEffect(() => {
+    if (savedMessages?.length) {
+      // Only update if messages are empty or if savedMessages has more content
+      if (messages.length === 0 || (savedMessages.length > messages.length)) {
+        setMessages(savedMessages)
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id])
+  }, [savedMessages])
 
   // Restore any saved draft after login
   useEffect(() => {
@@ -299,7 +342,7 @@ export function Chat({
           window.location.href = '/auth/sign-up'
           return
         }
-        append({ role: 'user', parts: [{ type: 'text', text: query }] } as any)
+        sendMessage({ text: query }) // v5: simplified message format
       })
   }
 
@@ -326,8 +369,10 @@ export function Chat({
       // Reload not supported in this v5 setup; no-op
       void 0
     } catch (error) {
-      console.error('Failed to reload after message update:', error)
-      toast.error(`Failed to reload conversation: ${(error as Error).message}`)
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Failed to reload after message update:', error)
+      }
+      toast.error(`Failed to reload conversation: ${(error as Error)?.message || 'Unknown error'}`)
     }
   }
 
@@ -337,15 +382,21 @@ export function Chat({
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>, messageOverride?: string) => {
     e.preventDefault()
-    console.log('🔧 [Frontend] =================== USER SUBMITTED MESSAGE ===================')
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔧 [Frontend] =================== USER SUBMITTED MESSAGE ===================')
+    }
     
     // Use messageOverride if provided, otherwise use input value
     const messageToSend = messageOverride || input
-    console.log('🔧 [Frontend] Message to send:', messageToSend)
-    console.log('🔧 [Frontend] sendMessage function type:', typeof sendMessage)
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔧 [Frontend] Message to send:', messageToSend)
+      console.log('🔧 [Frontend] sendMessage function type:', typeof sendMessage)
+    }
     
     if (!messageToSend || messageToSend.trim().length === 0) {
-      console.log('🔧 [Frontend] No message to submit')
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('🔧 [Frontend] No message to submit')
+      }
       return
     }
     
@@ -370,12 +421,14 @@ export function Chat({
           }
         } catch {}
 
-        sendMessage({ role: 'user', parts: [{ type: 'text', text: messageToSend.trim() }] } as any)
+        sendMessage({ text: messageToSend.trim() }) // v5: simplified message format
         if (!messageOverride) {
           setInput('')
         }
       } else {
-        console.error('🔧 [Frontend] sendMessage is not a function:', sendMessage)
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('🔧 [Frontend] sendMessage is not a function:', sendMessage)
+        }
         toast.error('Chat functionality not ready, please refresh the page')
       }
     } catch (error) {
@@ -393,23 +446,24 @@ export function Chat({
 
   return (
     <div
-      className="relative flex h-full min-w-0 min-h-0 flex-1 overflow-hidden bg-gray-50"
+      className="relative flex h-full min-w-0 min-h-0 flex-1 overflow-hidden bg-gray-50 pt-0"
       data-testid="full-chat"
     >
       {showProgressTracker ? (
         // Campaign layout with compact progress at top; chat takes full width
-        <div className="flex h-full relative z-10 flex-1 flex-col min-h-0">
-          <div className="flex-1 flex flex-col min-h-0">
-            {/* Campaign overview strip */}
+        <div className="flex h-full relative z-10 flex-1 flex-col min-h-0 overflow-hidden">
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            {/* Minimal campaign progress indicator */}
             {showProgressTracker && (
-              <div className="border-b border-border px-4 py-2 text-xs flex items-center justify-between bg-card/60">
-                <div className="flex items-center gap-3">
-                  <span className="font-medium">Campaign</span>
-                  <span className="text-muted-foreground">Step {currentCampaignStep} of {totalCampaignSteps}</span>
-                  <span className="text-muted-foreground">• {stepsBrief[Math.min(currentCampaignStep-1, stepsBrief.length-1)]}</span>
+              <div className="border-b border-border/50 px-3 py-1.5 text-[10px] flex items-center justify-between bg-background/40 backdrop-blur-sm">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-medium text-foreground/70 truncate">{stepsBrief[Math.min(currentCampaignStep-1, stepsBrief.length-1)]}</span>
                 </div>
-                <div className="w-40 h-1 bg-muted rounded-full overflow-hidden">
-                  <div className="h-1 bg-primary rounded-full" style={{ width: `${campaignPercent}%` }} />
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="w-24 h-0.5 bg-muted/50 rounded-full overflow-hidden">
+                    <div className="h-full bg-primary/60 rounded-full transition-all duration-300" style={{ width: `${campaignPercent}%` }} />
+                  </div>
+                  <span className="text-muted-foreground/60 tabular-nums">{Math.round(campaignPercent)}%</span>
                 </div>
               </div>
             )}
@@ -449,8 +503,8 @@ export function Chat({
         </div>
       ) : (
         // Enhanced default layout with spatial depth
-        <div className="flex flex-col flex-1 relative z-10">
-          <div className="flex-1 relative overflow-hidden">
+        <div className="flex flex-col flex-1 relative z-10 min-h-0">
+          <div className="flex-1 relative overflow-hidden min-h-0">
             <ChatMessages
               sections={sections}
               data={uiData}

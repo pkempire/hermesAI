@@ -41,7 +41,7 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
         open ? 'md:pl-[calc(var(--sidebar-width)+1rem)]' : 'md:pl-4'
       )}
     >
-      <div className="flex items-center justify-between py-2 px-4 md:px-6">
+      <div className="flex items-center justify-between py-1.5 px-4 md:px-6">
         {/* Left: Sidebar toggle + Branding */}
         <div className="flex items-center gap-2">
           <SidebarTrigger className="mr-1" />

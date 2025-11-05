@@ -1,4 +1,5 @@
 import { getCurrentUserId } from '@/lib/auth/get-current-user'
+import { logger } from '@/lib/utils/logger'
 import { getModel } from '@/lib/utils/registry'
 import { generateText } from 'ai'
 import { NextRequest, NextResponse } from 'next/server'
@@ -13,7 +14,7 @@ export async function POST(req: NextRequest) {
       emailTypes 
     } = await req.json()
     
-    console.log('[POST /api/email/generate] Generating email templates:', {
+    logger.debug('Generating email templates:', {
       prospectsCount: prospects?.length || 0,
       emailTypesCount: emailTypes?.length || 0,
       personalizationSettings: Object.keys(personalization || {}).length
@@ -24,8 +25,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Use GPT-4o for reliable email generation  
-    const model = getModel('openai:gpt-5')
+    // Validate inputs
+    if (!prospects || !Array.isArray(prospects) || prospects.length === 0) {
+      return NextResponse.json({ error: 'No prospects provided' }, { status: 400 })
+    }
+    if (!campaignObjective || typeof campaignObjective !== 'string') {
+      return NextResponse.json({ error: 'Campaign objective is required' }, { status: 400 })
+    }
+    if (!emailTypes || !Array.isArray(emailTypes) || emailTypes.length === 0) {
+      return NextResponse.json({ error: 'At least one email type is required' }, { status: 400 })
+    }
+
+    // Use GPT-5-mini for fast email generation
+    const model = getModel('openai:gpt-5-mini')
 
     // Sample prospect context for personalization
     const prospectContext = prospects?.slice(0, 3).map((p: any) => ({
@@ -86,7 +98,7 @@ Return ONLY a JSON object with "subject" and "body" fields. Use placeholder vari
           emailContent = JSON.parse(result.text)
         } catch (parseError) {
           // Fallback if AI doesn't return valid JSON
-          console.warn('Failed to parse AI response as JSON:', result.text)
+          logger.warn('Failed to parse AI response as JSON:', result.text)
           const lines = result.text.split('\n').filter(line => line.trim())
           emailContent = {
             subject: lines[0]?.replace(/^Subject:?\s*/i, '') || `${isInitial ? 'Quick question about' : 'Following up on'} {{company}}`,
@@ -102,7 +114,7 @@ Return ONLY a JSON object with "subject" and "body" fields. Use placeholder vari
         })
 
       } catch (error) {
-        console.error(`Failed to generate email ${index + 1}:`, error)
+        logger.error(`Failed to generate email ${index + 1}:`, error)
         // Fallback template
         templates.push({
           type: emailType.type,
@@ -122,7 +134,7 @@ Return ONLY a JSON object with "subject" and "body" fields. Use placeholder vari
     })
 
   } catch (error) {
-    console.error('[POST /api/email/generate] Error:', error)
+    logger.error('Error generating emails:', error)
     return NextResponse.json({ 
       success: false,
       error: error instanceof Error ? error.message : 'Failed to generate email templates'

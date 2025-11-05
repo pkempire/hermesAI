@@ -107,12 +107,24 @@ export function RenderMessage({
           }
           case 'tool-result': {
             // Output is already structured, no need to parse
+            const output = (part as any).output
+            // Handle both string JSON and object formats
+            let parsedResult = output
+            if (typeof output === 'string') {
+              try {
+                parsedResult = JSON.parse(output)
+              } catch {
+                parsedResult = output
+              }
+            }
+            
             const tool: any = {
               state: 'result',
               toolCallId: (part as any).toolCallId,
               toolName: (part as any).toolName,
-              result: (part as any).output  // Already structured, no parsing needed
+              result: parsedResult  // Use parsed result
             } as any
+            
             return (
               <ToolSection
                 key={`${messageId}-toolresult-${index}`}

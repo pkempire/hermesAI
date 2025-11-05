@@ -1,4 +1,5 @@
 import { researcher } from '@/lib/agents/researcher'
+import { logger } from '@/lib/utils/logger'
 import {
   CoreMessage,
   createUIMessageStream,
@@ -24,15 +25,13 @@ function containsAskQuestionTool(message: CoreMessage) {
 }
 
 export function createToolCallingStreamResponse(config: BaseStreamConfig) {
-  const DEBUG = process.env.NODE_ENV !== 'production'
   return createUIMessageStreamResponse({
     stream: createUIMessageStream({
       async execute({ writer }) {
         const { messages, model, chatId, searchMode, userId } = config
         
-        DEBUG && console.log('🔧 [createToolCallingStreamResponse] Config received:', {
+        logger.debug('Config received:', {
           hasMessages: !!messages,
-          messagesType: typeof messages,
           messagesLength: messages?.length,
           hasModel: !!model,
           hasChatId: !!chatId,
@@ -41,20 +40,12 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
         })
       const modelId = `${model.providerId}:${model.id}`
 
-      DEBUG && console.log('🔧 [createToolCallingStreamResponse] =================== STREAM STARTING ===================')
-      DEBUG && console.log('🔧 [createToolCallingStreamResponse] Model ID:', modelId)
-      DEBUG && console.log('🔧 [createToolCallingStreamResponse] Search Mode:', searchMode)
-      DEBUG && console.log('🔧 [createToolCallingStreamResponse] Messages:', messages.length)
+      logger.stream('start', { modelId, searchMode, messagesCount: messages.length })
 
       try {
-        // Debug messages before conversion
-        DEBUG && console.log('🔧 [createToolCallingStreamResponse] Messages type:', typeof messages)
-        DEBUG && console.log('🔧 [createToolCallingStreamResponse] Messages is array:', Array.isArray(messages))
-        DEBUG && console.log('🔧 [createToolCallingStreamResponse] Messages content:', messages)
-        
         // Guard against undefined messages
         if (!messages || !Array.isArray(messages)) {
-          console.error('❌ [createToolCallingStreamResponse] Messages is undefined or not an array:', messages)
+          logger.error('Messages is undefined or not an array:', messages)
           throw new Error('Messages array is required for AI processing')
         }
         
@@ -71,12 +62,12 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
             )
           
           if (!isValid) {
-            DEBUG && console.warn('❌ [createToolCallingStreamResponse] Invalid message filtered out:', msg)
+            logger.warn('Invalid message filtered out:', msg)
           }
           return isValid
         })
         
-        DEBUG && console.log('🔧 [createToolCallingStreamResponse] Valid messages for conversion:', validMessages.length)
+        logger.debug('Valid messages for conversion:', validMessages.length)
         
         // Clean UI messages to remove problematic tool states before conversion
         const cleanUIMessages = (messages: any[]) => {
@@ -148,7 +139,7 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
           }
           return { role: msg.role, content }
         })
-        DEBUG && console.log('✅ [createToolCallingStreamResponse] Messages converted successfully:', modelMessages.length)
+        logger.debug('Messages converted successfully:', modelMessages.length)
 
         let researcherConfig = await researcher({
           messages: modelMessages,
@@ -156,7 +147,7 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
           searchMode
         })
 
-        DEBUG && console.log('🔧 [createToolCallingStreamResponse] About to call streamText with tools:', Object.keys(researcherConfig.tools || {}))
+        logger.debug('Calling streamText with tools:', Object.keys(researcherConfig.tools || {}))
 
         const result = streamText({
           ...researcherConfig,
@@ -165,7 +156,7 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
           // No need to manually intercept and re-write them
           // Campaign progress events are emitted via custom data-pipeline parts
           onStepFinish: (step) => {
-            DEBUG && console.log('🔧 [streamText] Step finished')
+            logger.stream('step_finished')
             // Emit campaign progress events based on tool calls
             // Tool parts are automatically in the stream, no manual copying needed
             try {
@@ -209,7 +200,7 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
                 }
               }
             } catch (e) {
-              if (DEBUG) console.warn('⚠️ [streamText] Failed to emit pipeline events:', e)
+              logger.warn('Failed to emit pipeline events:', e)
             }
           },
           onFinish: async result => {
@@ -237,12 +228,12 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
 
         writer.merge(result.toUIMessageStream())
       } catch (error) {
-        console.error('Stream execution error:', error)
+        logger.error('Stream execution error:', error)
         throw error
       }
     },
     onError: error => {
-      console.error('Stream error:', error)
+      logger.error('Stream error:', error)
       return error instanceof Error ? error.message : String(error)
     }
     })

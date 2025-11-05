@@ -1,8 +1,8 @@
 import { Model } from '@/lib/types/models'
 
 export const DEFAULT_MODEL: Model = {
-  id: process.env.DEFAULT_MODEL_ID || 'gpt-5',
-  name: process.env.DEFAULT_MODEL_NAME || 'GPT-5',
+  id: process.env.DEFAULT_MODEL_ID || 'gpt-5-mini',
+  name: process.env.DEFAULT_MODEL_NAME || 'GPT-5 Mini',
   provider: 'OpenAI', 
   providerId: 'openai',
   enabled: true,
@@ -13,10 +13,14 @@ export async function getModels(): Promise<Model[]> {
   try {
     // For server-side rendering, just return the default model
     // The client-side code can load models via static files if needed
-    console.log('Loading default model for server-side rendering')
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Loading default model for server-side rendering')
+    }
     return [DEFAULT_MODEL]
   } catch (error) {
-    console.error('Error loading models:', error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error loading models:', error)
+    }
     return [DEFAULT_MODEL]
   }
 }

@@ -89,7 +89,8 @@ export async function handleStreamFinish({
       ...responseMessages.slice(-1)
     ] as ExtendedCoreMessage[]
 
-    if (process.env.ENABLE_SAVE_CHAT_HISTORY !== 'true') {
+    // Always save chat history in development, or if explicitly enabled
+    if (process.env.NODE_ENV === 'production' && process.env.ENABLE_SAVE_CHAT_HISTORY !== 'true') {
       return
     }
 

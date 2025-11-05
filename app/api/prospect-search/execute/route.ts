@@ -2,6 +2,7 @@ import { getCurrentUserId } from '@/lib/auth/get-current-user'
 import { createOrReuseWebset } from '@/lib/clients/exa-cache'
 import { createExaWebsetsClient, createProspectSearchCriteria } from '@/lib/clients/exa-websets'
 import { getCachedProspects } from '@/lib/performance/redis-cache'
+import { logger } from '@/lib/utils/logger'
 import { createClient } from '@/lib/supabase/server'
 import { requireQuota } from '@/lib/utils/quota'
 import { NextRequest, NextResponse } from 'next/server'
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid targetCount' }, { status: 400 })
     }
     
-    console.log(`🔍 [POST /api/prospect-search/execute] ${preview ? 'Preview' : 'Full'} search requested:`, {
+    logger.debug(`${preview ? 'Preview' : 'Full'} search requested:`, {
       criteriaCount: criteria?.length || 0,
       enrichmentsCount: enrichments?.length || 0,
       entityType,
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
     if (!preview) {
       const cachedResults = await getCachedProspects(originalQuery, criteria || [], entityType || 'person')
       if (cachedResults && cachedResults.length >= (targetCount || 25)) {
-        console.log(`⚡ [POST /api/prospect-search/execute] Serving ${cachedResults.length} cached prospects`)
+        logger.debug(`Serving ${cachedResults.length} cached prospects`)
         return NextResponse.json({
           type: 'cached_results',
           prospects: cachedResults.slice(0, targetCount || 25),
@@ -49,10 +50,15 @@ export async function POST(req: NextRequest) {
     }
 
     // Quota: cost = number of targets requested (min 1)
+    // Bypass quota in development or if SKIP_QUOTA_CHECK is set
     const cost = Math.max(1, preview ? 1 : (targetCount || 25))
-    const quota = await requireQuota({ userId, cost, kind: 'prospect_search', idempotencyKey: `ps:${userId}:${originalQuery}:${cost}` })
-    if (!quota.ok) {
-      return NextResponse.json({ type: 'error', message: quota.reason }, { status: 402 })
+    if (process.env.NODE_ENV !== 'development' && process.env.SKIP_QUOTA_CHECK !== 'true') {
+      const quota = await requireQuota({ userId, cost, kind: 'prospect_search', idempotencyKey: `ps:${userId}:${originalQuery}:${cost}` })
+      if (!quota.ok) {
+        return NextResponse.json({ type: 'error', message: quota.reason }, { status: 402 })
+      }
+    } else {
+      logger.debug('Bypassing quota check (development mode)')
     }
 
     const exa = createExaWebsetsClient()
@@ -124,7 +130,7 @@ export async function POST(req: NextRequest) {
         if (websetEnrichments.length >= 10) break
       }
 
-      console.log('🔧 [POST /api/prospect-search/execute] Creating or reusing webset...')
+      logger.debug('Creating or reusing webset...')
       const result = await createOrReuseWebset({
         query: originalQuery,
         criteria: criteria || [],
@@ -136,7 +142,7 @@ export async function POST(req: NextRequest) {
       isReused = result.isReused
     }
 
-    console.log(`✅ [POST /api/prospect-search/execute] Webset ${isReused ? 'reused' : 'created'}:`, websetId)
+    logger.debug(`Webset ${isReused ? 'reused' : 'created'}:`, websetId)
 
     // Persist minimal campaign record (best-effort) — guard against duplicates
     try {
@@ -169,17 +175,17 @@ export async function POST(req: NextRequest) {
             .select('id')
             .single()
           if (campaign) {
-            console.log('🗂️ [POST /api/prospect-search/execute] Campaign persisted:', campaign.id)
+            logger.debug('Campaign persisted:', campaign.id)
           }
         }
       }
     } catch (persistError) {
-      console.warn('⚠️ [POST /api/prospect-search/execute] Campaign persistence skipped:', persistError)
+      logger.warn('Campaign persistence skipped:', persistError)
     }
 
     if (preview) {
       // For preview, wait for completion and return results immediately
-      console.log('⏳ [POST /api/prospect-search/execute] Waiting for preview to complete...')
+      logger.debug('Waiting for preview to complete...')
 
       try {
         const completedWebset = await exa.waitUntilIdle(websetId, {
@@ -206,7 +212,7 @@ export async function POST(req: NextRequest) {
           }
         })
       } catch (error) {
-        console.error('❌ [POST /api/prospect-search/execute] Preview timeout or error:', error)
+        logger.error('Preview timeout or error:', error)
         return NextResponse.json({
           type: 'preview_timeout',
           websetId: websetId,
@@ -237,7 +243,7 @@ export async function POST(req: NextRequest) {
     }
 
   } catch (err: any) {
-    console.error('❌ [POST /api/prospect-search/execute] Error:', err)
+    logger.error('Error:', err)
     return NextResponse.json({ 
       type: 'error',
       error: err.message,

@@ -101,7 +101,11 @@ export function ChatMessages({
     return () => clearInterval(id)
   }, [showLoading])
 
-  if (!sections.length) return null
+  // Don't return null - show empty state if no sections
+  // This allows the UI to render even when loading or when messages are being streamed
+  if (!sections.length && !isLoading) {
+    return null
+  }
 
   // Get all messages as a flattened array
   const allMessages = sections.flatMap(section => [
@@ -137,7 +141,7 @@ export function ChatMessages({
       role="list"
       aria-roledescription="chat messages"
       className={cn(
-        'relative pt-2 md:pt-3 w-full h-full flex-1 overflow-y-auto',
+        'relative pt-1 w-full h-full flex-1 overflow-y-auto',
         'scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent'
       )}
     >

@@ -1,4 +1,5 @@
 import { createExaWebsetsClient } from '@/lib/clients/exa-websets'
+import { logger } from '@/lib/utils/logger'
 import { tool } from 'ai'
 import { z } from 'zod'
 
@@ -12,7 +13,7 @@ const prospectSearchSchema = z.object({
 })
 
 export function createProspectSearchTool(model: string) {
-  console.log('🔧 [createProspectSearchTool] Creating prospect search tool for model:', model)
+  logger.tool('prospect_search', 'Creating prospect search tool for model:', model)
   
   const prospectSearchTool = tool({
     description: 'Search for qualified prospects using AI-powered research. Extract search criteria and enrichments from user campaign descriptions. ALWAYS use interactive: true to show the detailed interactive UI with individual search criteria, enrichments, and preview option.',
@@ -25,8 +26,8 @@ export function createProspectSearchTool(model: string) {
       interactive = true,
       previewOnly = false
     }) => {
-      console.log('🚀 [prospectSearchTool] TOOL EXECUTION STARTED!')
-      console.log('🔍 [prospectSearchTool] Parameters received:', {
+      logger.tool('prospect_search', 'TOOL EXECUTION STARTED!')
+      logger.debug('Parameters received:', {
         query,
         targetPersona,
         offer,
@@ -37,7 +38,7 @@ export function createProspectSearchTool(model: string) {
 
       // If interactive mode is requested, return UI configuration (seeded via Exa Preview when possible)
       if (interactive) {
-        console.log('🎨 [prospectSearchTool] Seeding interactive UI configuration from Exa Preview')
+        logger.debug('Seeding interactive UI configuration from Exa Preview')
         let initialCriteria: Array<{ label: string; value: string; type: 'job_title' | 'company_type' | 'industry' | 'location' | 'technology' | 'activity' | 'other' }> = []
         let initialEnrichments: Array<{ label: string; value: string; required: boolean }> = []
         let initialEntityType: 'person' | 'company' = 'person'
@@ -104,7 +105,7 @@ export function createProspectSearchTool(model: string) {
             { label: 'Location', value: 'location', required: false }
           ]
         } catch (error) {
-          console.error('❌ [prospectSearchTool] Error in fast extraction:', error)
+          logger.error('Error in fast extraction:', error)
           initialEntityType = 'company'
           initialCriteria = [{ label: query, value: query, type: 'other' as const }]
         }
@@ -164,20 +165,20 @@ ${targetPersona ? `**👤 Decision Maker:** Looking for ${targetPersona} at each
 
 You can **preview with 1 company** first to validate the approach, or **run the full search** for ${targetCount || 25} prospects. Ready when you are!`
         }
-        console.log('✅ [prospectSearchTool] Returning interactive UI result:', result)
+        logger.debug('Returning interactive UI result')
         return result
       }
 
       // Otherwise, execute the search immediately
       try {
-        console.log('🔍 [prospectSearchTool] Executing immediate search...')
+        logger.debug('Executing immediate search...')
         
         // FAST: Skip slow GPT generation, use simple defaults
         // Create the Exa client
         const exaClient = createExaWebsetsClient()
         
         // Use simple, fast extraction instead of slow GPT-5 call
-        console.log('⚡ [prospectSearchTool] Using fast extraction (no GPT call)...')
+        logger.debug('Using fast extraction (no GPT call)...')
         
         // Simple webset config without GPT generation
         const websetSearchConfig = {
@@ -195,7 +196,7 @@ You can **preview with 1 company** first to validate the approach, or **run the 
           { title: 'Decision Maker LinkedIn', description: 'LinkedIn profile URL for target persona', format: 'text' as const, instructions: `Find LinkedIn profile for ${targetPersona || 'decision maker'}` }
         ]
         
-        console.log('🔧 [prospectSearchTool] Creating webset with fast config:', {
+        logger.debug('Creating webset with fast config:', {
           searchConfig: websetSearchConfig,
           enrichmentsCount: websetEnrichments.length
         })
@@ -206,7 +207,7 @@ You can **preview with 1 company** first to validate the approach, or **run the 
           enrichments: websetEnrichments
         })
         
-        console.log('✅ [prospectSearchTool] Webset created:', webset.id)
+        logger.debug('Webset created:', webset.id)
         
         // Return streaming configuration for real-time updates
         return {
@@ -223,7 +224,7 @@ You can **preview with 1 company** first to validate the approach, or **run the 
         }
         
       } catch (error) {
-        console.error('❌ [prospectSearchTool] Error during prospect search:', error)
+        logger.error('Error during prospect search:', error)
         
         return {
           type: 'error',
@@ -234,6 +235,6 @@ You can **preview with 1 company** first to validate the approach, or **run the 
     }
   })
   
-  console.log('✅ [createProspectSearchTool] Prospect search tool created successfully')
+  logger.tool('prospect_search', 'Prospect search tool created successfully')
   return prospectSearchTool
 } 

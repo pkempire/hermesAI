@@ -81,44 +81,41 @@ export function ProspectSearchSection({
     return null
   }, [tool])  // Add dependencies for useCallback
 
-  // Start polling for streaming search updates with faster polling
+  // Start SSE streaming for real-time search updates
   const startStreamingPolling = useCallback((websetId: string, target?: number, criteria?: { query?: string; entityType?: string; targetCount?: number }) => {
+    // Clean up any existing polling
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current)
+      pollingIntervalRef.current = null
     }
 
-    let pollCount = 0
-    const maxPolls = 1500 // 5 minutes at 200ms polling (faster for better UX)
     let hasDispatchedSuggestion = false // Prevent duplicate messages
+    let lastItemCount = 0
 
-    const interval = setInterval(async () => {
-        try {
-          pollCount++
-          
-          // Use the server-side API to get status
-          const targetParam = target ? `&target=${target}` : ''
-          const response = await fetch(`/api/prospect-search/status?websetId=${websetId}${targetParam}`)
-          if (!response.ok) {
-            throw new Error(`API call failed: ${response.status}`)
-          }
-          
-          const data = await response.json()
-          setLastStatus(data.status as any)
-          
-          // Update progress messages
-          if (data.found > 0 || data.analyzed > 0) {
-            setSearchMessage(`Processing: ${data.analyzed} analyzed, ${data.found} prospects found...`)
-          } else if (pollCount > 5) {
-            setSearchMessage(`Still searching... (${pollCount * 3}s elapsed)`)
-          }
-          
-          // Update prospects if available
-          if (data.prospects && Array.isArray(data.prospects) && data.prospects.length > 0) {
+    // Use Server-Sent Events (SSE) instead of polling
+    const targetParam = target ? `&target=${target}` : ''
+    const eventSource = new EventSource(`/api/prospect-search/stream?websetId=${websetId}${targetParam}`)
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        setLastStatus(data.status as any)
+        
+        // Update progress messages
+        if (data.found > 0 || data.analyzed > 0) {
+          setSearchMessage(`Processing: ${data.analyzed} analyzed, ${data.found} prospects found...`)
+        }
+        
+        // Update prospects if available (only new ones)
+        if (data.prospects && Array.isArray(data.prospects) && data.prospects.length > 0) {
           setProspects(prev => {
             // Merge by unique id to allow incremental growth without flicker
             const byId = new Map<string, Prospect>()
             for (const p of prev) byId.set(p.id, p)
-            for (const p of data.prospects) byId.set(p.id, p)
+            // Only add new prospects (those after lastItemCount)
+            const newProspects = data.prospects.slice(lastItemCount)
+            for (const p of newProspects) byId.set(p.id, p)
+            lastItemCount = data.totalProspects || byId.size
             return Array.from(byId.values())
           })
         }
@@ -126,7 +123,7 @@ export function ProspectSearchSection({
         // Emit pipeline progress event for the campaign tracker (0-100)
         try {
           const targetTotal = target || criteria?.targetCount || 25
-          const found = typeof data.found === 'number' ? data.found : (data.prospects?.length || 0)
+          const found = typeof data.found === 'number' ? data.found : (data.totalProspects || 0)
           const percent = Math.max(0, Math.min(100, Math.round((found / Math.max(1, targetTotal)) * 100)))
           window.dispatchEvent(new CustomEvent('pipeline-progress', {
             detail: {
@@ -138,32 +135,24 @@ export function ProspectSearchSection({
           }))
         } catch {}
         
-        // Handle timeout (only after 5 minutes - rare case)
-        if (pollCount >= maxPolls) {
-          setSearchStatus('failed')
-          setSearchMessage('Search is taking longer than expected. Results may still arrive - check back soon or contact support.')
-          clearInterval(interval)
-          pollingIntervalRef.current = null
-          return
-        }
-        
         // Check if search is complete
-        if (data.status === 'completed' || data.status === 'idle') {
+        if (data.type === 'complete' || data.status === 'completed' || data.status === 'idle') {
           setSearchStatus('completed')
-          clearInterval(interval)
-          pollingIntervalRef.current = null
+          eventSource.close()
           
-          if (data.prospects?.length > 0) {
+          // Get final prospects count
+          const finalProspects = data.prospects || []
+          if (finalProspects.length > 0) {
             // Switch to results UI for multiple prospects, keep streaming for single prospect preview
-            if (data.prospects.length > 1) {
+            if (finalProspects.length > 1) {
               setUiType('results')
-              setSearchMessage(`Search completed! Found ${data.prospects.length} qualified prospects.`)
+              setSearchMessage(`Search completed! Found ${finalProspects.length} qualified prospects.`)
             } else {
-              setSearchMessage(`Search completed! Found ${data.prospects.length} prospect.`)
+              setSearchMessage(`Search completed! Found ${finalProspects.length} prospect.`)
             }
             
             setSearchSummary({
-              totalFound: data.prospects.length,
+              totalFound: finalProspects.length,
               query: (criteria?.query || streamingWebsetId),
               entityType: (criteria?.entityType || 'company'),
               websetId: streamingWebsetId
@@ -176,11 +165,11 @@ export function ProspectSearchSection({
 
             // Store prospects and context for email drafter
             try {
-              sessionStorage.setItem('hermes-latest-prospects', JSON.stringify(data.prospects))
+              sessionStorage.setItem('hermes-latest-prospects', JSON.stringify(finalProspects))
               sessionStorage.setItem('hermes-search-summary', JSON.stringify({
                 query: currentSearchCriteria.query || '',
                 entityType: currentSearchCriteria.entityType || 'company',
-                totalFound: data.prospects.length
+                totalFound: finalProspects.length
               }))
               // Also store search context (targetPersona, offer) from tool result
               const toolResult = parseToolResult()
@@ -200,23 +189,25 @@ export function ProspectSearchSection({
                 websetId: streamingWebsetId,
                 query: criteria?.query,
                 entityType: criteria?.entityType,
-                totalFound: data.prospects.length,
+                totalFound: finalProspects.length,
                 createdAt: new Date().toISOString(),
                 status: 'completed'
               })
               // Keep only last 20 campaigns
               localStorage.setItem('hermes-campaigns', JSON.stringify(campaigns.slice(0, 20)))
             } catch (e) {
-              console.warn('Failed to store prospects:', e)
+              if (process.env.NODE_ENV !== 'production') {
+                console.warn('Failed to store prospects:', e)
+              }
             }
             
             // Ask the model to propose next step via a short assistant message (ONLY ONCE)
-            if (!hasDispatchedSuggestion && data.prospects.length > 0) {
+            if (!hasDispatchedSuggestion && finalProspects.length > 0) {
               hasDispatchedSuggestion = true
               setTimeout(() => {
                 window.dispatchEvent(new CustomEvent('chat-system-suggest', {
                   detail: {
-                    text: `Found ${data.prospects.length} ${data.prospects.length === 1 ? 'prospect' : 'prospects'}. Ready to draft personalized emails?`
+                    text: `Found ${finalProspects.length} ${finalProspects.length === 1 ? 'prospect' : 'prospects'}. Ready to draft personalized emails?`
                   }
                 }))
               }, 300)
@@ -225,58 +216,85 @@ export function ProspectSearchSection({
             setSearchMessage('Search completed but no prospects found. Try broadening your criteria.')
             setSearchStatus('completed')
           }
-        } else if (data.status === 'failed') {
+        } else if (data.type === 'error' || data.status === 'failed') {
           setSearchStatus('failed')
           setSearchMessage(data.error || 'Search failed')
-          clearInterval(interval)
-          pollingIntervalRef.current = null
+          eventSource.close()
           setUiType('error')
+        } else if (data.type === 'timeout') {
+          setSearchStatus('failed')
+          setSearchMessage('Search is taking longer than expected. Results may still arrive - check back soon or contact support.')
+          eventSource.close()
         }
       } catch (error) {
-        // Silent error handling - show user-friendly message instead
-        
-        // Only fail after multiple consecutive errors
-        if (pollCount > 3) {
-          setSearchStatus('failed')
-          setSearchMessage(`Connection error: ${error instanceof Error ? error.message : 'Failed to get search updates'}`)
-          clearInterval(interval)
-          pollingIntervalRef.current = null
-          setUiType('error')
-        } else {
-          setSearchMessage(`Retrying connection... (attempt ${pollCount})`)
+        // Error parsing SSE data
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('Error parsing SSE data:', error)
         }
       }
-    }, 200) // Ultra-fast polling for real-time updates (10x faster than typical)
+    }
 
-    pollingIntervalRef.current = interval
+    eventSource.onerror = (error) => {
+      // SSE connection error
+      setSearchStatus('failed')
+      setSearchMessage('Connection error. Please refresh and try again.')
+      eventSource.close()
+      setUiType('error')
+    }
+
+    // Store eventSource reference for cleanup
+    pollingIntervalRef.current = eventSource as any
   }, [])
 
-  // Cleanup polling on unmount
+  // Cleanup SSE on unmount
   useEffect(() => {
     return () => {
       if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current)
+        // Can be either EventSource or interval, check type
+        if (pollingIntervalRef.current instanceof EventSource) {
+          pollingIntervalRef.current.close()
+        } else {
+          clearInterval(pollingIntervalRef.current)
+        }
+        pollingIntervalRef.current = null
       }
     }
   }, [])
 
   // Parse tool result whenever tool changes
   useEffect(() => {
-    console.log('🔄 [ProspectSearchSection] Tool changed, parsing result...')
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔄 [ProspectSearchSection] Tool changed, parsing result...', { tool, toolState: (tool as any)?.state, toolResult: (tool as any)?.result })
+    }
     const result = parseToolResult()
     
-    if (!result) return
+    if (!result) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('⚠️ [ProspectSearchSection] No result parsed from tool')
+      }
+      return
+    }
     
-    // IMPORTANT: Only let tool result set UI when we haven't started a local run
-    if (uiType !== 'idle') return
-
-    // Initialize UI from tool result on first mount only
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('✅ [ProspectSearchSection] Parsed result:', result)
+    }
+    
+    // Initialize UI from tool result - always process when available
     if (result.type === 'interactive') {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('🎨 [ProspectSearchSection] Setting UI type to interactive')
+      }
       setUiType('interactive')
       setEvidenceMode(Boolean(result.props?.evidenceMode))
       setSearchStatus('idle')
       setSearchMessage(result.message || 'Interactive search builder ready')
-      // notify global progress (optional: could be elevated to context)
+      // Set initial criteria from props if available
+      if (result.props?.initialCriteria) {
+        setCurrentSearchCriteria({
+          ...currentSearchCriteria,
+          ...result.props.initialCriteria
+        })
+      }
     } else if (result.type === 'streaming') {
       setUiType('streaming')
       setSearchStatus('running')
@@ -298,13 +316,27 @@ export function ProspectSearchSection({
     }
   }, [tool, parseToolResult, startStreamingPolling, uiType])
 
-  // Debug UI type changes
+  // Track UI type changes for debugging (dev only)
   useEffect(() => {
-    console.log('🎭 [ProspectSearchSection] UI Type changed to:', uiType)
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🎭 [ProspectSearchSection] UI Type changed to:', uiType)
+    }
   }, [uiType])
 
-  const toolResult = useMemo(() => parseToolResult(), [parseToolResult])
-  console.log('🔍 [ProspectSearchSection] Tool result parsed:', toolResult)
+  const toolResult = useMemo(() => parseToolResult(), [parseToolResult, tool])
+  
+  // Always log tool state for debugging
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('🔍 [ProspectSearchSection] Tool state:', {
+      toolName: (tool as any)?.toolName,
+      state: (tool as any)?.state,
+      hasResult: !!(tool as any)?.result,
+      resultType: (tool as any)?.result?.type,
+      toolResult,
+      uiType,
+      searchStatus
+    })
+  }
 
   // If we have no prospects yet but status shows counts, synthesize placeholders (optional)
   useEffect(() => {
@@ -326,7 +358,9 @@ export function ProspectSearchSection({
           enrichments: args.enrichments || ['email', 'linkedin', 'company_info']
         }
       } catch (error) {
-        console.error('Error parsing search criteria:', error)
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('Error parsing search criteria:', error)
+        }
       }
     }
     
@@ -407,7 +441,7 @@ export function ProspectSearchSection({
     >
       {/* Removed embedded step progress - handled by global campaign tracker */}
 
-      <Collapsible open={isOpen} onOpenChange={onOpenChange}>
+      <Collapsible open={isOpen !== false} onOpenChange={onOpenChange}>
         <Card className="w-full border-none shadow-none bg-transparent">
           <CollapsibleTrigger asChild>
             <CardHeader className="cursor-pointer hover:bg-muted/40 transition-all duration-200 rounded-t-xl px-4 py-3">
@@ -704,7 +738,20 @@ export function ProspectSearchSection({
                       step={toolResult.props.step || 1}
                       totalSteps={toolResult.props.totalSteps || 5}
                       onSearchExecute={async (searchParams) => {
-                        console.log('🚀 [ProspectSearchSection] Starting search with:', searchParams)
+                        if (process.env.NODE_ENV !== 'production') {
+                          console.log('🚀 [ProspectSearchSection] Starting search with:', searchParams)
+                        }
+                        
+                        // Validation
+                        if (!searchParams?.criteria || searchParams.criteria.length === 0) {
+                          setUiType('error')
+                          setSearchStatus('failed')
+                          setSearchMessage('Please add at least one search criterion.')
+                          return
+                        }
+                        
+                        // Validate targetCount
+                        const validTargetCount = Math.max(1, Math.min(1000, searchParams.targetCount || 25))
                         
                         // Immediately transition to streaming UI
                         setUiType('streaming')
@@ -716,7 +763,11 @@ export function ProspectSearchSection({
                           const response = await fetch('/api/prospect-search/execute', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ ...(searchParams || {}), preview: false })
+                            body: JSON.stringify({ 
+                              ...searchParams, 
+                              targetCount: validTargetCount,
+                              preview: false 
+                            })
                           })
                           
                           if (!response.ok) {
@@ -728,7 +779,14 @@ export function ProspectSearchSection({
                             if (response.status === 402) {
                               setUiType('error')
                               setSearchStatus('failed')
-                              setSearchMessage(`⚠️ Quota Error: ${errorMsg}. Running in dev mode - this should be bypassed. Check your .env.local file.`)
+                              setSearchMessage(`⚠️ Quota exceeded. Please upgrade your plan or contact support.`)
+                              return
+                            }
+                            
+                            if (response.status === 400) {
+                              setUiType('error')
+                              setSearchStatus('failed')
+                              setSearchMessage(`Invalid request: ${errorMsg}`)
                               return
                             }
                             
@@ -739,26 +797,40 @@ export function ProspectSearchSection({
                           }
                           
                           const result = await response.json()
-                          console.log('📊 [ProspectSearchSection] Search API response:', result)
+                          if (process.env.NODE_ENV !== 'production') {
+                            console.log('📊 [ProspectSearchSection] Search API response:', result)
+                          }
                           
                           if (result.type === 'streaming_search') {
                             setStreamingWebsetId(result.websetId)
                             setSearchMessage(result.message || 'Search started, finding prospects...')
-                            startStreamingPolling(result.websetId, (searchParams as any)?.targetCount ?? currentSearchCriteria.targetCount)
+                            startStreamingPolling(result.websetId, validTargetCount)
                           } else if (result.type === 'error') {
                             setUiType('error')
                             setSearchStatus('failed')
                             setSearchMessage(result.message || 'Search failed')
                           }
                         } catch (error) {
-                          console.error('❌ [ProspectSearchSection] Search execution error:', error)
+                          if (process.env.NODE_ENV !== 'production') {
+                            console.error('❌ [ProspectSearchSection] Search execution error:', error)
+                          }
                           setUiType('error')
                           setSearchStatus('failed')
                           setSearchMessage(`Search failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
                         }
                       }}
                       onPreviewExecute={async (previewParams) => {
-                        console.log('👁️ [ProspectSearchSection] Starting preview with:', previewParams)
+                        if (process.env.NODE_ENV !== 'production') {
+                          console.log('👁️ [ProspectSearchSection] Starting preview with:', previewParams)
+                        }
+                        
+                        // Validation
+                        if (!previewParams?.criteria || previewParams.criteria.length === 0) {
+                          setUiType('error')
+                          setSearchStatus('failed')
+                          setSearchMessage('Please add at least one search criterion.')
+                          return
+                        }
                         
                         // Show loading state for preview
                         setUiType('streaming')
@@ -778,7 +850,9 @@ export function ProspectSearchSection({
                           }
                           
                           const result = await response.json()
-                          console.log('🔍 [ProspectSearchSection] Preview API response:', result)
+                          if (process.env.NODE_ENV !== 'production') {
+                            console.log('🔍 [ProspectSearchSection] Preview API response:', result)
+                          }
                           
                           if (result.type === 'preview_result') {
                             setUiType('results')
@@ -797,7 +871,9 @@ export function ProspectSearchSection({
                             setSearchMessage(result.message || 'Preview failed')
                           }
                         } catch (error) {
-                          console.error('❌ [ProspectSearchSection] Preview execution error:', error)
+                          if (process.env.NODE_ENV !== 'production') {
+                            console.error('❌ [ProspectSearchSection] Preview execution error:', error)
+                          }
                           setUiType('error')
                           setSearchStatus('failed')
                           setSearchMessage(`Preview failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
@@ -806,7 +882,6 @@ export function ProspectSearchSection({
                     />
                   )}
 
-                  {console.log('🎨 [ProspectSearchSection] Render check - uiType:', uiType, 'searchStatus:', searchStatus, 'prospects:', prospects.length)}
                   
                   {/* Streaming Search Progress */}
                   {uiType === 'streaming' && (
@@ -931,21 +1006,27 @@ export function ProspectSearchSection({
                       prospect={prospects[0]}
                       searchSummary={searchSummary}
                       onApprove={(feedback) => {
-                        console.log('✅ [ProspectSearchSection] Preview approved:', feedback)
+                        if (process.env.NODE_ENV !== 'production') {
+                          console.log('✅ [ProspectSearchSection] Preview approved:', feedback)
+                        }
                         // Switch back to interactive mode to run full search
                         setUiType('interactive')
                         setSearchStatus('idle')
                         setSearchMessage('Great! Ready to run the full search with these criteria.')
                       }}
                       onReject={(feedback) => {
-                        console.log('❌ [ProspectSearchSection] Preview rejected:', feedback)
+                        if (process.env.NODE_ENV !== 'production') {
+                          console.log('❌ [ProspectSearchSection] Preview rejected:', feedback)
+                        }
                         // Switch back to interactive mode with feedback
                         setUiType('interactive')
                         setSearchStatus('idle')
                         setSearchMessage(`I understand this isn't what you're looking for. Let's refine the search criteria based on your feedback: "${feedback}"`)
                       }}
                       onRefineSearch={(feedback) => {
-                        console.log('🔧 [ProspectSearchSection] Search refinement requested:', feedback)
+                        if (process.env.NODE_ENV !== 'production') {
+                          console.log('🔧 [ProspectSearchSection] Search refinement requested:', feedback)
+                        }
                         // Switch back to interactive mode with refinement suggestions
                         setUiType('interactive')
                         setSearchStatus('idle')

@@ -2,9 +2,9 @@ import { Chat } from '@/components/chat'
 import { getChat } from '@/lib/actions/chat'
 import { getCurrentUserId } from '@/lib/auth/get-current-user'
 import { getModels } from '@/lib/config/models'
+import { ExtendedCoreMessage, SearchResults } from '@/lib/types'; // Added SearchResults
 import { convertToUIMessages } from '@/lib/utils'
 import { notFound, redirect } from 'next/navigation'
-import { ExtendedCoreMessage, SearchResults } from '@/lib/types'; // Added SearchResults
 
 export const maxDuration = 60
 
@@ -57,21 +57,28 @@ export default async function SearchPage(props: {
   const userId = await getCurrentUserId()
   const { id } = await props.params
 
-  const chat = await getChat(id, userId)
+  // Wait a bit for async save to complete (especially in development)
+  let chat = await getChat(id, userId)
+  if (!chat && process.env.NODE_ENV === 'development') {
+    // In development, wait longer for the async save to complete
+    await new Promise(resolve => setTimeout(resolve, 1500))
+    chat = await getChat(id, userId)
+  }
+  
   // convertToUIMessages for useChat hook
   const messages = convertToUIMessages(chat?.messages || [])
 
-  // Allow loading even if chat doesn't exist yet (might be saving)
-  // Don't redirect immediately - let the chat component handle it
-  if (!chat && messages.length === 0) {
-    // Only redirect if we're sure there's no chat and no messages
-    // Wait a moment for async save to complete
+  // In development, NEVER redirect - always render the Chat component
+  // Messages will come from the streaming response even if not saved yet
+  if (!chat && messages.length === 0 && process.env.NODE_ENV !== 'development') {
+    // Only redirect in production if we're sure there's no chat
     await new Promise(resolve => setTimeout(resolve, 1000))
     const retryChat = await getChat(id, userId)
     if (!retryChat) {
       redirect('/')
     }
   }
+  // In development, always render - don't redirect even if chat doesn't exist
 
   if (chat?.userId !== userId && chat?.userId !== 'anonymous') {
     notFound()

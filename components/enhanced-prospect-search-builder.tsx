@@ -170,24 +170,38 @@ export function EnhancedProspectSearchBuilder({
   }))]
 
   const handlePreview = () => {
+    // Validation
+    if (enabledCriteria.length === 0 && !originalQuery.trim()) {
+      alert('Please add at least one search criterion or provide a query.')
+      return
+    }
+    
     const params = {
-      criteria: enabledCriteria,
+      criteria: enabledCriteria.length > 0 ? enabledCriteria : [{ label: originalQuery, value: originalQuery, type: 'other' as const, enabled: true }],
       enrichments: allEnabledEnrichments,
       entityType,
       targetCount: 1,
-      originalQuery,
+      originalQuery: originalQuery || enabledCriteria.map(c => c.label).join(' '),
       evidenceMode
     }
     onPreviewExecute?.(params)
   }
 
   const handleSearch = () => {
+    // Validation
+    if (enabledCriteria.length === 0 && !originalQuery.trim()) {
+      alert('Please add at least one search criterion or provide a query.')
+      return
+    }
+    
+    const validTargetCount = Math.max(1, Math.min(1000, targetCount))
+    
     const params = {
-      criteria: enabledCriteria,
+      criteria: enabledCriteria.length > 0 ? enabledCriteria : [{ label: originalQuery, value: originalQuery, type: 'other' as const, enabled: true }],
       enrichments: allEnabledEnrichments,
       entityType,
-      targetCount,
-      originalQuery,
+      targetCount: validTargetCount,
+      originalQuery: originalQuery || enabledCriteria.map(c => c.label).join(' '),
       evidenceMode
     }
     onSearchExecute?.(params)
@@ -407,13 +421,18 @@ export function EnhancedProspectSearchBuilder({
                   <div className="space-y-2">
                     <Slider
                       value={[targetCount]}
-                      onValueChange={([value]) => setTargetCount(value)}
-                      max={500}
+                      onValueChange={([value]) => setTargetCount(Math.max(1, Math.min(1000, value)))}
+                      max={1000}
                       min={1}
                       step={1}
                     />
-                    <div className="text-sm text-muted-foreground text-center">
-                      {targetCount} prospects
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm text-muted-foreground">
+                        {targetCount} prospect{targetCount !== 1 ? 's' : ''}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Max: 1000
+                      </div>
                     </div>
                   </div>
                 </div>

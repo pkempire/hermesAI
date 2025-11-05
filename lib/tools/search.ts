@@ -8,10 +8,14 @@ import { DEFAULT_PROVIDER, SearchProviderType, createSearchProvider } from './se
 /**
  * Creates a search tool with the appropriate schema for the given model.
  */
+// Track search calls to prevent loops (in-memory, per-process)
+const searchCallHistory: Map<string, number> = new Map()
+const MAX_SEARCH_CALLS_PER_CONVERSATION = 3
+
 export function createSearchTool(fullModel: string) {
   const schema = getSearchSchemaForModel(fullModel) || z.object({})
   return tool({
-    description: 'Search the web for information',
+    description: 'Search the web for information. IMPORTANT: Do not call this tool repeatedly. Maximum 2-3 searches per conversation. If you already searched for something, use that information.',
     inputSchema: schema ?? ({} as any),
     execute: async ({
       query,
@@ -20,6 +24,22 @@ export function createSearchTool(fullModel: string) {
       include_domains = [],
       exclude_domains = []
     }) => {
+      // Prevent search loops by tracking calls
+      const queryKey = query.toLowerCase().trim()
+      const callCount = searchCallHistory.get(queryKey) || 0
+      
+      if (callCount >= MAX_SEARCH_CALLS_PER_CONVERSATION) {
+        console.warn(`[Search] Blocked repeated search for: ${query} (${callCount} calls)`)
+        return {
+          results: [],
+          query: query,
+          images: [],
+          number_of_results: 0,
+          error: 'Search limit reached. Please use previous search results.'
+        }
+      }
+      
+      searchCallHistory.set(queryKey, callCount + 1)
       // Ensure max_results is at least 10
       const minResults = 10
       const effectiveMaxResults = Math.max(
@@ -40,9 +60,11 @@ export function createSearchTool(fullModel: string) {
           ? 'advanced'
           : effectiveSearchDepth || 'basic'
 
-      console.log(
-        `Using search API: ${searchAPI}, Search Depth: ${effectiveSearchDepthForAPI}`
-      )
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(
+          `Using search API: ${searchAPI}, Search Depth: ${effectiveSearchDepthForAPI}`
+        )
+      }
 
       try {
         if (
@@ -81,7 +103,9 @@ export function createSearchTool(fullModel: string) {
           )
         }
       } catch (error) {
-        console.error('Search API error:', error)
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('Search API error:', error)
+        }
         searchResult = {
           results: [],
           query: filledQuery,
@@ -90,14 +114,16 @@ export function createSearchTool(fullModel: string) {
         }
       }
 
-      console.log('completed search')
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('completed search')
+      }
       return searchResult
     }
   })
 }
 
 // Default export for backward compatibility, using a default model
-export const searchTool = createSearchTool('openai:gpt-5')
+export const searchTool = createSearchTool('openai:gpt-5-mini')
 
 export async function search(
   query: string,
