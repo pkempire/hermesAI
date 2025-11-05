@@ -43,7 +43,7 @@ Return ONLY the optimized search query, nothing else.`
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'gpt-5-mini',
+      model: 'gpt-4o-mini',
       messages: [
         {
           role: 'system',
@@ -100,7 +100,7 @@ Return the personalized email content only.`
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'gpt-5-mini',
+      model: 'gpt-4o-mini',
       messages: [
         {
           role: 'system',
@@ -158,7 +158,7 @@ Format your response as JSON:
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'gpt-5-mini',
+      model: 'gpt-4o-mini',
       messages: [
         {
           role: 'system',

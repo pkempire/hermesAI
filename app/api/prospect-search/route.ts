@@ -1,9 +1,34 @@
 import { logger } from '@/lib/utils/logger'
+import { checkRateLimit, prospectSearchRateLimit, getRateLimitErrorMessage } from '@/lib/utils/rate-limit'
+import { getCurrentUserId } from '@/lib/auth/get-current-user'
 import Exa from 'exa-js'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
   try {
+    // Get user ID for rate limiting
+    const userId = await getCurrentUserId()
+    const rateLimitId = userId || req.ip || 'anonymous'
+
+    // Check rate limit
+    const rateLimitResult = await checkRateLimit(rateLimitId, prospectSearchRateLimit)
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        {
+          error: getRateLimitErrorMessage('prospect search', rateLimitResult.reset),
+          retryAfter: rateLimitResult.reset
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+            'X-RateLimit-Reset': rateLimitResult.reset.toISOString(),
+          }
+        }
+      )
+    }
+
     const { criteria, enrichments, entityType = 'person', count = 25 } = await req.json()
     
     // Validation

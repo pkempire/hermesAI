@@ -1,179 +1,328 @@
-# HermesAI: Prospecting & Outreach Engine - Implementation Plan
+# HermesAI - AI-Powered Outbound Prospecting Engine
 
-This document outlines the step-by-step plan to transform the existing AI chat boilerplate into a powerful, automated sales prospecting and outreach tool. We will build this iteratively, with clear verification steps to ensure each component is working correctly before moving to the next.
+HermesAI is an intelligent prospecting platform that helps you find, enrich, and engage with your ideal customers using natural language and AI.
 
----
+## 🚀 What It Does
 
-## Phase 1: Core Prospecting Engine
+Users describe their ideal prospects in plain English, and HermesAI:
+1. **Extracts criteria** (location, industry, company type, decision maker roles)
+2. **Finds prospects** via Exa Websets API
+3. **Enriches contacts** with email, LinkedIn, phone from Apollo/Hunter
+4. **Drafts personalized emails** using AI and prospect context
+5. **Sends via Gmail** with tracking and analytics
 
-**Goal:** Implement the backend logic and UI to find prospects using Exa Websets and display them in a real-time grid.
+### Example Workflow
 
-### Step 1.1: Database Schema for Campaigns
+```
+Input: "Find 20 Boston-area education nonprofits that partner with summer programs"
 
-**Objective:** Create the necessary database tables to store campaign data.
+↓
 
-**Files to Create:**
-*   `supabase/migrations/YYYYMMDDHHMMSS_create_campaign_schema.sql`
+AI extracts:
+- Location: Boston area
+- Industry: Education
+- Company Type: Nonprofit
+- Focus: Summer program partnerships
 
-**Implementation:**
-*   Write a SQL migration to create three tables:
-    *   `campaigns`: To store high-level campaign details (`id`, `user_id`, `created_at`, `prompt`, `status`).
-    *   `prospects`: To store found prospects (`id`, `campaign_id`, `exa_item_id`, `properties` (jsonb), `enrichments` (jsonb)).
-    *   `draft_emails`: To store generated emails (`id`, `prospect_id`, `subject`, `body`, `status`).
+↓
 
-**Verification:**
-1.  Run `supabase db reset` locally to apply the migration.
-2.  Use the Supabase Studio (Table Editor) to confirm the `campaigns`, `prospects`, and `draft_emails` tables exist with the correct columns.
-3.  Manually insert a row into each table to ensure there are no constraint violations.
-
-### Step 1.2: Implement the Campaign Builder UI
-
-**Objective:** Create the user-facing form to define and launch a new prospecting campaign.
-
-**Files to Create/Modify:**
-*   Create `components/campaign-builder.tsx`
-*   Modify `app/page.tsx`
-
-**Implementation:**
-1.  Create the `CampaignBuilder` component exactly as you designed it, with state management for all inputs (query, entity type, enrichments, filters, count).
-2.  Replace the content of `app/page.tsx` to render the `CampaignBuilder` component as the main feature of the home page.
-3.  The `onCreateCampaign` prop will trigger the `startProspectSearch` action.
-
-**Verification:**
-1.  Run the app and navigate to the homepage.
-2.  Verify the `CampaignBuilder` UI renders correctly with all toggles, inputs, and sliders.
-3.  Interact with all form elements and check that their state updates correctly (e.g., using React DevTools).
-4.  Clicking the "Start Search" button should trigger a console log or a placeholder action for now.
-
-### Step 1.3: Enhance Exa to support Websets & Create the Agent
-
-**Objective:** Create a new agent that uses an enhanced Exa tool to initiate a Webset search and stream UI updates.
-
-**Files to Create/Modify:**
-*   Create `lib/agents/prospect-researcher.ts`
-*   Create `components/prospect-grid.tsx`
-*   Modify `lib/actions/chat.ts` (or wherever the `createAI` actions are defined).
-
-**Implementation:**
-1.  Create the `prospect-researcher.ts` file. Implement the `prospectResearcher` function as you outlined. This will involve:
-    *   Accepting structured `searchParams`.
-    *   Calling `exa.websets.create(...)` with the structured query, criteria, and enrichments.
-    *   Streaming initial status updates to the UI (`createStreamableUI`).
-    *   Initiating the polling mechanism (`streamWebsetResults`) to check for results.
-2.  Create the `ProspectGrid.tsx` component. This component will receive the list of `prospects` and render them in a grid using the `ProspectCard` sub-component. It must handle the `isComplete` state to show/hide the loading indicators.
-3.  In `lib/actions/chat.ts`, define the `startProspectSearch` server action. This action will:
-    *   Receive the `searchParams` from the `CampaignBuilder` UI.
-    *   Initialize a `createStreamableUI` instance.
-    *   Call the `prospectResearcher` agent function.
-    *   Return the `streamableUI.value` as part of the AI message.
-
-**Verification:**
-1.  Fill out the `CampaignBuilder` form and click "Start Search".
-2.  Check the browser's network tab to confirm the `startProspectSearch` action is called.
-3.  In your terminal logs, confirm that the `prospect-researcher` is called and that it makes an API request to Exa's Webset endpoint.
-4.  The UI should update in real-time, first showing "Creating intelligent search agents...", then "Finding prospects...", and finally rendering the `ProspectGrid` component.
-5.  As the polling runs, new prospect cards should appear in the grid one by one, animated with `framer-motion`.
-
----
-
-## Phase 2: Email Integration and Sending
-
-**Goal:** Allow users to connect their Gmail account and send the generated emails.
-
-### Step 2.1: Update Supabase Auth to Include Gmail Scopes
-
-**Objective:** Modify the existing Google OAuth flow to request permissions for sending emails.
-
-**Files to Modify:**
-*   `lib/auth/get-current-user.ts` or wherever `signInWithOAuth` is called.
-*   We'll also need a new table/column for the refresh token.
-
-**Implementation:**
-1.  Locate the `supabase.auth.signInWithOAuth` call for the 'google' provider.
-2.  Add the `scopes` and `queryParams` to the options object as you defined:
-    ```javascript
-    options: {
-      scopes: 'openid email profile https://www.googleapis.com/auth/gmail.send',
-      queryParams: {
-        access_type: 'offline',
-        prompt: 'consent',
-      },
-    }
-    ```
-3.  **Crucially**, we must also store the `provider_refresh_token`. Modify the `users` table in Supabase (or create a new `user_tokens` table) to store an encrypted version of the refresh token. After a user logs in, we'll need a server-side function to grab this token from the session and save it to our database.
-
-**Verification:**
-1.  Log out of the application.
-2.  Log back in using the Google provider.
-3.  You should be prompted by Google's consent screen to grant permission for "Send email on your behalf."
-4.  After logging in, inspect the user's session data (e.g., via `supabase.auth.getSession()`) and confirm that `provider_token` and `provider_refresh_token` are present.
-5.  Check your database to ensure the refresh token was saved correctly.
-
-### Step 2.2: Create the "Generate Emails" and "Send Emails" Logic
-
-**Objective:** Implement the functionality to draft and send emails for a completed campaign.
-
-**Files to Create/Modify:**
-*   Modify `lib/agents/prospect-researcher.ts`
-*   Create `app/api/send-emails/route.ts`
-*   Modify `components/prospect-grid.tsx`
-
-**Implementation:**
-1.  Add a "Generate Emails" button to the `ProspectGrid` component, which appears when `isComplete` is true.
-2.  When clicked, this button will call a new server action (e.g., `generateEmailsForCampaign`).
-3.  The `generateEmailsForCampaign` action will:
-    *   Fetch all prospects for the campaign from the DB.
-    *   For each prospect, call the LLM with their enriched data and the original pitch to generate a personalized subject and body.
-    *   Save these drafts to the `draft_emails` table.
-4.  Create the `/api/send-emails/route.ts` API route as you specified. This route will:
-    *   Fetch the user's `access_token` (using the `refresh_token` to get a new one if necessary).
-    *   Use the `googleapis` library to send the emails.
-    *   Update the status of each email in the `draft_emails` table.
-
-**Verification:**
-1.  After a prospect search is complete, click the "Generate Emails" button.
-2.  Check the database to confirm that the `draft_emails` table is populated with personalized content.
-3.  Implement a "Send" button. When clicked, it should call the `/api/send-emails` endpoint.
-4.  Confirm in your own Gmail "Sent" folder that the emails were actually sent.
-5.  Check the `draft_emails` table to see their status updated to 'sent'.
-
-## Launch Readiness (Checklist)
-
-- Landing page: product promise, screenshots, pricing, CTA (waitlist or signup)
-- Auth: Supabase or email OTP (sign up, login, forgot password)
-- Usage limits: env flags + simple rate limit (Upstash Redis)
-- Observability: basic server logs in Vercel + error boundaries
-- Billing (optional for v1): Stripe Checkout link or manual onboarding
-- Data: .env variables set (OpenAI/Anthropic, EXA_API_KEY)
-- CI: GitHub Actions (Node 20) lint + build
-- Hosting: Vercel (Next 15) on Node >= 18.18
-
-## GitHub Setup
-
-1. Create a new repo on GitHub.
-2. In this project, run:
-
-```bash
-git init
-git remote add origin <your-repo-url>
-git checkout -b dev
-git add -A
-git commit -m "feat: streaming prospect search + Hermes prompt + UI improvements"
-git push -u origin dev
+Search runs → Prospects found → Emails drafted → Ready to send!
 ```
 
-3. Open a PR to `main`. CI will run via `.github/workflows/ci.yml`.
-4. Add repository secrets (Settings → Secrets → Actions):
-   - `OPENAI_API_KEY`
-   - `ANTHROPIC_API_KEY` (if used)
-   - `EXA_API_KEY`
-   - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (if using auth)
+## 🛠 Tech Stack
 
-## Running Locally
+- **Framework:** Next.js 15 (App Router) + React 19 + TypeScript
+- **UI:** Radix UI + shadcn/ui + Tailwind CSS
+- **Database:** Supabase (PostgreSQL with Row-Level Security)
+- **Authentication:** Supabase Auth (Email/Password + Google OAuth)
+- **AI/LLM:** Vercel AI SDK v5 (OpenAI GPT-4o-mini, Anthropic Claude)
+- **Search:** Exa Websets API (prospect discovery)
+- **Enrichment:** Apollo.io, Hunter.io (contact data)
+- **Email:** Gmail API (OAuth integration)
+- **Rate Limiting:** Upstash Redis (optional but recommended)
+- **Animations:** Framer Motion
+- **Deployment:** Vercel-ready
+
+## 📋 Prerequisites
+
+Before you begin, ensure you have:
+
+- Node.js 18+ or Bun 1.2.12+
+- A Supabase account (free tier works)
+- OpenAI API key
+- Exa API key
+- Google Cloud Console project (for Gmail OAuth)
+- (Optional) Upstash Redis account for rate limiting
+- (Optional) Apollo.io and Hunter.io API keys for enrichment
+
+## ⚙️ Setup Instructions
+
+### 1. Clone the Repository
 
 ```bash
-# Node >= 18.18 required for Next.js 15
-nvm use 20
-npm i
+git clone <your-repo-url>
+cd hermesAI
+```
+
+### 2. Install Dependencies
+
+Using npm:
+```bash
+npm install
+```
+
+Or using Bun (recommended):
+```bash
+bun install
+```
+
+### 3. Set Up Supabase
+
+#### a. Create a New Supabase Project
+
+1. Go to [supabase.com](https://supabase.com)
+2. Create a new project
+3. Note your **Project URL** and **Anon Key** from Settings → API
+
+#### b. Run Database Migrations
+
+```bash
+# Install Supabase CLI if you haven't already
+npm install -g supabase
+
+# Link your project
+supabase link --project-ref <your-project-ref>
+
+# Run migrations
+supabase db push
+```
+
+Or manually run the SQL migrations in the `supabase/migrations/` directory through the Supabase dashboard.
+
+### 4. Set Up Google OAuth (for Gmail Integration)
+
+#### a. Create OAuth Credentials
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com)
+2. Create a new project or select an existing one
+3. Enable the **Gmail API**
+4. Go to **Credentials** → **Create Credentials** → **OAuth 2.0 Client ID**
+5. Application type: **Web application**
+6. Authorized redirect URIs:
+   - Development: `http://localhost:3000/api/auth/callback/google`
+   - Production: `https://yourdomain.com/api/auth/callback/google`
+7. Save your **Client ID** and **Client Secret**
+
+#### b. Configure Supabase Auth
+
+1. In Supabase Dashboard, go to **Authentication** → **Providers**
+2. Enable **Google** provider
+3. Add your Google Client ID and Client Secret
+4. Add scopes: `https://www.googleapis.com/auth/gmail.send`, `https://www.googleapis.com/auth/gmail.compose`
+
+### 5. Environment Variables
+
+Copy the example env file:
+
+```bash
+cp .env.example .env.local
+```
+
+Edit `.env.local` with your credentials:
+
+```bash
+# Database Configuration
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# AI Models
+OPENAI_API_KEY=sk-your-openai-api-key
+ANTHROPIC_API_KEY=sk-ant-your-anthropic-key  # Optional
+
+# Prospect Research
+EXA_API_KEY=your-exa-api-key
+
+# Email Enrichment (Optional)
+APOLLO_API_KEY=your-apollo-key
+HUNTER_API_KEY=your-hunter-key
+
+# Google OAuth
+GMAIL_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+GMAIL_CLIENT_SECRET=your-google-client-secret
+
+# Rate Limiting (Optional but recommended)
+UPSTASH_REDIS_REST_URL=https://your-redis.upstash.io
+UPSTASH_REDIS_REST_TOKEN=your-redis-token
+
+# Development
+NODE_ENV=development
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+### 6. Run the Development Server
+
+```bash
 npm run dev
+# or
+bun dev
 ```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## 🎯 Core Features
+
+### ✅ Implemented Features
+
+- **Natural Language Search:** Describe prospects in plain English
+- **AI Criteria Extraction:** Automatically parse search intent
+- **Exa Websets Integration:** High-quality prospect discovery
+- **Interactive Search Builder:** Refine criteria before searching
+- **Real-time Progress Tracking:** See results as they're found
+- **Prospect Grid View:** Cards with quality scores and enriched data
+- **Email Template Generation:** AI-powered personalization with GPT-4o-mini
+- **4-Email Sequences:** Initial + 3 follow-ups with delay scheduling
+- **Gmail Integration:** OAuth flow + send/draft capabilities
+- **Campaign Management:** Save and track campaigns
+- **Email Preview:** Review emails before sending
+- **Rate Limiting:** Protect APIs with configurable limits
+- **Analytics Dashboard:** Track opens, clicks, replies (infrastructure ready)
+
+### 🚧 Coming Soon
+
+- Stripe billing integration (webhook setup complete)
+- Advanced analytics and reporting
+- CSV import/export
+- Email scheduling and warm-up logic
+- Webhook processing for delivery events
+- CRM integrations (Salesforce, HubSpot)
+
+## 📚 API Routes
+
+### Prospect Search
+- `POST /api/prospect-search` - Create new search
+- `POST /api/prospect-search/execute` - Execute search
+- `GET /api/prospect-search/status` - Poll search progress
+
+### Email Generation
+- `POST /api/email/generate` - Generate AI email templates
+- `POST /api/email/create-draft` - Save draft to database
+
+### Gmail Integration
+- `POST /api/gmail/send` - Send email via Gmail
+- `POST /api/gmail/draft` - Create Gmail draft
+
+### Campaigns
+- `GET /api/campaigns` - List user campaigns
+- `POST /api/campaigns` - Create new campaign
+- `GET /api/campaigns/[id]` - Get campaign details
+
+## 🔐 Security
+
+- **Row-Level Security (RLS):** All Supabase tables protected
+- **User Isolation:** Users only see their own data
+- **Rate Limiting:** Configurable per endpoint
+- **OAuth Tokens:** Securely stored and refreshed
+- **Environment Variables:** Secrets never committed to repo
+
+### Rate Limits (Default)
+
+- Prospect Search: 5 searches/hour
+- Email Generation: 10 requests/minute
+- Email Sending: 100 emails/day (trial), 500/day (paid)
+
+## 📊 Database Schema
+
+Key tables:
+- `campaigns` - Campaign configurations and search criteria
+- `prospects` - Found prospects with enriched data
+- `draft_emails` - Email templates and instances
+- `email_analytics` - Event tracking (opens, clicks, replies)
+- `gmail_credentials` - OAuth token storage
+- `subscriptions` - User plans and quotas
+
+All tables include automatic timestamps and RLS policies.
+
+## 🚀 Deployment
+
+### Vercel (Recommended)
+
+1. Push your code to GitHub
+2. Import project in Vercel dashboard
+3. Add environment variables
+4. Deploy!
+
+Vercel will automatically:
+- Build the Next.js app
+- Set up serverless functions
+- Configure CDN and edge network
+- Enable automatic deployments on push
+
+### Environment Variables for Production
+
+Ensure you set all required environment variables in Vercel dashboard:
+- Add production Supabase credentials
+- Add production Google OAuth redirect URI
+- Enable Redis for production rate limiting
+
+## 🧪 Testing
+
+Run the development server and test the workflow:
+
+1. **Sign up/Login** → Create account or use Google OAuth
+2. **Search for Prospects** → Type natural language query
+3. **Review Results** → See enriched prospect cards
+4. **Generate Emails** → AI creates personalized templates
+5. **Preview & Send** → Review before sending via Gmail
+
+## 🐛 Troubleshooting
+
+### Gmail OAuth Not Working
+- Check redirect URI matches exactly in Google Cloud Console
+- Ensure Gmail API is enabled
+- Verify scopes in Supabase Auth provider settings
+
+### Rate Limiting Errors
+- If Redis not configured, rate limits are disabled (development only)
+- Add Upstash Redis credentials for production
+
+### Prospect Search Fails
+- Verify Exa API key is valid
+- Check API quota hasn't been exceeded
+- Review logs for detailed error messages
+
+### Email Generation Slow
+- Using GPT-4o-mini (fast model) by default
+- Check OpenAI API quota and rate limits
+- Consider caching common templates
+
+## 📖 Documentation
+
+- [Exa Websets API Docs](https://docs.exa.ai/reference/websets)
+- [OpenAI API Docs](https://platform.openai.com/docs)
+- [Supabase Docs](https://supabase.com/docs)
+- [Vercel AI SDK](https://sdk.vercel.ai/docs)
+- [Gmail API Docs](https://developers.google.com/gmail/api)
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+Apache-2.0
+
+## 🆘 Support
+
+For issues, questions, or feature requests:
+- Create an issue on GitHub
+- Check existing issues for solutions
+- Review troubleshooting guide above
+
+---
+
+**Built with ❤️ using Next.js, Vercel AI SDK, and Supabase**

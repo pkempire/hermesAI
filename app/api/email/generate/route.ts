@@ -1,29 +1,50 @@
 import { getCurrentUserId } from '@/lib/auth/get-current-user'
 import { logger } from '@/lib/utils/logger'
+import { checkRateLimit, chatRateLimit, getRateLimitErrorMessage } from '@/lib/utils/rate-limit'
 import { getModel } from '@/lib/utils/registry'
 import { generateText } from 'ai'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
   try {
-    const { 
-      prospects, 
-      campaignObjective, 
-      valueProposition, 
+    // Authenticate user first
+    const userId = await getCurrentUserId()
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Check rate limit
+    const rateLimitResult = await checkRateLimit(userId, chatRateLimit)
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        {
+          error: getRateLimitErrorMessage('email generation', rateLimitResult.reset),
+          retryAfter: rateLimitResult.reset
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+            'X-RateLimit-Reset': rateLimitResult.reset.toISOString(),
+          }
+        }
+      )
+    }
+
+    const {
+      prospects,
+      campaignObjective,
+      valueProposition,
       personalization,
-      emailTypes 
+      emailTypes
     } = await req.json()
-    
+
     logger.debug('Generating email templates:', {
       prospectsCount: prospects?.length || 0,
       emailTypesCount: emailTypes?.length || 0,
       personalizationSettings: Object.keys(personalization || {}).length
     })
-
-    const userId = await getCurrentUserId()
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
 
     // Validate inputs
     if (!prospects || !Array.isArray(prospects) || prospects.length === 0) {
@@ -36,8 +57,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'At least one email type is required' }, { status: 400 })
     }
 
-    // Use GPT-5-mini for fast email generation
-    const model = getModel('openai:gpt-5-mini')
+    // Use GPT-4o-mini for fast email generation
+    const model = getModel('openai:gpt-4o-mini')
 
     // Sample prospect context for personalization
     const prospectContext = prospects?.slice(0, 3).map((p: any) => ({
