@@ -45,15 +45,21 @@ export async function GET(request: Request) {
         }
       } catch {}
 
+      // Preserve the current deployment's domain (important for preview branches)
       const forwardedHost = request.headers.get('x-forwarded-host') // original origin before load balancer
+      const host = request.headers.get('host') || new URL(request.url).host
+      const protocol = request.headers.get('x-forwarded-proto') || 'https'
+      
       const isLocalEnv = process.env.NODE_ENV === 'development'
       if (isLocalEnv) {
         // we can be sure that there is no load balancer in between, so no need to watch for X-Forwarded-Host
         return NextResponse.redirect(`${origin}${next}`)
-      } else if (forwardedHost) {
-        return NextResponse.redirect(`https://${forwardedHost}${next}`)
       } else {
-        return NextResponse.redirect(`${origin}${next}`)
+        // Use the current request's host to preserve preview deployment URLs
+        // This ensures stable-sept-29 preview stays on stable-sept-29, not main
+        const currentHost = forwardedHost || host
+        const redirectUrl = `${protocol}://${currentHost}${next}`
+        return NextResponse.redirect(redirectUrl)
       }
     }
   }
@@ -64,10 +70,19 @@ export async function GET(request: Request) {
   // If provider=google was passed, try to initiate OAuth flow
   if (provider === 'google') {
     const supabase = await createClient()
+    // Preserve current deployment domain for OAuth callback
+    const forwardedHost = request.headers.get('x-forwarded-host')
+    const host = request.headers.get('host') || new URL(request.url).host
+    const protocol = request.headers.get('x-forwarded-proto') || 'https'
+    const currentHost = forwardedHost || host
+    const callbackUrl = process.env.NODE_ENV === 'development' 
+      ? `${origin}/auth/oauth`
+      : `${protocol}://${currentHost}/auth/oauth`
+    
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${origin}/auth/oauth`,
+        redirectTo: callbackUrl,
         scopes: 'https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.send'
       }
     })
