@@ -93,11 +93,7 @@ export async function GET(request: Request) {
     }
 
     console.log('🔧 [OAuth] Failed to get Google OAuth URL:', error)
-    // Preserve current deployment domain for error redirects too
-    const forwardedHost = request.headers.get('x-forwarded-host')
-    const host = request.headers.get('host') || new URL(request.url).host
-    const protocol = request.headers.get('x-forwarded-proto') || 'https'
-    const currentHost = forwardedHost || host
+    // Reuse variables already declared above for error redirect
     const errorUrl = process.env.NODE_ENV === 'development'
       ? `${origin}/auth/error?error=${encodeURIComponent('Google OAuth not configured in Supabase')}`
       : `${protocol}://${currentHost}/auth/error?error=${encodeURIComponent('Google OAuth not configured in Supabase')}`
