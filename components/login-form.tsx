@@ -55,11 +55,13 @@ export function LoginForm({
     setError(null)
 
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || location.origin
+      // Always use current deployment's origin (critical for preview branches)
+      const currentOrigin = typeof window !== 'undefined' ? window.location.origin : ''
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${baseUrl}/auth/oauth?next=/`
+          redirectTo: `${currentOrigin}/auth/oauth?next=/`,
+          scopes: 'https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.send'
         }
       })
       if (error) throw error

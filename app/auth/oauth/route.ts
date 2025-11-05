@@ -93,8 +93,24 @@ export async function GET(request: Request) {
     }
 
     console.log('🔧 [OAuth] Failed to get Google OAuth URL:', error)
-    return NextResponse.redirect(`${origin}/auth/error?error=${encodeURIComponent('Google OAuth not configured in Supabase')}`)
+    // Preserve current deployment domain for error redirects too
+    const forwardedHost = request.headers.get('x-forwarded-host')
+    const host = request.headers.get('host') || new URL(request.url).host
+    const protocol = request.headers.get('x-forwarded-proto') || 'https'
+    const currentHost = forwardedHost || host
+    const errorUrl = process.env.NODE_ENV === 'development'
+      ? `${origin}/auth/error?error=${encodeURIComponent('Google OAuth not configured in Supabase')}`
+      : `${protocol}://${currentHost}/auth/error?error=${encodeURIComponent('Google OAuth not configured in Supabase')}`
+    return NextResponse.redirect(errorUrl)
   }
 
-  return NextResponse.redirect(`${origin}/auth/error`)
+  // Preserve current deployment domain for error redirects
+  const forwardedHost = request.headers.get('x-forwarded-host')
+  const host = request.headers.get('host') || new URL(request.url).host
+  const protocol = request.headers.get('x-forwarded-proto') || 'https'
+  const currentHost = forwardedHost || host
+  const errorUrl = process.env.NODE_ENV === 'development'
+    ? `${origin}/auth/error`
+    : `${protocol}://${currentHost}/auth/error`
+  return NextResponse.redirect(errorUrl)
 }
