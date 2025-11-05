@@ -4,7 +4,7 @@ import { CHAT_ID } from '@/lib/constants'
 import { Model } from '@/lib/types/models'
 import { cn } from '@/lib/utils'
 import { useChat } from '@ai-sdk/react'
-import { ChatRequestOptions, JSONValue, type UIMessage as Message } from 'ai'
+import { ChatRequestOptions, DefaultChatTransport, JSONValue, type UIMessage as Message } from 'ai'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { ChatMessages } from './chat-messages'
@@ -47,7 +47,9 @@ export function Chat({
 
   const chatHook = useChat({
     id: CHAT_ID,
-    body: {
+    transport: new DefaultChatTransport({
+      api: '/api/chat',
+    }),    body: {
       id
     },
     onFinish: () => {
