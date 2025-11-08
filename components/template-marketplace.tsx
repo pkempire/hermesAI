@@ -245,6 +245,7 @@ export const TemplateMarketplace = memo(function TemplateMarketplace({
       </Card>
     )
   })
+  TemplateCard.displayName = 'TemplateCard'
 
   if (loading) {
     return (

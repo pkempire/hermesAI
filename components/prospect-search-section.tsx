@@ -244,7 +244,7 @@ export function ProspectSearchSection({
 
     // Store eventSource reference for cleanup
     pollingIntervalRef.current = eventSource as any
-  }, [])
+  }, [currentSearchCriteria.entityType, currentSearchCriteria.query, parseToolResult, streamingWebsetId])
 
   // Cleanup SSE on unmount
   useEffect(() => {
@@ -314,7 +314,7 @@ export function ProspectSearchSection({
       setSearchStatus('failed')
       setSearchMessage(result.message || 'Search failed')
     }
-  }, [tool, parseToolResult, startStreamingPolling, uiType])
+  }, [tool, parseToolResult, startStreamingPolling, uiType, currentSearchCriteria])
 
   // Track UI type changes for debugging (dev only)
   useEffect(() => {
@@ -323,7 +323,7 @@ export function ProspectSearchSection({
     }
   }, [uiType])
 
-  const toolResult = useMemo(() => parseToolResult(), [parseToolResult, tool])
+  const toolResult = useMemo(() => parseToolResult(), [parseToolResult])
   
   // Always log tool state for debugging
   if (process.env.NODE_ENV !== 'production') {

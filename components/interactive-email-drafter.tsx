@@ -80,7 +80,7 @@ export function InteractiveEmailDrafter({
         }
       }
     }
-  }, [prospects])
+  }, [prospects, actualProspects.length])
   
   // Update when props change
   useEffect(() => {

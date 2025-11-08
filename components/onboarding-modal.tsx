@@ -107,7 +107,7 @@ const ONBOARDING_STEPS = [
               <div className="flex-1">
                 <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-2">Example</p>
                 <p className="text-sm font-medium text-gray-900 leading-relaxed">
-                  "Find CTOs at fintech startups who recently posted about API scaling challenges"
+                  &quot;Find CTOs at fintech startups who recently posted about API scaling challenges&quot;
                 </p>
               </div>
             </div>
@@ -126,7 +126,7 @@ const ONBOARDING_STEPS = [
               <div className="flex-1">
                 <p className="text-xs font-semibold text-yellow-700 uppercase tracking-wide mb-2">Another Example</p>
                 <p className="text-sm font-medium text-gray-900 leading-relaxed">
-                  "VPs of Marketing at B2B SaaS companies with 50-200 employees in NYC"
+                  &quot;VPs of Marketing at B2B SaaS companies with 50-200 employees in NYC&quot;
                 </p>
               </div>
             </div>

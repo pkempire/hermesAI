@@ -31,10 +31,11 @@ export function RenderMessage({
   onUpdateMessage,
   reload
 }: RenderMessageProps) {
+  const messageAnnotations = (message as any)?.annotations
   const relatedQuestions = useMemo(() => {
-    const annotations = (message as any)?.annotations as any[] | undefined
+    const annotations = messageAnnotations as any[] | undefined
     return annotations?.filter(a => a?.type === 'related-questions')
-  }, [(message as any)?.annotations])
+  }, [messageAnnotations])
 
   // Tool calls and results are now handled directly from message.parts
   // No need to parse from annotations or metadata
