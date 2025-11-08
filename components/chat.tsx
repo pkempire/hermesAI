@@ -446,8 +446,9 @@ export function Chat({
 
   return (
     <div
-      className="relative flex h-full min-w-0 min-h-0 flex-1 overflow-hidden bg-gray-50 pt-0"
+      className="relative flex min-w-0 min-h-0 flex-1 overflow-hidden bg-gray-50 pt-0 h-screen md:h-full"
       data-testid="full-chat"
+      style={{ height: '100dvh' }} // Dynamic viewport height for mobile browsers
     >
       {showProgressTracker ? (
         // Campaign layout with compact progress at top; chat takes full width

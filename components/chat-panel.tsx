@@ -213,13 +213,13 @@ export function ChatPanel({
     <div
       className={cn(
         'w-full group/form-container shrink-0 relative z-10',
-        messages.length > 0 ? 'px-4 pb-4' : 'px-4 sm:px-8 pb-8'
+        messages.length > 0 ? 'px-2 sm:px-4 pb-2 sm:pb-4' : 'px-2 sm:px-4 md:px-8 pb-4 sm:pb-8'
       )}
     >
       {/* Title header (only when there is no conversation yet) - Compact design */}
       {messages.length === 0 && (
         <div className={cn('max-w-4xl w-full mx-auto mb-4')}>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-1">
             <RotatingHeroText />
           </h1>
           <p className="text-sm text-gray-600 mt-1">Describe who you want to reach. I'll find them, verify details, and craft personalized emails.</p>
@@ -266,12 +266,12 @@ export function ChatPanel({
             'relative z-[5] flex items-end w-full bg-white rounded-xl border border-gray-200 shadow-sm transition-all duration-200',
             'focus-within:border-gray-400 focus-within:shadow-md hover:shadow-md'
           )}>
-            <div className="p-3 z-[10] flex items-center gap-2">
+            <div className="p-2 sm:p-3 z-[10] flex items-center gap-1 sm:gap-2">
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
-                className="w-10 h-10 rounded-xl"
+                className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl"
                 onClick={() => fileInputRef.current?.click()}
                 title="Attach file"
               >
@@ -281,7 +281,7 @@ export function ChatPanel({
                 type="button"
                 size="sm"
                 variant={isListening ? 'destructive' : 'outline'}
-                className="w-10 h-10 rounded-xl"
+                className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl"
                 onClick={startVoice}
                 title="Voice input"
               >
@@ -300,7 +300,7 @@ export function ChatPanel({
               spellCheck={false}
               value={input}
               disabled={isLoading || isToolInvocationInProgress()}
-              className="resize-none w-full min-h-[60px] bg-transparent border-0 px-6 py-4 text-base text-gray-900 placeholder:text-amber-600/60 placeholder:font-medium focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              className="resize-none w-full min-h-[50px] sm:min-h-[60px] bg-transparent border-0 px-3 sm:px-6 py-3 sm:py-4 text-sm sm:text-base text-gray-900 placeholder:text-amber-600/60 placeholder:font-medium focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
               onChange={e => {
                 if (handleInputChange) {
                   handleInputChange(e)
@@ -330,12 +330,12 @@ export function ChatPanel({
             />
 
             {/* Divine send button */}
-            <div className="p-3 z-[10]">
+            <div className="p-2 sm:p-3 z-[10]">
               <Button
                 type="button"
                 size="sm"
                 className={cn(
-                  'w-10 h-10 rounded-xl bg-primary text-primary-foreground shadow-sm',
+                  'w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-primary text-primary-foreground shadow-sm',
                   'disabled:bg-gray-300 disabled:text-gray-700 disabled:cursor-not-allowed',
                   (!input || input.length === 0) && !isLoading && 'opacity-50 scale-95',
                   isLoading && 'bg-gradient-to-r from-amber-400 to-yellow-400 animate-pulse'

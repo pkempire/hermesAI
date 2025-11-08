@@ -145,7 +145,7 @@ export function ChatMessages({
         'scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent'
       )}
     >
-      <div className="relative mx-auto w-full max-w-3xl px-3 md:px-4 pb-24">
+      <div className="relative mx-auto w-full max-w-3xl px-2 sm:px-3 md:px-4 pb-20 sm:pb-24">
         {sections.map((section, sectionIndex) => (
           <div
             key={section.id}
