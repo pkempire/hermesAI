@@ -301,16 +301,19 @@ export function Chat({
   }, [sections, messages])
 
   // Sync saved messages immediately on mount if useChat hook didn't load them
+  const hasInitializedRef = useRef(false)
   useEffect(() => {
+    if (hasInitializedRef.current) return
     // Wait a tick to ensure useChat has initialized
     const timer = setTimeout(() => {
       if (savedMessages?.length && messages.length === 0) {
         // useChat's initialMessages might not have loaded yet, force sync
         setMessages(savedMessages)
+        hasInitializedRef.current = true
       }
     }, 100)
     return () => clearTimeout(timer)
-  }, []) // Run once on mount
+  }, [messages.length, savedMessages, setMessages]) // Include dependencies for ESLint, but use ref to prevent re-runs
 
   // Also sync when savedMessages change (e.g., after navigation or refresh)
   useEffect(() => {

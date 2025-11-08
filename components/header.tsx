@@ -3,6 +3,7 @@
 import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar'
 import { cn } from '@/lib/utils'
 import { User } from '@supabase/supabase-js'
+import Image from 'next/image'
 import Link from 'next/link'
 import React, { useEffect, useState } from 'react'
 import GuestMenu from './guest-menu'
@@ -51,11 +52,13 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
           >
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-full blur-sm opacity-0 group-hover:opacity-30 transition-opacity duration-300" />
-              <img
+              <Image
                 src="/images/hermes-avatar.png"
                 alt="Hermes"
-                className="relative h-7 w-7 md:h-8 md:w-8 rounded-full border-2 border-amber-200 shadow-sm group-hover:border-amber-300 transition-colors"
-                onError={(e) => { e.currentTarget.style.display = 'none' }}
+                width={32}
+                height={32}
+                className="relative h-7 w-7 md:h-8 md:w-8 rounded-full border-2 border-amber-200 shadow-sm group-hover:border-amber-300 transition-colors object-cover"
+                unoptimized
               />
             </div>
             <div className="hidden sm:block">
