@@ -23,13 +23,11 @@ export async function requireQuota({ userId, cost, kind, idempotencyKey }: Quota
     .eq('user_id', userId)
     .maybeSingle()
 
-  const now = new Date()
-  const inTrial = sub?.trial_expires_at ? new Date(sub.trial_expires_at) > now : false
-  const quota = sub?.quota_monthly ?? (inTrial ? 200 : 0)
+  const quota = sub?.quota_monthly ?? 0
   const used = sub?.used_this_month ?? 0
 
-  if (!inTrial && quota <= 0) {
-    return { ok: false, reason: 'No active plan. Start trial or subscribe.' }
+  if (quota <= 0) {
+    return { ok: false, reason: 'No credits remaining. Please upgrade your plan.' }
   }
   if (used + cost > quota) {
     return { ok: false, reason: 'Monthly quota exceeded.' }

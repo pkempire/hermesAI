@@ -43,14 +43,19 @@ export function SignUpForm({
     try {
       const { error } = await supabase.auth.signUp({ email, password })
       if (error) throw error
-      // After account creation, redirect to Google sign-in to grant Gmail scopes and start trial
+      // After account creation, redirect to Google sign-in to grant Gmail scopes and get 100 credits
       // Always use current deployment's origin (critical for preview branches)
       const currentOrigin = typeof window !== 'undefined' ? window.location.origin : ''
+      console.log('🔧 [SignUpForm] Initiating Google OAuth from:', currentOrigin)
       await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${currentOrigin}/auth/oauth?next=/`,
-          scopes: 'https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.modify openid email profile'
+          scopes: 'https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.modify openid email profile',
+          queryParams: {
+            // Force account selection to prevent wrong account issue
+            prompt: 'select_account'
+          }
         }
       })
     } catch (error: unknown) {
@@ -72,7 +77,7 @@ export function SignUpForm({
             Create an account
           </CardTitle>
           <CardDescription>
-            Start your 7‑day free trial. We’ll email a reminder before $39/mo begins.
+            Get started with 100 free credits. No credit card required.
           </CardDescription>
         </CardHeader>
         <CardContent>

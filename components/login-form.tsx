@@ -57,11 +57,16 @@ export function LoginForm({
     try {
       // Always use current deployment's origin (critical for preview branches)
       const currentOrigin = typeof window !== 'undefined' ? window.location.origin : ''
+      console.log('🔧 [LoginForm] Initiating Google OAuth from:', currentOrigin)
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${currentOrigin}/auth/oauth?next=/`,
-          scopes: 'https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.send'
+          scopes: 'https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.send',
+          queryParams: {
+            // Force account selection to prevent wrong account issue
+            prompt: 'select_account'
+          }
         }
       })
       if (error) throw error
@@ -85,7 +90,7 @@ export function LoginForm({
             <IconLogo className="size-12" />
             Welcome back
           </CardTitle>
-          <CardDescription>Sign in to continue your 7‑day free trial</CardDescription>
+          <CardDescription>Sign in to access your account</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-4">
