@@ -109,14 +109,13 @@ export function ProspectSearchSection({
         // Update prospects if available (only new ones)
         if (data.prospects && Array.isArray(data.prospects) && data.prospects.length > 0) {
           setProspects(prev => {
-            // Merge by unique id to allow incremental growth without flicker
-            const byId = new Map<string, Prospect>()
-            for (const p of prev) byId.set(p.id, p)
-            // Only add new prospects (those after lastItemCount)
-            const newProspects = data.prospects.slice(lastItemCount)
-            for (const p of newProspects) byId.set(p.id, p)
-            lastItemCount = data.totalProspects || byId.size
-            return Array.from(byId.values())
+            // Optimized incremental update: only add truly new prospects
+            const existingIds = new Set(prev.map(p => p.id))
+            const newProspects = data.prospects.filter(p => !existingIds.has(p.id))
+            lastItemCount = data.totalProspects || (prev.length + newProspects.length)
+            
+            // Only create new array if there are actually new prospects
+            return newProspects.length > 0 ? [...prev, ...newProspects] : prev
           })
         }
 
