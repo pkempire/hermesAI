@@ -110,8 +110,8 @@ export function ProspectSearchSection({
         if (data.prospects && Array.isArray(data.prospects) && data.prospects.length > 0) {
           setProspects(prev => {
             // Optimized incremental update: only add truly new prospects
-            const existingIds = new Set(prev.map(p => p.id))
-            const newProspects = data.prospects.filter(p => !existingIds.has(p.id))
+            const existingIds = new Set(prev.map((p: Prospect) => p.id))
+            const newProspects = data.prospects.filter((p: Prospect) => !existingIds.has(p.id))
             lastItemCount = data.totalProspects || (prev.length + newProspects.length)
             
             // Only create new array if there are actually new prospects
