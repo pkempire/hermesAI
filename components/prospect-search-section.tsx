@@ -319,13 +319,7 @@ export function ProspectSearchSection({
       setEvidenceMode(Boolean(result.props?.evidenceMode))
       setSearchStatus('idle')
       setSearchMessage(result.message || 'Interactive search builder ready')
-      // Set initial criteria from props if available
-      if (result.props?.initialCriteria) {
-        setCurrentSearchCriteria({
-          ...currentSearchCriteria,
-          ...result.props.initialCriteria
-        })
-      }
+      // Initial criteria are now derived from tool.args automatically
     } else if (result.type === 'streaming') {
       setUiType('streaming')
       setSearchStatus('running')

@@ -9,7 +9,7 @@ import {
   SidebarTrigger
 } from '@/components/ui/sidebar'
 import { cn } from '@/lib/utils'
-import { Plus } from 'lucide-react'
+import { Plus, Search, Send } from 'lucide-react'
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { ChatHistorySection } from './sidebar/chat-history-section'
@@ -32,7 +32,23 @@ export default function AppSidebar() {
             <SidebarMenuButton asChild>
               <Link href="/" className="flex items-center gap-2">
                 <Plus className="size-4" />
-                <span>New</span>
+                <span>New Chat</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <Link href="/prospect-search" className="flex items-center gap-2">
+                <Search className="size-4" />
+                <span>Find Prospects</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <Link href="/campaigns" className="flex items-center gap-2">
+                <Send className="size-4" />
+                <span>Campaigns</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

@@ -162,7 +162,7 @@ export class HunterClient {
             prospect.domain
           )
 
-          if (personEmail) {
+          if (personEmail && personEmail.email) {
             return {
               email: personEmail.email || undefined,
               emailScore: personEmail.verification.score,

@@ -499,3 +499,5 @@ npm run test:deliverability
 This PRD provides a comprehensive blueprint for transforming Morphic.sh into HermesAI, a powerful cold email platform. By leveraging Morphic's solid foundation and integrating Exa.ai's advanced prospect research capabilities, developers can build a competitive SaaS product that addresses the critical needs of modern B2B sales teams.
 
 The key to success lies in maintaining laser focus on email deliverability, providing an intuitive user experience, and ensuring compliance with evolving regulations. Following this PRD and the included specifications will result in a platform capable of competing with established players while offering unique advantages in AI-powered personalization and data quality.
+
+@orangeslice-docs/CLAUDE.md

@@ -1,29 +1,10 @@
-import { getCurrentUserId } from '@/lib/auth/get-current-user'
-import { createClient } from '@/lib/supabase/server'
-import Exa from 'exa-js'
-import { NextRequest } from 'next/server'
 import { canAccessWebset } from '@/lib/auth/authorize-webset-access'
 import { requireAuthUser } from '@/lib/auth/require-auth-user'
 import { logger } from '@/lib/utils/logger'
+import Exa from 'exa-js'
+import { NextRequest } from 'next/server'
 
 let cachedExa: Exa | null = null
-
-async function ensureWebsetOwnership(websetId: string, userId: string) {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('campaigns')
-    .select('id')
-    .eq('user_id', userId)
-    .contains('settings', { exa_webset_id: websetId } as any)
-    .limit(1)
-
-  if (error) {
-    logger.error('Ownership lookup failed:', error)
-    return false
-  }
-
-  return Boolean(data && data.length > 0)
-}
 
 export async function GET(req: NextRequest) {
   const auth = await requireAuthUser()
@@ -45,22 +26,42 @@ export async function GET(req: NextRequest) {
     return new Response('Forbidden', { status: 403 })
   }
 
-  // Reuse cached Exa client for speed
   if (!cachedExa) {
     cachedExa = new Exa(process.env.EXA_API_KEY!)
   }
   const exa = cachedExa
+
+  let cleanupStream = () => {}
 
   const stream = new ReadableStream({
     async start(controller) {
       const encoder = new TextEncoder()
       let lastItemCount = 0
       let pollCount = 0
+      let isClosed = false
+      let timeoutId: NodeJS.Timeout | null = null
       const maxPolls = 600
 
       const send = (data: Record<string, any>) => {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
+        if (isClosed) return
+        try {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
+        } catch (error) {
+          logger.error('Error sending stream message:', error)
+        }
       }
+
+      const cleanup = () => {
+        isClosed = true
+        if (timeoutId) {
+          clearTimeout(timeoutId)
+          timeoutId = null
+        }
+        try {
+          controller.close()
+        } catch {}
+      }
+      cleanupStream = cleanup
 
       send({
         type: 'prospect_search_start',
@@ -71,6 +72,8 @@ export async function GET(req: NextRequest) {
       })
 
       const poll = async () => {
+        if (isClosed) return
+
         try {
           pollCount += 1
           const webset = await exa.websets.get(websetId)
@@ -83,16 +86,17 @@ export async function GET(req: NextRequest) {
           let prospects: any[] = []
           try {
             const itemsResponse = await exa.websets.items.list(websetId, { limit: 100 })
-            prospects = itemsResponse.data?.map((item: any) => ({
-              id: item.id,
-              exaItemId: item.id,
-              fullName: item.title || 'Profile Found',
-              company: 'Unknown',
-              jobTitle: 'Unknown',
-              linkedinUrl: item.url || undefined,
-              website: item.url,
-              enrichments: item.enrichments || []
-            })) || []
+            prospects =
+              itemsResponse.data?.map((item: any) => ({
+                id: item.id,
+                exaItemId: item.id,
+                fullName: item.title || 'Profile Found',
+                company: 'Unknown',
+                jobTitle: 'Unknown',
+                linkedinUrl: item.url || undefined,
+                website: item.url,
+                enrichments: item.enrichments || []
+              })) || []
           } catch (itemsError) {
             logger.error('Error listing stream items:', itemsError)
           }
@@ -113,15 +117,16 @@ export async function GET(req: NextRequest) {
             message: `Analyzed ${analyzed} records and found ${Math.max(found, prospects.length)} matches.`
           })
 
-          lastItemCount = prospects.length
-
-          // Check if complete or failed
           const status = String(webset.status)
-          if (status === 'idle' || status === 'completed' || status === 'failed' || status === 'cancelled' || status === 'canceled') {
-          // Check if complete or failed (status is 'idle' when complete in Exa SDK)
-          if (webset.status === 'idle' || (webset.status as string) === 'failed') {
+          if (
+            status === 'idle' ||
+            status === 'completed' ||
+            status === 'failed' ||
+            status === 'cancelled' ||
+            status === 'canceled'
+          ) {
             send({ type: 'complete', status: webset.status })
-            controller.close()
+            cleanup()
             return
           }
 
@@ -145,13 +150,13 @@ export async function GET(req: NextRequest) {
               reason: 'target_reached',
               message: 'Target reached. Search stopped.'
             })
-            controller.close()
+            cleanup()
             return
           }
 
-          if (pollCount < maxPolls) {
-            setTimeout(poll, 500)
-          } else {
+          if (pollCount < maxPolls && !isClosed) {
+            timeoutId = setTimeout(poll, 500)
+          } else if (!isClosed) {
             send({
               type: 'prospect_search_error',
               event: 'error',
@@ -159,22 +164,27 @@ export async function GET(req: NextRequest) {
               status: 'timeout',
               message: 'Search stream timed out.'
             })
-            controller.close()
+            cleanup()
           }
         } catch (error) {
           logger.error('Error while polling prospect stream:', error)
-          send({
-            type: 'prospect_search_error',
-            event: 'error',
-            websetId,
-            status: 'failed',
-            message: error instanceof Error ? error.message : 'Unknown stream error'
-          })
-          controller.close()
+          if (!isClosed) {
+            send({
+              type: 'prospect_search_error',
+              event: 'error',
+              websetId,
+              status: 'failed',
+              message: error instanceof Error ? error.message : 'Unknown stream error'
+            })
+            cleanup()
+          }
         }
       }
 
       poll()
+    },
+    cancel() {
+      cleanupStream()
     }
   })
 

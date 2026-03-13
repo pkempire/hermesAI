@@ -71,13 +71,21 @@ export async function checkRateLimit(
 }
 
 /**
+ * Get user plan from database - placeholder for now
+ */
+async function getUserPlan(userId: string): Promise<'trial' | 'paid'> {
+  // TODO: Implement actual database lookup
+  // For now, return trial to avoid build errors
+  return 'trial'
+}
+
+/**
  * Get user-specific rate limiter based on their plan
  */
 export async function getUserRateLimiter(userId: string, type: 'email' | 'search' | 'chat') {
   // TODO: Fetch user plan from database
-  // For now, assume trial tier
-  const userPlan: 'trial' | 'paid' = process.env.DEFAULT_USER_PLAN === 'paid' ? 'paid' : 'trial'
-  
+  // For now, assume trial tier - will be dynamic later
+  const userPlan = await getUserPlan(userId) // Default to trial for now
   if (type === 'email') {
     return userPlan === 'paid' ? emailSendRateLimitPaid : emailSendRateLimit
   }

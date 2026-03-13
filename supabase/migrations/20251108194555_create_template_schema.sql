@@ -161,3 +161,5 @@ create trigger trg_update_prospect_templates_updated_at
 before update on prospect_templates
 for each row execute function update_prospect_templates_updated_at();
 
+
+

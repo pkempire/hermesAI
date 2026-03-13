@@ -9,7 +9,6 @@
     "start": "next start",
     "lint": "next lint"
   },
-  
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.0",
     "@ai-sdk/openai": "^2.0.0",
@@ -55,6 +54,7 @@
     "node-html-parser": "^6.1.13",
     "ollama-ai-provider": "^1.2.0",
     "openai": "^5.10.2",
+    "orangeslice": "^2.1.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-icons": "^5.0.1",
