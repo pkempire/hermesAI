@@ -143,8 +143,8 @@ export async function GET(req: NextRequest) {
 
           lastItemCount = prospects.length
 
-          // Check if complete or failed
-          if (webset.status === 'completed' || webset.status === 'failed') {
+          // Check if complete or failed (status is 'idle' when complete in Exa SDK)
+          if (webset.status === 'idle' || (webset.status as string) === 'failed') {
             send({ type: 'complete', status: webset.status })
             controller.close()
             return
