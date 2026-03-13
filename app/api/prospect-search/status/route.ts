@@ -1,16 +1,26 @@
 import Exa from 'exa-js';
 import { NextRequest, NextResponse } from 'next/server';
+import { canAccessWebset } from '@/lib/auth/authorize-webset-access'
+import { requireAuthUser } from '@/lib/auth/require-auth-user'
 
 // Cache Exa client to avoid recreating on each request
 let cachedExa: Exa | null = null;
 
 export async function GET(req: NextRequest) {
   try {
+    const auth = await requireAuthUser()
+    if (!auth.ok) {
+      return auth.response
+    }
+
     const { searchParams } = new URL(req.url!);
     const websetId = searchParams.get('websetId');
     const targetParam = searchParams.get('target');
     const targetCount = targetParam ? Number(targetParam) : undefined;
     if (!websetId) return NextResponse.json({ error: 'Missing websetId' }, { status: 400 });
+
+    const allowed = await canAccessWebset(auth.userId, websetId)
+    if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     // Reuse cached Exa client for speed
     if (!cachedExa) {

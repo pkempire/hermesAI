@@ -1,12 +1,29 @@
 import { createClient } from '@/lib/supabase/server'
+import { requireAuthUser } from '@/lib/auth/require-auth-user'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ campaignId: string }> }
 ) {
+  const auth = await requireAuthUser()
+  if (!auth.ok) {
+    return auth.response
+  }
+
   const { campaignId } = await params
   const supabase = await createClient()
+
+  const { data: campaign } = await supabase
+    .from('campaigns')
+    .select('id')
+    .eq('id', campaignId)
+    .eq('user_id', auth.userId)
+    .maybeSingle()
+
+  if (!campaign) {
+    return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
+  }
 
   const { data: rows, error } = await supabase
     .from('prospects')
@@ -30,5 +47,4 @@ export async function GET(
     }
   })
 }
-
 

@@ -36,6 +36,38 @@ export function ProspectSearchSection({
   const [showEmailDrafter, setShowEmailDrafter] = useState(false)
   const [evidenceMode, setEvidenceMode] = useState(false)
 
+  // Extract search criteria from tool arguments for display
+  const getSearchCriteria = useCallback(() => {
+    if (tool.args) {
+      try {
+        const args = typeof tool.args === 'string' ? JSON.parse(tool.args) : tool.args
+        return {
+          query: args.query || '',
+          entityType: args.entityType || 'company',
+          targetCount: args.targetCount || 10,
+          enrichments: args.enrichments || ['email', 'linkedin', 'company_info']
+        }
+      } catch (error) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('Error parsing search criteria:', error)
+        }
+      }
+    }
+
+    return {
+      query: '',
+      entityType: 'company',
+      targetCount: 10,
+      enrichments: ['email', 'linkedin', 'company_info']
+    }
+  }, [tool.args])
+
+  const [currentSearchCriteria, setCurrentSearchCriteria] = useState(getSearchCriteria())
+
+  useEffect(() => {
+    setCurrentSearchCriteria(getSearchCriteria())
+  }, [getSearchCriteria])
+
   // Parse the tool result to determine UI type and handle different response formats
   const parseToolResult = useCallback(() => {
     
@@ -345,34 +377,6 @@ export function ProspectSearchSection({
       setSearchStatus('running')
     }
   }, [uiType, prospects.length, lastStatus])
-
-  // Extract search criteria from tool arguments for display
-  const getSearchCriteria = () => {
-    if (tool.args) {
-      try {
-        const args = typeof tool.args === 'string' ? JSON.parse(tool.args) : tool.args
-        return {
-          query: args.query || '',
-          entityType: args.entityType || 'company',
-          targetCount: args.targetCount || 10,
-          enrichments: args.enrichments || ['email', 'linkedin', 'company_info']
-        }
-      } catch (error) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.error('Error parsing search criteria:', error)
-        }
-      }
-    }
-    
-    return {
-      query: '',
-      entityType: 'company',
-      targetCount: 10,
-      enrichments: ['email', 'linkedin', 'company_info']
-    }
-  }
-
-  const currentSearchCriteria = getSearchCriteria()
 
   // Get status badge variant
   const getStatusBadgeVariant = () => {
