@@ -1,4 +1,4 @@
-import { getCurrentUserId } from '@/lib/auth/get-current-user'
+import { requireAuthUserId } from '@/lib/auth/require-auth-user'
 import { logger } from '@/lib/utils/logger'
 import { getModel } from '@/lib/utils/registry'
 import { generateText } from 'ai'
@@ -20,10 +20,9 @@ export async function POST(req: NextRequest) {
       personalizationSettings: Object.keys(personalization || {}).length
     })
 
-    const userId = await getCurrentUserId()
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const auth = await requireAuthUserId()
+    if ('response' in auth) return auth.response
+
 
     // Validate inputs
     if (!prospects || !Array.isArray(prospects) || prospects.length === 0) {

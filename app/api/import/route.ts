@@ -1,12 +1,14 @@
-import { getCurrentUserId } from '@/lib/auth/get-current-user'
+import { requireAuthUserId } from '@/lib/auth/require-auth-user'
 import { createClient } from '@/lib/supabase/server'
 import { parse } from 'csv-parse/sync'
 import { NextRequest, NextResponse } from 'next/server'
 
 // POST /api/import  body: multipart/form-data with file, and optional { name, entityType }
 export async function POST(req: NextRequest) {
-  const userId = await getCurrentUserId()
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireAuthUserId()
+  if ('response' in auth) return auth.response
+
+  const { userId } = auth
 
   const contentType = req.headers.get('content-type') || ''
   if (!contentType.includes('multipart/form-data')) {
@@ -68,5 +70,3 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ campaignId: campaign.id, imported: prospects.length })
 }
-
-

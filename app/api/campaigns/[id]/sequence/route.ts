@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getCurrentUserId } from '@/lib/auth/get-current-user'
+import { requireAuthUserId } from '@/lib/auth/require-auth-user'
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const userId = await getCurrentUserId()
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireAuthUserId()
+  if ('response' in auth) return auth.response
+
+  const { userId } = auth
   const { id } = await params
   const body = await req.json()
   const supabase = await createClient()
@@ -16,5 +18,3 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
-
-

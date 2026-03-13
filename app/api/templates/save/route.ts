@@ -1,13 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
-import { getCurrentUserId } from '@/lib/auth/get-current-user'
+import { requireAuthUserId } from '@/lib/auth/require-auth-user'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
   try {
-    const userId = await getCurrentUserId()
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const auth = await requireAuthUserId()
+    if ('response' in auth) return auth.response
+
+    const { userId } = auth
 
     const { templateId } = await req.json()
 
@@ -54,10 +54,10 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const userId = await getCurrentUserId()
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const auth = await requireAuthUserId()
+    if ('response' in auth) return auth.response
+
+    const { userId } = auth
 
     const { searchParams } = new URL(req.url)
     const templateId = searchParams.get('templateId')

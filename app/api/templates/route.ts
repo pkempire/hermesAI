@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { getCurrentUserId } from '@/lib/auth/get-current-user'
+import { requireAuthUserId } from '@/lib/auth/require-auth-user'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(req: NextRequest) {
@@ -10,10 +10,10 @@ export async function GET(req: NextRequest) {
     const supabase = await createClient()
 
     if (type === 'saved') {
-      const userId = await getCurrentUserId()
-      if (!userId) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
+      const auth = await requireAuthUserId()
+      if ('response' in auth) return auth.response
+
+      const { userId } = auth
 
       // Get user's saved templates
       const { data, error } = await supabase
