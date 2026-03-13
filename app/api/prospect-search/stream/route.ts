@@ -1,5 +1,7 @@
 import Exa from 'exa-js'
-import { authorizeWebsetAccess } from '@/lib/auth/authorize-webset-access'
+import { NextRequest } from 'next/server'
+import { canAccessWebset } from '@/lib/auth/authorize-webset-access'
+import { requireAuthUser } from '@/lib/auth/require-auth-user'
 import { logger } from '@/lib/utils/logger'
 import { NextRequest } from 'next/server'
 
@@ -7,6 +9,11 @@ import { NextRequest } from 'next/server'
 let cachedExa: Exa | null = null
 
 export async function GET(req: NextRequest) {
+  const auth = await requireAuthUser()
+  if (!auth.ok) {
+    return auth.response
+  }
+
   const { searchParams } = new URL(req.url!)
   const websetId = searchParams.get('websetId')
   const targetParam = searchParams.get('target')
@@ -16,10 +23,9 @@ export async function GET(req: NextRequest) {
     return new Response('Missing websetId', { status: 400 })
   }
 
-
-  const auth = await authorizeWebsetAccess(websetId)
-  if (!auth.ok) {
-    return new Response(auth.error, { status: auth.status })
+  const allowed = await canAccessWebset(auth.userId, websetId)
+  if (!allowed) {
+    return new Response('Forbidden', { status: 403 })
   }
 
   // Reuse cached Exa client for speed
@@ -151,7 +157,10 @@ export async function GET(req: NextRequest) {
           lastItemCount = prospects.length
 
           // Check if complete or failed
-          if (webset.status === 'completed' || webset.status === 'failed') {
+          const status = String(webset.status)
+          if (status === 'idle' || status === 'completed' || status === 'failed' || status === 'cancelled' || status === 'canceled') {
+          // Check if complete or failed (status is 'idle' when complete in Exa SDK)
+          if (webset.status === 'idle' || (webset.status as string) === 'failed') {
             send({ type: 'complete', status: webset.status })
             controller.close()
             return
@@ -196,4 +205,3 @@ export async function GET(req: NextRequest) {
     }
   })
 }
-
