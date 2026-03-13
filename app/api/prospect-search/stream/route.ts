@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server'
 import { canAccessWebset } from '@/lib/auth/authorize-webset-access'
 import { requireAuthUser } from '@/lib/auth/require-auth-user'
 import { logger } from '@/lib/utils/logger'
+import { NextRequest } from 'next/server'
 
 // Cache Exa client to avoid recreating on each request
 let cachedExa: Exa | null = null

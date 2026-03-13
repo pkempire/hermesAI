@@ -1,3 +1,4 @@
+import { authorizeWebsetAccess } from '@/lib/auth/authorize-webset-access';
 import Exa from 'exa-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { canAccessWebset } from '@/lib/auth/authorize-webset-access'
