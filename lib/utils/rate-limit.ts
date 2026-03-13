@@ -76,7 +76,7 @@ export async function checkRateLimit(
 export async function getUserRateLimiter(userId: string, type: 'email' | 'search' | 'chat') {
   // TODO: Fetch user plan from database
   // For now, assume trial tier
-  const userPlan: 'trial' | 'paid' = 'trial' // or fetch from DB
+  const userPlan: 'trial' | 'paid' = process.env.DEFAULT_USER_PLAN === 'paid' ? 'paid' : 'trial'
   
   if (type === 'email') {
     return userPlan === 'paid' ? emailSendRateLimitPaid : emailSendRateLimit

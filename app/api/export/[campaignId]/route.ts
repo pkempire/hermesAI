@@ -1,11 +1,17 @@
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserId } from '@/lib/auth/get-current-user'
+import { requireAuthUser } from '@/lib/auth/require-auth-user'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ campaignId: string }> }
 ) {
+  const auth = await requireAuthUser()
+  if (!auth.ok) {
+    return auth.response
+  }
+
   const { campaignId } = await params
   const currentUserId = await getCurrentUserId()
   if (!currentUserId || currentUserId === 'anonymous') {
@@ -23,6 +29,16 @@ export async function GET(
 
   if (campaignError) return NextResponse.json({ error: campaignError.message }, { status: 500 })
   if (!campaign) return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
+  const { data: campaign } = await supabase
+    .from('campaigns')
+    .select('id')
+    .eq('id', campaignId)
+    .eq('user_id', auth.userId)
+    .maybeSingle()
+
+  if (!campaign) {
+    return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
+  }
 
   const { data: rows, error } = await supabase
     .from('prospects')
