@@ -158,6 +158,8 @@ export async function GET(req: NextRequest) {
           // Check if complete or failed
           const status = String(webset.status)
           if (status === 'idle' || status === 'completed' || status === 'failed' || status === 'cancelled' || status === 'canceled') {
+          // Check if complete or failed (status is 'idle' when complete in Exa SDK)
+          if (webset.status === 'idle' || (webset.status as string) === 'failed') {
             send({ type: 'complete', status: webset.status })
             controller.close()
             return
