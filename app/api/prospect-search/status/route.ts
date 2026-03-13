@@ -1,3 +1,4 @@
+import { authorizeWebsetAccess } from '@/lib/auth/authorize-webset-access';
 import Exa from 'exa-js';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -11,6 +12,9 @@ export async function GET(req: NextRequest) {
     const targetParam = searchParams.get('target');
     const targetCount = targetParam ? Number(targetParam) : undefined;
     if (!websetId) return NextResponse.json({ error: 'Missing websetId' }, { status: 400 });
+
+    const auth = await authorizeWebsetAccess(websetId);
+    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
     // Reuse cached Exa client for speed
     if (!cachedExa) {

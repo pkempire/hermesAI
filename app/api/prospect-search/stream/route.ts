@@ -1,6 +1,7 @@
 import Exa from 'exa-js'
-import { NextRequest } from 'next/server'
+import { authorizeWebsetAccess } from '@/lib/auth/authorize-webset-access'
 import { logger } from '@/lib/utils/logger'
+import { NextRequest } from 'next/server'
 
 // Cache Exa client to avoid recreating on each request
 let cachedExa: Exa | null = null
@@ -13,6 +14,12 @@ export async function GET(req: NextRequest) {
 
   if (!websetId) {
     return new Response('Missing websetId', { status: 400 })
+  }
+
+
+  const auth = await authorizeWebsetAccess(websetId)
+  if (!auth.ok) {
+    return new Response(auth.error, { status: auth.status })
   }
 
   // Reuse cached Exa client for speed
