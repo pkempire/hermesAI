@@ -36,6 +36,38 @@ export function ProspectSearchSection({
   const [showEmailDrafter, setShowEmailDrafter] = useState(false)
   const [evidenceMode, setEvidenceMode] = useState(false)
 
+  // Extract search criteria from tool arguments for display
+  const getSearchCriteria = useCallback(() => {
+    if (tool.args) {
+      try {
+        const args = typeof tool.args === 'string' ? JSON.parse(tool.args) : tool.args
+        return {
+          query: args.query || '',
+          entityType: args.entityType || 'company',
+          targetCount: args.targetCount || 10,
+          enrichments: args.enrichments || ['email', 'linkedin', 'company_info']
+        }
+      } catch (error) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('Error parsing search criteria:', error)
+        }
+      }
+    }
+
+    return {
+      query: '',
+      entityType: 'company',
+      targetCount: 10,
+      enrichments: ['email', 'linkedin', 'company_info']
+    }
+  }, [tool.args])
+
+  const [currentSearchCriteria, setCurrentSearchCriteria] = useState(getSearchCriteria())
+
+  useEffect(() => {
+    setCurrentSearchCriteria(getSearchCriteria())
+  }, [getSearchCriteria])
+
   // Parse the tool result to determine UI type and handle different response formats
   const parseToolResult = useCallback(() => {
     
@@ -109,14 +141,13 @@ export function ProspectSearchSection({
         // Update prospects if available (only new ones)
         if (data.prospects && Array.isArray(data.prospects) && data.prospects.length > 0) {
           setProspects(prev => {
-            // Merge by unique id to allow incremental growth without flicker
-            const byId = new Map<string, Prospect>()
-            for (const p of prev) byId.set(p.id, p)
-            // Only add new prospects (those after lastItemCount)
-            const newProspects = data.prospects.slice(lastItemCount)
-            for (const p of newProspects) byId.set(p.id, p)
-            lastItemCount = data.totalProspects || byId.size
-            return Array.from(byId.values())
+            // Optimized incremental update: only add truly new prospects
+            const existingIds = new Set(prev.map((p: Prospect) => p.id))
+            const newProspects = data.prospects.filter((p: Prospect) => !existingIds.has(p.id))
+            lastItemCount = data.totalProspects || (prev.length + newProspects.length)
+            
+            // Only create new array if there are actually new prospects
+            return newProspects.length > 0 ? [...prev, ...newProspects] : prev
           })
         }
 
@@ -345,34 +376,6 @@ export function ProspectSearchSection({
       setSearchStatus('running')
     }
   }, [uiType, prospects.length, lastStatus])
-
-  // Extract search criteria from tool arguments for display
-  const getSearchCriteria = () => {
-    if (tool.args) {
-      try {
-        const args = typeof tool.args === 'string' ? JSON.parse(tool.args) : tool.args
-        return {
-          query: args.query || '',
-          entityType: args.entityType || 'company',
-          targetCount: args.targetCount || 10,
-          enrichments: args.enrichments || ['email', 'linkedin', 'company_info']
-        }
-      } catch (error) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.error('Error parsing search criteria:', error)
-        }
-      }
-    }
-    
-    return {
-      query: '',
-      entityType: 'company',
-      targetCount: 10,
-      enrichments: ['email', 'linkedin', 'company_info']
-    }
-  }
-
-  const currentSearchCriteria = getSearchCriteria()
 
   // Get status badge variant
   const getStatusBadgeVariant = () => {

@@ -164,7 +164,7 @@ export class HunterClient {
 
           if (personEmail) {
             return {
-              email: personEmail.email,
+              email: personEmail.email || undefined,
               emailScore: personEmail.verification.score,
               verified: true
             }
@@ -183,7 +183,7 @@ export class HunterClient {
           const bestEmail = roleMatch || domainEmails[0]
 
           return {
-            email: bestEmail.email,
+            email: bestEmail.email || undefined,
             emailScore: bestEmail.verification.score,
             verified: bestEmail.verification.result === 'deliverable'
           }

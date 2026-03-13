@@ -2,6 +2,8 @@ import { getCurrentUserId } from '@/lib/auth/get-current-user'
 import { createClient } from '@/lib/supabase/server'
 import Exa from 'exa-js'
 import { NextRequest } from 'next/server'
+import { canAccessWebset } from '@/lib/auth/authorize-webset-access'
+import { requireAuthUser } from '@/lib/auth/require-auth-user'
 import { logger } from '@/lib/utils/logger'
 
 let cachedExa: Exa | null = null
@@ -24,7 +26,12 @@ async function ensureWebsetOwnership(websetId: string, userId: string) {
 }
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url)
+  const auth = await requireAuthUser()
+  if (!auth.ok) {
+    return auth.response
+  }
+
+  const { searchParams } = new URL(req.url!)
   const websetId = searchParams.get('websetId')
   const targetParam = searchParams.get('target')
   const targetCount = targetParam ? Number(targetParam) : undefined
@@ -33,16 +40,12 @@ export async function GET(req: NextRequest) {
     return new Response('Missing websetId', { status: 400 })
   }
 
-  const userId = await getCurrentUserId()
-  if (!userId || userId === 'anonymous') {
-    return new Response('Unauthorized', { status: 401 })
-  }
-
-  const ownsWebset = await ensureWebsetOwnership(websetId, userId)
-  if (!ownsWebset) {
+  const allowed = await canAccessWebset(auth.userId, websetId)
+  if (!allowed) {
     return new Response('Forbidden', { status: 403 })
   }
 
+  // Reuse cached Exa client for speed
   if (!cachedExa) {
     cachedExa = new Exa(process.env.EXA_API_KEY!)
   }
@@ -110,19 +113,14 @@ export async function GET(req: NextRequest) {
             message: `Analyzed ${analyzed} records and found ${Math.max(found, prospects.length)} matches.`
           })
 
-          if (webset.status === 'completed' || webset.status === 'failed') {
-            send({
-              type: webset.status === 'completed' ? 'prospect_search_complete' : 'prospect_search_error',
-              event: webset.status === 'completed' ? 'complete' : 'error',
-              websetId,
-              status: webset.status,
-              analyzed,
-              found: Math.max(found, prospects.length),
-              completion,
-              totalProspects: prospects.length,
-              prospects,
-              message: webset.status === 'completed' ? 'Search completed.' : 'Search failed.'
-            })
+          lastItemCount = prospects.length
+
+          // Check if complete or failed
+          const status = String(webset.status)
+          if (status === 'idle' || status === 'completed' || status === 'failed' || status === 'cancelled' || status === 'canceled') {
+          // Check if complete or failed (status is 'idle' when complete in Exa SDK)
+          if (webset.status === 'idle' || (webset.status as string) === 'failed') {
+            send({ type: 'complete', status: webset.status })
             controller.close()
             return
           }
