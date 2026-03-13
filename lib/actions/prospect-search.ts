@@ -1,6 +1,6 @@
 'use server'
 
-import { CampaignSettings, EmailSequence, ProspectCriteria } from '@/components/campaign-builder'
+import { CampaignSettings, EmailSequence, ProspectCriteria } from '@/lib/types/prospecting'
 import { Prospect } from '@/components/prospect-grid'
 import {
   createProspectEnrichments,

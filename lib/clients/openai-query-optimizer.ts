@@ -3,7 +3,7 @@
  * Optimizes search queries for better prospect research results using Exa Websets
  */
 
-import { ProspectCriteria } from '@/components/campaign-builder'
+import { ProspectCriteria } from '@/lib/types/prospecting'
 import OpenAI from 'openai'
 
 const openai = new OpenAI({

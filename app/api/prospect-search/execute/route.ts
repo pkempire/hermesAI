@@ -6,19 +6,20 @@ import { logger } from '@/lib/utils/logger'
 import { createClient } from '@/lib/supabase/server'
 import { requireQuota } from '@/lib/utils/quota'
 import { NextRequest, NextResponse } from 'next/server'
+import { ProspectSearchStartPayload } from '@/lib/types/prospecting'
 
 export async function POST(req: NextRequest) {
   try {
     const { criteria, enrichments, entityType, targetCount, originalQuery, preview = false, evidenceMode } = await req.json()
     const userId = await getCurrentUserId()
     if (!userId || userId === 'anonymous') {
-      return NextResponse.json({ type: 'error', message: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ type: 'prospect_search_error', event: 'error', message: 'Unauthorized' }, { status: 401 })
     }
     if (!originalQuery || typeof originalQuery !== 'string') {
-      return NextResponse.json({ error: 'Missing query' }, { status: 400 })
+      return NextResponse.json({ type: 'prospect_search_error', event: 'error', message: 'Missing query' }, { status: 400 })
     }
     if (targetCount && (typeof targetCount !== 'number' || targetCount < 1)) {
-      return NextResponse.json({ error: 'Invalid targetCount' }, { status: 400 })
+      return NextResponse.json({ type: 'prospect_search_error', event: 'error', message: 'Invalid targetCount' }, { status: 400 })
     }
     
     logger.debug(`${preview ? 'Preview' : 'Full'} search requested:`, {
@@ -35,7 +36,8 @@ export async function POST(req: NextRequest) {
       if (cachedResults && cachedResults.length >= (targetCount || 25)) {
         logger.debug(`Serving ${cachedResults.length} cached prospects`)
         return NextResponse.json({
-          type: 'cached_results',
+          type: 'prospect_search_complete',
+          event: 'complete',
           prospects: cachedResults.slice(0, targetCount || 25),
           message: `Found ${cachedResults.length} cached prospects matching your criteria.`,
           searchCriteria: {
@@ -55,7 +57,7 @@ export async function POST(req: NextRequest) {
     if (process.env.NODE_ENV !== 'development' && process.env.SKIP_QUOTA_CHECK !== 'true') {
       const quota = await requireQuota({ userId, cost, kind: 'prospect_search', idempotencyKey: `ps:${userId}:${originalQuery}:${cost}` })
       if (!quota.ok) {
-        return NextResponse.json({ type: 'error', message: quota.reason }, { status: 402 })
+        return NextResponse.json({ type: 'prospect_search_error', event: 'error', message: quota.reason }, { status: 402 })
       }
     } else {
       logger.debug('Bypassing quota check (development mode)')
@@ -144,7 +146,7 @@ export async function POST(req: NextRequest) {
 
     logger.debug(`Webset ${isReused ? 'reused' : 'created'}:`, websetId)
 
-    // Persist minimal campaign record (best-effort) — guard against duplicates
+    // Persist campaign ownership record — required for authenticated stream access
     try {
       const supabase = await createClient()
       const { data: { user } } = await supabase.auth.getUser()
@@ -180,7 +182,8 @@ export async function POST(req: NextRequest) {
         }
       }
     } catch (persistError) {
-      logger.warn('Campaign persistence skipped:', persistError)
+      logger.error('Campaign persistence failed:', persistError)
+      return NextResponse.json({ type: 'prospect_search_error', event: 'error', message: 'Unable to persist search ownership record.' }, { status: 500 })
     }
 
     if (preview) {
@@ -197,7 +200,8 @@ export async function POST(req: NextRequest) {
         const prospects = itemsResponse.data.map(item => exa.convertToProspect(item))
 
         return NextResponse.json({
-          type: 'preview_result',
+          type: 'prospect_search_complete',
+          event: 'complete',
           websetId: websetId,
           prospects,
           message: prospects.length > 0
@@ -214,7 +218,8 @@ export async function POST(req: NextRequest) {
       } catch (error) {
         logger.error('Preview timeout or error:', error)
         return NextResponse.json({
-          type: 'preview_timeout',
+          type: 'prospect_search_progress',
+          event: 'progress',
           websetId: websetId,
           message: 'Preview is taking longer than expected. You can check the full search results or try again.',
           error: error instanceof Error ? error.message : 'Preview timeout'
@@ -222,8 +227,9 @@ export async function POST(req: NextRequest) {
       }
     } else {
       // For full search, return streaming configuration
-      return NextResponse.json({
-        type: 'streaming_search',
+      const startPayload: ProspectSearchStartPayload = {
+        type: 'prospect_search_start',
+        event: 'start',
         websetId: websetId,
         searchCriteria: {
           query: originalQuery,
@@ -233,19 +239,21 @@ export async function POST(req: NextRequest) {
           enrichmentsCount: enrichments?.length || 0
         },
         status: 'created',
-        message: `Started searching for ${targetCount} prospects. I'll show you results as they come in.`,
+        message: `Started searching for ${targetCount} prospects. I'll stream progress updates.`,
         progress: {
           found: 0,
           analyzed: 0,
           completion: 0
         }
-      })
+      }
+      return NextResponse.json(startPayload)
     }
 
   } catch (err: any) {
     logger.error('Error:', err)
     return NextResponse.json({ 
-      type: 'error',
+      type: 'prospect_search_error',
+      event: 'error',
       error: err.message,
       message: 'Failed to execute prospect search. Please try again.'
     }, { status: 500 })

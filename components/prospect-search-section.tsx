@@ -59,18 +59,18 @@ export function ProspectSearchSection({
         }
         
         // Handle streaming search configuration
-        if (result.type === 'streaming_search') {
+        if (result.type === 'prospect_search_start') {
           return { type: 'streaming', websetId: result.websetId, message: result.message }
         }
         
         // Handle completed search results
-        if (result.type === 'search_results' || (result.success && result.prospects)) {
+        if (result.type === 'prospect_search_complete') {
           const prospectsData = result.prospects || result.prospects || []
           return { type: 'results', prospects: prospectsData, summary: result.summary, message: result.message }
         }
         
         // Handle error
-        if (result.type === 'error' || !result.success) {
+        if (result.type === 'prospect_search_error') {
           return { type: 'error', message: result.message }
         }
         
@@ -136,7 +136,7 @@ export function ProspectSearchSection({
         } catch {}
         
         // Check if search is complete
-        if (data.type === 'complete' || data.status === 'completed' || data.status === 'idle') {
+        if (data.event === 'complete' || data.type === 'prospect_search_complete' || data.status === 'completed' || data.status === 'idle') {
           setSearchStatus('completed')
           eventSource.close()
           
@@ -216,12 +216,12 @@ export function ProspectSearchSection({
             setSearchMessage('Search completed but no prospects found. Try broadening your criteria.')
             setSearchStatus('completed')
           }
-        } else if (data.type === 'error' || data.status === 'failed') {
+        } else if (data.event === 'error' || data.type === 'prospect_search_error' || data.type === 'error' || data.status === 'failed') {
           setSearchStatus('failed')
           setSearchMessage(data.error || 'Search failed')
           eventSource.close()
           setUiType('error')
-        } else if (data.type === 'timeout') {
+        } else if (data.status === 'timeout' || data.type === 'timeout') {
           setSearchStatus('failed')
           setSearchMessage('Search is taking longer than expected. Results may still arrive - check back soon or contact support.')
           eventSource.close()
@@ -309,7 +309,7 @@ export function ProspectSearchSection({
       setProspects(result.prospects || [])
       setSearchMessage(result.message || `Found ${result.prospects?.length || 0} prospects`)
       setSearchSummary(result.summary)
-    } else if (result.type === 'error') {
+    } else if (result.type === 'prospect_search_error') {
       setUiType('error')
       setSearchStatus('failed')
       setSearchMessage(result.message || 'Search failed')
@@ -801,11 +801,11 @@ export function ProspectSearchSection({
                             console.log('📊 [ProspectSearchSection] Search API response:', result)
                           }
                           
-                          if (result.type === 'streaming_search') {
+                          if (result.type === 'prospect_search_start') {
                             setStreamingWebsetId(result.websetId)
                             setSearchMessage(result.message || 'Search started, finding prospects...')
                             startStreamingPolling(result.websetId, validTargetCount)
-                          } else if (result.type === 'error') {
+                          } else if (result.type === 'prospect_search_error') {
                             setUiType('error')
                             setSearchStatus('failed')
                             setSearchMessage(result.message || 'Search failed')
@@ -854,18 +854,18 @@ export function ProspectSearchSection({
                             console.log('🔍 [ProspectSearchSection] Preview API response:', result)
                           }
                           
-                          if (result.type === 'preview_result') {
+                          if (result.type === 'prospect_search_complete') {
                             setUiType('results')
                             setProspects(result.prospects || [])
                             setSearchSummary(result.summary)
                             setSearchStatus('completed')
                             setSearchMessage(result.message || 'Preview completed')
-                          } else if (result.type === 'preview_timeout') {
+                          } else if (result.type === 'prospect_search_progress' && result.event === 'progress') {
                             // Handle timeout - start polling for this webset
                             setStreamingWebsetId(result.websetId)
                             setSearchMessage(result.message || 'Preview taking longer than expected, monitoring...')
                             startStreamingPolling(result.websetId)
-                          } else if (result.type === 'error') {
+                          } else if (result.type === 'prospect_search_error') {
                             setUiType('error')
                             setSearchStatus('failed')
                             setSearchMessage(result.message || 'Preview failed')

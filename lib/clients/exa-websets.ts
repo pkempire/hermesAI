@@ -3,7 +3,7 @@
  * Handles prospect research, enrichment, and data extraction using official exa-js SDK
  */
 
-import { ProspectCriteria } from '@/components/campaign-builder'
+import { ProspectCriteria } from '@/lib/types/prospecting'
 import { Prospect } from '@/components/prospect-grid'
 import { logger } from '@/lib/utils/logger'
 import Exa from 'exa-js'
