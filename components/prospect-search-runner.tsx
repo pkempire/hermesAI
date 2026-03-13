@@ -21,7 +21,7 @@ import {
     Users
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { CampaignSettings, EmailSequence, ProspectCriteria } from './campaign-builder'
+import { CampaignSettings, EmailSequence, ProspectCriteria } from '@/lib/types/prospecting'
 import { Prospect, ProspectGrid } from './prospect-grid'
 
 interface ProspectSearchRunnerProps {

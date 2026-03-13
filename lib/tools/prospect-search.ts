@@ -211,7 +211,8 @@ You can **preview with 1 company** first to validate the approach, or **run the 
         
         // Return streaming configuration for real-time updates
         return {
-          type: 'streaming_search',
+          type: 'prospect_search_start',
+          event: 'start',
           websetId: webset.id,
           searchCriteria: { query, targetCount },
           status: 'created',
@@ -227,7 +228,8 @@ You can **preview with 1 company** first to validate the approach, or **run the 
         logger.error('Error during prospect search:', error)
         
         return {
-          type: 'error',
+          type: 'prospect_search_error',
+          event: 'error',
           message: `Failed to start prospect search: ${error instanceof Error ? error.message : 'Unknown error'}`,
           error: error instanceof Error ? error.message : 'Unknown error'
         }
