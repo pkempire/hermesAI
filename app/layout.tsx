@@ -87,7 +87,7 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body
         className={cn(
-          'min-h-screen flex flex-col font-sans antialiased',
+          'min-h-screen flex flex-col font-sans antialiased hermes-shell',
           manrope.variable,
           playfair.variable
         )}
@@ -104,7 +104,7 @@ export default async function RootLayout({
             <AppSidebar />
             <div className="flex flex-col flex-1 min-h-0">
               <Header user={user} />
-              <main className="flex flex-1 min-h-0 overflow-hidden pt-0">
+              <main className="relative flex flex-1 min-h-0 overflow-hidden pt-0">
                 <ArtifactRoot>{children}</ArtifactRoot>
               </main>
             </div>

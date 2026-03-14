@@ -145,12 +145,12 @@ export function ChatMessages({
         'scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent'
       )}
     >
-      <div className="relative mx-auto w-full max-w-3xl px-2 sm:px-3 md:px-4 pb-20 sm:pb-24">
+      <div className="relative mx-auto w-full max-w-4xl px-3 sm:px-4 md:px-6 pb-24 sm:pb-28">
         {sections.map((section, sectionIndex) => (
           <div
             key={section.id}
             id={`section-${section.id}`}
-            className="chat-section mb-6 md:mb-7"
+            className="chat-section mb-7 md:mb-8"
             style={
               sectionIndex === sections.length - 1
                 ? { minHeight: '50vh' }

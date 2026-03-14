@@ -43,7 +43,7 @@ export function ProspectGrid({ prospects, onSelectionChange, onReviewComplete }:
 
   if (!prospects || prospects.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+      <div className="flex flex-col items-center justify-center rounded-[1.5rem] border border-black/5 bg-white/60 py-12 text-gray-500">
         <Users className="w-12 h-12 mb-4 opacity-50" />
         <p className="text-lg font-medium">No prospects found</p>
         <p className="text-sm text-gray-400">Try adjusting your search criteria</p>
@@ -113,14 +113,13 @@ export function ProspectGrid({ prospects, onSelectionChange, onReviewComplete }:
   if (viewMode === 'grid') {
     return (
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+        <div className="flex flex-col gap-4 rounded-[1.5rem] border border-black/5 bg-white/60 p-5 backdrop-blur-sm lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap items-center gap-3">
+            <h3 className="flex items-center gap-2 font-serif text-2xl text-gray-900">
               <Users className="w-5 h-5 text-amber-600" />
               {prospects.length} Prospects Found
             </h3>
-            <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-amber-200">
+            <Badge variant="secondary" className="border border-amber-200 bg-amber-50 text-amber-700">
               {selectedProspects.size} Selected
             </Badge>
             <Button
@@ -132,17 +131,12 @@ export function ProspectGrid({ prospects, onSelectionChange, onReviewComplete }:
               {selectedProspects.size === prospects.length ? 'Deselect All' : 'Select All'}
             </Button>
           </div>
-          <Button
-            onClick={() => setViewMode('single')}
-            variant="outline"
-            size="sm"
-          >
+          <Button onClick={() => setViewMode('single')} variant="outline" size="sm">
             <List className="w-4 h-4 mr-1" />
             Single View
           </Button>
         </div>
 
-        {/* Grid View with smooth stagger animations */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           <AnimatePresence mode="popLayout">
             {prospects.map((prospect, index) => (
@@ -175,16 +169,12 @@ export function ProspectGrid({ prospects, onSelectionChange, onReviewComplete }:
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-xl border-2 border-amber-200 p-4 flex items-center gap-4 z-50"
+            className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-full border border-amber-200 bg-white/95 p-3 shadow-[0_24px_48px_rgba(62,45,18,0.18)] backdrop-blur-sm"
           >
             <span className="text-sm font-medium text-gray-900">
               {selectedProspects.size} {selectedProspects.size === 1 ? 'prospect' : 'prospects'} selected
             </span>
-            <Button 
-              size="sm" 
-              className="bg-amber-500 hover:bg-amber-600 text-amber-950"
-              onClick={handleDraftEmails}
-            >
+            <Button size="sm" className="bg-black text-white hover:bg-black/90" onClick={handleDraftEmails}>
               Draft Emails for Selected
             </Button>
             <Button size="sm" variant="outline" className="border-gray-300">
@@ -198,11 +188,10 @@ export function ProspectGrid({ prospects, onSelectionChange, onReviewComplete }:
 
   return (
     <div className="space-y-6">
-      {/* Header with Stats */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+      <div className="space-y-4 rounded-[1.5rem] border border-black/5 bg-white/60 p-5 backdrop-blur-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap items-center gap-4">
+            <h3 className="flex items-center gap-2 font-serif text-2xl text-gray-900">
               <Users className="w-5 h-5" />
               Prospect Review
             </h3>
@@ -232,7 +221,6 @@ export function ProspectGrid({ prospects, onSelectionChange, onReviewComplete }:
           </Button>
         </div>
 
-        {/* Progress Bar */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-600">Review Progress</span>
@@ -250,7 +238,7 @@ export function ProspectGrid({ prospects, onSelectionChange, onReviewComplete }:
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
           transition={{ duration: 0.3 }}
-          className="max-w-2xl mx-auto"
+          className="mx-auto max-w-2xl"
         >
           <ProspectCard
             prospect={prospect}
@@ -273,14 +261,14 @@ export function ProspectGrid({ prospects, onSelectionChange, onReviewComplete }:
           Previous
         </Button>
         
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2 rounded-full border border-black/5 bg-white/70 px-3 py-2">
           {prospects.map((_, index) => (
             <button
               key={index}
               onClick={() => setCurrent(index)}
-              className={`w-2 h-2 rounded-full transition-colors ${
+              className={`h-2.5 w-2.5 rounded-full transition-colors ${
                 index === current 
-                  ? 'bg-blue-600' 
+                  ? 'bg-black' 
                   : feedback[prospects[index].id]
                     ? feedback[prospects[index].id] === 'good'
                       ? 'bg-green-400'
@@ -307,7 +295,7 @@ export function ProspectGrid({ prospects, onSelectionChange, onReviewComplete }:
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-green-50 border border-green-200 rounded-lg p-6 text-center"
+          className="rounded-[1.5rem] border border-emerald-200 bg-emerald-50 p-6 text-center"
         >
           <h4 className="text-lg font-semibold text-green-900 mb-2">
             🎉 Review Complete!
@@ -315,7 +303,7 @@ export function ProspectGrid({ prospects, onSelectionChange, onReviewComplete }:
           <p className="text-sm text-green-700 mb-4">
             You&apos;ve reviewed all {prospects.length} prospects. Found {goodCount} good fits!
           </p>
-          <Button className="bg-green-600 hover:bg-green-700">
+          <Button className="bg-black text-white hover:bg-black/90">
             Create Email Campaign
           </Button>
         </motion.div>

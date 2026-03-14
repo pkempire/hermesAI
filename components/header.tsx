@@ -37,46 +37,41 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
     <header
       className={cn(
         'sticky top-0 right-0 left-0 z-30 transition-all duration-200',
-        'backdrop-blur-xl bg-white/80 border-b border-gray-200/50',
-        'shadow-sm',
+        'border-b border-black/5 bg-[rgba(255,251,245,0.82)] backdrop-blur-xl',
         open ? 'md:pl-[calc(var(--sidebar-width)+1rem)]' : 'md:pl-4'
       )}
     >
-      <div className="flex items-center justify-between py-1.5 px-4 md:px-6">
-        {/* Left: Sidebar toggle + Branding */}
-        <div className="flex items-center gap-2">
-          <SidebarTrigger className="mr-1" />
+      <div className="flex items-center justify-between px-4 py-2 md:px-6">
+        <div className="flex items-center gap-3">
+          <SidebarTrigger className="mr-1 rounded-full border border-black/10 bg-white/70 shadow-sm" />
           <Link 
             href="/" 
-            className="flex items-center gap-2 transition-all duration-200 hover:opacity-80 group"
+            className="group flex items-center gap-3 transition-all duration-200 hover:opacity-80"
           >
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-full blur-sm opacity-0 group-hover:opacity-30 transition-opacity duration-300" />
+            <div className="relative flex items-center gap-3">
+              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-400/20 to-yellow-500/20 blur-md opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
               <Image
                 src="/images/hermes-avatar.png"
                 alt="Hermes"
                 width={32}
                 height={32}
-                className="relative h-7 w-7 md:h-8 md:w-8 rounded-full border-2 border-amber-200 shadow-sm group-hover:border-amber-300 transition-colors object-cover"
+                className="relative h-8 w-8 rounded-full border border-amber-300/70 shadow-sm transition-colors object-cover md:h-9 md:w-9"
                 unoptimized
               />
             </div>
             <div className="hidden sm:block">
-              <span className="text-sm md:text-base font-semibold text-gray-900">HermesAI</span>
+              <div className="text-[11px] uppercase tracking-[0.28em] text-black/45">Messenger OS</div>
+              <span className="font-serif text-lg text-gray-950 md:text-xl">HermesAI</span>
             </div>
           </Link>
         </div>
 
-        {/* Actions */}
         <div className="flex items-center gap-3">
           {user && credits !== null && (
-            <div className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200/50 text-sm font-medium text-gray-700 shadow-sm">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-              </span>
-              <span className="font-bold text-gray-900">{credits}</span>
-              <span className="text-gray-600">credits</span>
+            <div className="hidden items-center gap-2 rounded-full border border-amber-200/80 bg-white/80 px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm sm:inline-flex">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]" />
+              <span className="font-semibold text-gray-900">{credits}</span>
+              <span className="text-gray-500">credits</span>
             </div>
           )}
           {user ? <UserMenu user={user} /> : <GuestMenu />}

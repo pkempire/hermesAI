@@ -4,44 +4,47 @@
 
 @layer base {
   :root {
-    --background: 45 10% 98%;
-    --foreground: 20 14% 10%;
+    --background: 38 42% 97%;
+    --foreground: 24 19% 13%;
     --card: 0 0% 100%;
-    --card-foreground: 20 14% 10%;
+    --card-foreground: 24 19% 13%;
     --popover: 0 0% 100%;
-    --popover-foreground: 20 14% 10%;
-    --primary: 43 96% 56%;
-    --primary-foreground: 26 83% 14%;
-    --secondary: 45 12% 92%;
-    --secondary-foreground: 20 14% 10%;
-    --muted: 45 12% 92%;
-    --muted-foreground: 25 5% 45%;
-    --accent: 43 96% 56%;
-    --accent-foreground: 26 83% 14%;
+    --popover-foreground: 24 19% 13%;
+    --primary: 32 90% 52%;
+    --primary-foreground: 36 100% 98%;
+    --secondary: 35 28% 92%;
+    --secondary-foreground: 24 19% 13%;
+    --muted: 40 25% 93%;
+    --muted-foreground: 24 9% 41%;
+    --accent: 168 34% 88%;
+    --accent-foreground: 170 60% 17%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 45 12% 88%;
-    --input: 45 12% 88%;
-    --ring: 43 96% 56%;
-    --radius: 0.375rem;
+    --border: 30 20% 84%;
+    --input: 30 20% 84%;
+    --ring: 32 90% 52%;
+    --radius: 1rem;
+    --sidebar-background: 34 36% 95%;
+    --sidebar-foreground: 24 19% 13%;
+    --sidebar-border: 30 24% 84%;
     
     /* Greek/Hermes theme - Divine Gold & Classical Elements */
-    --hermes-gold: 43 96% 56%;
-    --hermes-gold-dark: 38 92% 50%;
-    --hermes-gold-light: 45 100% 70%;
-    --hermes-bronze: 30 60% 50%;
-    --hermes-marble: 45 10% 98%;
-    --hermes-laurel: 67 56% 58%;
-    --hermes-sky: 197 71% 73%;
-    --hermes-divine-glow: 43 100% 50%;
+    --hermes-gold: 32 90% 52%;
+    --hermes-gold-dark: 28 83% 44%;
+    --hermes-gold-light: 40 100% 73%;
+    --hermes-bronze: 22 48% 42%;
+    --hermes-marble: 38 42% 97%;
+    --hermes-laurel: 162 27% 45%;
+    --hermes-sky: 194 66% 44%;
+    --hermes-divine-glow: 35 94% 56%;
 
     /* Divine shadows with golden undertones */
-    --elevation-1: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --elevation-2: 0 2px 8px 0 rgba(0, 0, 0, 0.08);
-    --elevation-3: 0 4px 16px 0 rgba(0, 0, 0, 0.10);
-    --elevation-4: 0 8px 32px 0 rgba(0, 0, 0, 0.12);
-    --hermes-glow: 0 4px 20px 0 rgba(251, 191, 36, 0.15);
-    --hermes-glow-strong: 0 8px 32px 0 rgba(251, 191, 36, 0.25);
+    --elevation-1: 0 1px 2px rgba(36, 24, 11, 0.04);
+    --elevation-2: 0 16px 40px rgba(72, 50, 20, 0.08);
+    --elevation-3: 0 24px 60px rgba(72, 50, 20, 0.12);
+    --elevation-4: 0 32px 80px rgba(72, 50, 20, 0.16);
+    --hermes-glow: 0 18px 48px rgba(222, 137, 36, 0.18);
+    --hermes-glow-strong: 0 28px 64px rgba(222, 137, 36, 0.24);
 
     /* Divine animations */
     --animate-divine-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
@@ -87,15 +90,21 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: 'rlig' 1, 'calt' 1;
+    background-image:
+      radial-gradient(circle at top left, rgba(233, 184, 87, 0.16), transparent 28%),
+      radial-gradient(circle at top right, rgba(88, 159, 141, 0.12), transparent 24%),
+      linear-gradient(180deg, rgba(255, 252, 247, 0.98), rgba(247, 242, 234, 0.98));
+    background-attachment: fixed;
   }
 }
 
 /* Enterprise-grade utility classes */
 @layer utilities {
   .glass {
-    background: rgba(255, 255, 255, 0.95);
-    border: 1px solid hsl(var(--border));
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 250, 242, 0.84));
+    border: 1px solid hsl(var(--border) / 0.8);
     box-shadow: var(--elevation-2);
+    backdrop-filter: blur(18px);
   }
   
   .glass-hover {
@@ -143,6 +152,34 @@
   
   .gold-accent {
     color: hsl(var(--hermes-gold));
+  }
+
+  .hermes-panel {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(252, 247, 239, 0.88));
+    border: 1px solid rgba(175, 145, 103, 0.18);
+    box-shadow: var(--elevation-2);
+    backdrop-filter: blur(18px);
+  }
+
+  .hermes-surface {
+    background:
+      radial-gradient(circle at top, rgba(255, 240, 205, 0.7), transparent 40%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(249, 244, 236, 0.84));
+    border: 1px solid rgba(175, 145, 103, 0.16);
+  }
+
+  .hermes-shell {
+    position: relative;
+  }
+
+  .hermes-shell::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(242, 189, 88, 0.12), transparent 22%),
+      radial-gradient(circle at 85% 10%, rgba(69, 148, 126, 0.08), transparent 18%);
   }
   
   /* Floating animation for assistant bubble */
@@ -229,13 +266,13 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--glass-border);
+  background: rgba(166, 131, 84, 0.3);
   border-radius: 4px;
   backdrop-filter: blur(8px);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(138, 92, 246, 0.3);
+  background: rgba(166, 131, 84, 0.45);
 }
 
 /* Smooth scrolling behavior */
@@ -246,7 +283,7 @@ html {
 #scroll-container {
   scroll-behavior: smooth;
   scrollbar-width: thin;
-  scrollbar-color: rgba(138, 92, 246, 0.2) transparent;
+  scrollbar-color: rgba(166, 131, 84, 0.35) transparent;
 }
 
 /* Smooth transitions for all interactive elements */

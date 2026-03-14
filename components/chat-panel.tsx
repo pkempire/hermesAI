@@ -26,10 +26,10 @@ function RotatingHeroText() {
 
   return (
     <>
-      Find your{' '}
+      Find your next{' '}
       <RotatingText
         words={useCases}
-        className="inline-block"
+        className="inline-block text-[hsl(var(--hermes-gold-dark))]"
         interval={2500}
       />
     </>
@@ -213,16 +213,18 @@ export function ChatPanel({
     <div
       className={cn(
         'w-full group/form-container shrink-0 relative z-10',
-        messages.length > 0 ? 'px-2 sm:px-4 pb-2 sm:pb-4' : 'px-2 sm:px-4 md:px-8 pb-4 sm:pb-8'
+        messages.length > 0 ? 'px-3 sm:px-4 pb-3 sm:pb-5' : 'px-3 sm:px-5 md:px-8 pb-6 sm:pb-10'
       )}
     >
-      {/* Title header (only when there is no conversation yet) - Compact design */}
       {messages.length === 0 && (
-        <div className={cn('max-w-4xl w-full mx-auto mb-4')}>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-1">
+        <div className={cn('mx-auto mb-6 w-full max-w-4xl rounded-[2rem] border border-black/5 bg-white/65 px-6 py-8 shadow-[0_24px_80px_rgba(62,45,18,0.08)] backdrop-blur-sm md:px-8 md:py-10')}>
+          <div className="mb-4 text-[11px] uppercase tracking-[0.32em] text-black/40">Roman messenger for outbound teams</div>
+          <h1 className="max-w-3xl font-serif text-4xl leading-tight text-gray-950 sm:text-5xl md:text-6xl">
             <RotatingHeroText />
           </h1>
-          <p className="text-sm text-gray-600 mt-1">Describe who you want to reach. I&apos;ll find them, verify details, and craft personalized emails.</p>
+          <p className="mt-4 max-w-2xl text-sm leading-7 text-black/65 sm:text-base">
+            Describe who you need to reach. Hermes researches the market, verifies details, and drafts sharp outreach without making the workflow feel heavy.
+          </p>
         </div>
       )}
       <form
@@ -246,32 +248,30 @@ export function ChatPanel({
         }}
         className={cn('max-w-4xl w-full mx-auto relative group/form', messages.length === 0 ? 'mb-6' : '')}
       >
-        {/* Divine scroll to bottom button */}
         {showScrollToBottomButton && messages.length > 0 && (
           <Button
             type="button"
             variant="outline"
             size="icon"
-            className="absolute -top-16 right-6 z-20 size-10 rounded-full bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200 hover:bg-gradient-to-br hover:from-amber-100 hover:to-yellow-100 hover:border-amber-300 hover:scale-105 hover:shadow-lg hover:shadow-amber-500/20 transition-all duration-200"
+            className="absolute -top-16 right-6 z-20 size-10 rounded-full border border-black/10 bg-white/90 shadow-lg"
             onClick={handleScrollToBottom}
-            title="Return to divine messages"
+            title="Jump to latest"
           >
-            <ChevronDown size={18} className="text-amber-600" />
+            <ChevronDown size={18} className="text-black/70" />
           </Button>
         )}
 
         <div className="relative">
-          {/* Divine messenger input container */}
           <div className={cn(
-            'relative z-[5] flex items-end w-full bg-white rounded-xl border border-gray-200 shadow-sm transition-all duration-200',
-            'focus-within:border-gray-400 focus-within:shadow-md hover:shadow-md'
+            'hermes-panel relative z-[5] flex w-full items-end rounded-[1.75rem] border border-black/10 transition-all duration-200',
+            'focus-within:border-[hsl(var(--hermes-gold))]/40 focus-within:shadow-[0_24px_64px_rgba(203,126,40,0.16)]'
           )}>
-            <div className="p-2 sm:p-3 z-[10] flex items-center gap-1 sm:gap-2">
+            <div className="z-[10] flex items-center gap-1 p-2.5 sm:gap-2 sm:p-3">
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
-                className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl"
+                className="h-9 w-9 rounded-full border-black/10 bg-white/85 sm:h-10 sm:w-10"
                 onClick={() => fileInputRef.current?.click()}
                 title="Attach file"
               >
@@ -281,7 +281,7 @@ export function ChatPanel({
                 type="button"
                 size="sm"
                 variant={isListening ? 'destructive' : 'outline'}
-                className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl"
+                className="h-9 w-9 rounded-full border-black/10 bg-white/85 sm:h-10 sm:w-10"
                 onClick={startVoice}
                 title="Voice input"
               >
@@ -300,7 +300,7 @@ export function ChatPanel({
               spellCheck={false}
               value={input}
               disabled={isLoading || isToolInvocationInProgress()}
-              className="resize-none w-full min-h-[50px] sm:min-h-[60px] bg-transparent border-0 px-3 sm:px-6 py-3 sm:py-4 text-sm sm:text-base text-gray-900 placeholder:text-amber-600/60 placeholder:font-medium focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full resize-none border-0 bg-transparent px-3 py-4 text-sm text-gray-900 placeholder:text-black/35 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-[64px] sm:px-6 sm:text-base"
               onChange={e => {
                 if (handleInputChange) {
                   handleInputChange(e)
@@ -329,16 +329,15 @@ export function ChatPanel({
               onBlur={() => setShowEmptyScreen(false)}
             />
 
-            {/* Divine send button */}
-            <div className="p-2 sm:p-3 z-[10]">
+            <div className="z-[10] p-2.5 sm:p-3">
               <Button
                 type="button"
                 size="sm"
                 className={cn(
-                  'w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-primary text-primary-foreground shadow-sm',
+                  'h-10 w-10 rounded-full bg-black text-white shadow-[0_16px_32px_rgba(17,17,17,0.18)] sm:h-11 sm:w-11',
                   'disabled:bg-gray-300 disabled:text-gray-700 disabled:cursor-not-allowed',
                   (!input || input.length === 0) && !isLoading && 'opacity-50 scale-95',
-                  isLoading && 'bg-gradient-to-r from-amber-400 to-yellow-400 animate-pulse'
+                  isLoading && 'animate-pulse bg-[hsl(var(--hermes-gold-dark))] text-white'
                 )}
                 disabled={
                   ((!input || input.length === 0) && !isLoading) ||

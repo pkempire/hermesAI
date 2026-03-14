@@ -30,7 +30,6 @@ export async function GET(req: NextRequest) {
     cachedExa = new Exa(process.env.EXA_API_KEY!)
   }
   const exa = cachedExa
-
   let cleanupStream = () => {}
 
   const stream = new ReadableStream({

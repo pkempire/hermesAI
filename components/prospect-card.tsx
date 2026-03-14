@@ -33,9 +33,8 @@ export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, o
   
   return (
     <Card className={`group relative overflow-hidden interactive-card ${
-      selected ? 'ring-2 ring-amber-500 border-amber-300 shadow-lg' : 'border-gray-200'
+      selected ? 'border-amber-300 ring-2 ring-amber-500/60 shadow-[0_24px_48px_rgba(203,126,40,0.18)]' : 'border-black/5'
     }`}>
-      {/* Avatar / Company logo with glassmorphism */}
       <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full opacity-10 overflow-hidden blur-layer-1">
         <Image
           src={prospect.companyLogoUrl || prospect.avatarUrl || '/images/placeholder-image.png'}
@@ -50,9 +49,8 @@ export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, o
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="absolute top-4 right-4 z-10 cursor-help">
+            <div className="absolute top-4 right-4 z-10 cursor-help rounded-full bg-white/85 p-1 shadow-sm">
               <div className="relative">
-                {/* Radial progress circle */}
                 <svg className="w-16 h-16 transform -rotate-90">
                   <circle
                     cx="32"
@@ -88,7 +86,6 @@ export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, o
         </Tooltip>
       </TooltipProvider>
 
-      {/* Selection Checkbox */}
       {onSelect && (
         <div className="absolute top-4 left-4 z-10">
           <input 
@@ -101,16 +98,15 @@ export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, o
       )}
 
       <CardHeader className="pb-3 pt-12">
-        {/* Header with name and title */}
         <div className="space-y-2">
-          <h3 className="text-xl font-bold text-gray-900 leading-tight">
+          <h3 className="font-serif text-2xl text-gray-900 leading-tight">
             {prospect.fullName || 'Unknown Prospect'}
           </h3>
           {(prospect as any).summary && (
             <p className="text-xs text-gray-600">{(prospect as any).summary}</p>
           )}
           {prospect.jobTitle && (
-            <p className="text-sm font-medium text-amber-700 bg-amber-50 px-2 py-1 rounded-full inline-block">
+            <p className="inline-block rounded-full bg-amber-50 px-3 py-1 text-sm font-medium text-amber-700">
               {prospect.jobTitle}
             </p>
           )}
@@ -118,9 +114,8 @@ export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, o
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Company Information */}
         {prospect.company && (
-          <div className="flex items-center gap-3 p-3 glass rounded-lg lift-on-hover">
+          <div className="flex items-center gap-3 rounded-2xl p-3 glass lift-on-hover">
             <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-amber-400/10 to-orange-400/10 flex items-center justify-center">
               <Building2 className="w-5 h-5 text-amber-600 flex-shrink-0" />
             </div>
@@ -138,11 +133,9 @@ export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, o
           </div>
         )}
 
-        {/* Contact Information Grid */}
         <div className="grid grid-cols-1 gap-3">
-          {/* Email */}
           {prospect.email && (
-            <div className="flex items-center gap-3 p-3 glass frosted-green rounded-lg lift-on-hover">
+            <div className="flex items-center gap-3 rounded-2xl p-3 glass lift-on-hover">
               <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
                 <Mail className="w-5 h-5 text-success flex-shrink-0" />
               </div>
@@ -158,9 +151,8 @@ export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, o
             </div>
           )}
 
-          {/* LinkedIn */}
           {prospect.linkedinUrl && (
-            <div className="flex items-center gap-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100 lift-on-hover">
+            <div className="flex items-center gap-3 rounded-2xl border border-sky-100 bg-sky-50/60 p-3 lift-on-hover">
               <ExternalLink className="w-4 h-4 text-hermes-sky flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <a 
@@ -176,9 +168,8 @@ export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, o
             </div>
           )}
 
-          {/* Phone */}
           {prospect.phone && (
-            <div className="flex items-center gap-3 p-3 bg-amber-50/50 rounded-lg border border-amber-100 lift-on-hover">
+            <div className="flex items-center gap-3 rounded-2xl border border-amber-100 bg-amber-50/60 p-3 lift-on-hover">
               <Phone className="w-4 h-4 text-amber-600 flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <span className="text-sm font-medium text-amber-700">{prospect.phone}</span>
@@ -186,9 +177,8 @@ export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, o
             </div>
           )}
 
-          {/* Location */}
           {prospect.location && (
-            <div className="flex items-center gap-3 p-3 bg-orange-50/50 rounded-lg border border-orange-100">
+            <div className="flex items-center gap-3 rounded-2xl border border-orange-100 bg-orange-50/60 p-3">
               <MapPin className="w-4 h-4 text-orange-600 flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <span className="text-sm font-medium text-orange-700">{prospect.location}</span>
@@ -197,7 +187,6 @@ export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, o
           )}
         </div>
 
-        {/* Additional Enrichments */}
         {prospect.enrichments && Array.isArray(prospect.enrichments) && prospect.enrichments.length > 0 && (
           <div className="space-y-2">
             <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
@@ -211,7 +200,7 @@ export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, o
                 const displayText = isTruncated && !showFullEnrichments ? resultText.slice(0, 150) + '...' : resultText;
                 
                 return (
-                  <div key={i} className="flex items-start gap-2 p-2 bg-gray-50 rounded">
+                  <div key={i} className="flex items-start gap-2 rounded-xl bg-stone-50 p-3">
                     <div className="text-xs text-gray-600 flex-1">
                       <span className="font-medium text-amber-700">{enrichment.title || 'Info'}: </span>
                       <span>{displayText}</span>
@@ -234,7 +223,6 @@ export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, o
           </div>
         )}
 
-        {/* Notes Section */}
         {onNoteChange && (
           <div className="space-y-2">
             <div className="flex items-center gap-2">
@@ -251,14 +239,13 @@ export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, o
           </div>
         )}
 
-        {/* Action Buttons */}
         {onFeedback && (
           <div className="flex gap-2 pt-2">
             <Button
               onClick={() => onFeedback('good')}
               variant="default"
               size="sm"
-              className="flex-1 bg-green-600 hover:bg-green-700"
+              className="flex-1 bg-black text-white hover:bg-black/90"
             >
               <CheckCircle className="w-4 h-4 mr-1" />
               Good Fit
@@ -267,7 +254,7 @@ export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, o
               onClick={() => onFeedback('bad')}
               variant="outline"
               size="sm"
-              className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
+              className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
             >
               <XCircle className="w-4 h-4 mr-1" />
               Not a Fit
@@ -275,8 +262,7 @@ export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, o
           </div>
         )}
 
-        {/* Helper Text */}
-        <div className="text-xs text-gray-500 text-center pt-2 border-t border-gray-100">
+        <div className="border-t border-gray-100 pt-2 text-center text-xs text-gray-500">
           Review the prospect&apos;s information and LinkedIn profile before proceeding
         </div>
       </CardContent>
