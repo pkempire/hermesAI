@@ -51,7 +51,7 @@ export default function AppSidebar() {
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
-              <Link href="/prospect-search" className="flex items-center gap-3 rounded-xl px-3 py-2.5">
+              <Link href="/" className="flex items-center gap-3 rounded-xl px-3 py-2.5">
                 <Search className="size-4" />
                 <span>Find Prospects</span>
               </Link>

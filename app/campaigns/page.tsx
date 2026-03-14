@@ -81,7 +81,7 @@ export default function CampaignsPage() {
             Track the lists you&apos;ve built, how many contacts are ready, and where each outreach motion stands.
           </p>
         </div>
-        <Link href="/prospect-search">
+        <Link href="/">
           <Button className="bg-black text-white hover:bg-black/90">
             <Plus className="w-4 h-4 mr-2" />
             New Campaign
@@ -97,7 +97,7 @@ export default function CampaignsPage() {
             <p className="mb-4 max-w-md text-center text-black/60">
               Start your first cold email campaign by finding prospects
             </p>
-            <Link href="/prospect-search">
+            <Link href="/">
               <Button className="bg-black text-white hover:bg-black/90">
                 <Plus className="w-4 h-4 mr-2" />
                 Create First Campaign
