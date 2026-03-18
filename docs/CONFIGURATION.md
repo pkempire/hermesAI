@@ -1,6 +1,49 @@
 # Configuration Guide
 
-This guide covers the optional features and their configuration in Morphic.
+This guide covers the runtime configuration for HermesAI.
+
+## Core Environment Variables
+
+Set these before running Hermes locally or deploying it:
+
+```bash
+# App URLs
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXT_PUBLIC_BASE_URL=http://localhost:3000
+NEXTAUTH_URL=http://localhost:3000
+
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+
+# Model and research providers
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+EXA_API_KEY=
+ORANGESLICE_API_KEY=
+HUNTER_API_KEY=
+APOLLO_API_KEY=
+
+# Gmail / Google OAuth
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
+# Billing
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+NEXT_PUBLIC_STRIPE_CHECKOUT_URL=
+
+# Redis / rate limiting / cache
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+REDIS_URL=
+REDIS_TOKEN=
+
+# Feature flags
+SKIP_QUOTA_CHECK=false
+NEXT_PUBLIC_ENABLE_SAVE_CHAT_HISTORY=false
+```
 
 ## Table of Contents
 

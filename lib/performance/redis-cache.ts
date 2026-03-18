@@ -7,9 +7,10 @@ import { Redis } from '@upstash/redis'
 
 // Redis connection with connection pooling
 const redisToken = process.env.REDIS_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN
-const redis = process.env.REDIS_URL && redisToken
+const redisUrl = process.env.REDIS_URL || process.env.UPSTASH_REDIS_REST_URL
+const redis = redisUrl && redisToken
   ? new Redis({
-      url: process.env.REDIS_URL,
+      url: redisUrl,
       token: redisToken,
       automaticDeserialization: false, // Handle JSON manually for performance
     })

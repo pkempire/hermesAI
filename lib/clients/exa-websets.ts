@@ -88,6 +88,230 @@ export interface ListItemsResponse {
   nextCursor?: string
 }
 
+function toCleanString(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined
+  const trimmed = value.trim()
+  if (!trimmed || trimmed === 'null' || trimmed === 'None' || trimmed === 'Unknown') {
+    return undefined
+  }
+  return trimmed
+}
+
+function toFirstString(value: unknown): string | undefined {
+  if (Array.isArray(value)) {
+    return toCleanString(value.find(entry => typeof entry === 'string'))
+  }
+  return toCleanString(value)
+}
+
+function looksLikeDomain(value: string): boolean {
+  return /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(value)
+}
+
+function looksLikePhone(value: string): boolean {
+  return /\+?\d[\d\s().-]{7,}/.test(value)
+}
+
+function looksLikeJobTitle(value: string): boolean {
+  return /\b(founder|ceo|cto|coo|chief|director|manager|lead|head|partner|president|vp|engineer|marketer|sales|growth|recruiter)\b/i.test(value)
+}
+
+function titleCaseFromSlug(slug: string): string {
+  return slug
+    .replace(/[-_]+/g, ' ')
+    .replace(/\b\w/g, char => char.toUpperCase())
+}
+
+function parseItemTitle(title?: string): Partial<Prospect> {
+  const cleanTitle = toCleanString(title)
+  if (!cleanTitle) return {}
+
+  const dashParts = cleanTitle.split(' - ')
+  if (dashParts.length >= 2) {
+    const fullName = dashParts[0]?.trim()
+    const roleCompany = dashParts.slice(1).join(' - ').trim()
+
+    if (roleCompany.includes(' at ')) {
+      const [jobTitle, company] = roleCompany.split(' at ')
+      return {
+        fullName: toCleanString(fullName),
+        jobTitle: toCleanString(jobTitle),
+        company: toCleanString(company)
+      }
+    }
+
+    return {
+      fullName: toCleanString(fullName),
+      jobTitle: toCleanString(roleCompany)
+    }
+  }
+
+  return { fullName: cleanTitle }
+}
+
+function buildSummary(company?: string, industry?: string, companySize?: string): string | undefined {
+  const parts = [company, industry, companySize ? `${companySize} employees` : undefined].filter(Boolean)
+  return parts.length > 0 ? parts.join(' • ') : undefined
+}
+
+function normalizeStructuredEnrichments(rawEnrichments: unknown): Array<{ title: string; result: string; format?: string }> {
+  if (!rawEnrichments) return []
+
+  if (Array.isArray(rawEnrichments)) {
+    return rawEnrichments
+      .filter((entry: any) => entry?.status === 'completed')
+      .map((entry: any, index) => {
+        const result = toFirstString(entry?.result)
+        if (!result) return null
+
+        const title =
+          toCleanString(entry?.description) ||
+          toCleanString(entry?.enrichmentId) ||
+          `Enrichment ${index + 1}`
+
+        return {
+          title,
+          result,
+          format: toCleanString(entry?.format)
+        }
+      })
+      .filter(Boolean) as Array<{ title: string; result: string; format?: string }>
+  }
+
+  if (typeof rawEnrichments === 'object') {
+    return Object.entries(rawEnrichments as Record<string, any>)
+      .map(([key, value]) => {
+        if (value && typeof value === 'object') {
+          if (value.status && value.status !== 'completed') return null
+          const result = toFirstString(value.result ?? value.value)
+          if (!result) return null
+          return {
+            title: toCleanString(value.description) || key,
+            result,
+            format: toCleanString(value.format)
+          }
+        }
+
+        const result = toCleanString(value)
+        if (!result) return null
+        return { title: key, result }
+      })
+      .filter(Boolean) as Array<{ title: string; result: string; format?: string }>
+  }
+
+  return []
+}
+
+function extractProspectFields(
+  item: WebsetItem,
+  structuredEnrichments: Array<{ title: string; result: string; format?: string }>
+): Partial<Prospect> {
+  const base = parseItemTitle(item.title)
+  const inferredFromUrl = item.url?.includes('linkedin.com/in/')
+    ? titleCaseFromSlug(item.url.split('/in/')[1]?.split('/')[0] || '')
+    : undefined
+
+  const prospect: Partial<Prospect> = {
+    fullName: base.fullName || inferredFromUrl || 'Profile Found',
+    jobTitle: base.jobTitle,
+    company: base.company,
+    linkedinUrl: item.url?.includes('linkedin.com') ? item.url : undefined,
+    website: item.url,
+    avatarUrl: toCleanString(item.metadata?.image) || toCleanString(item.metadata?.avatar),
+    companyLogoUrl: toCleanString(item.metadata?.logo)
+  }
+
+  for (const enrichment of structuredEnrichments) {
+    const title = enrichment.title.toLowerCase()
+    const value = enrichment.result
+    const valueLower = value.toLowerCase()
+
+    if (!prospect.email && (title.includes('email') || value.includes('@'))) {
+      prospect.email = value
+      continue
+    }
+    if (!prospect.linkedinUrl && (title.includes('linkedin') || valueLower.includes('linkedin.com'))) {
+      prospect.linkedinUrl = value
+      continue
+    }
+    if (!prospect.phone && (title.includes('phone') || looksLikePhone(value))) {
+      prospect.phone = value
+      continue
+    }
+    if (!prospect.location && title.includes('location')) {
+      prospect.location = value
+      continue
+    }
+    if (!prospect.industry && title.includes('industry')) {
+      prospect.industry = value
+      continue
+    }
+    if (!prospect.companySize && (title.includes('employee') || title.includes('company size') || title.includes('headcount'))) {
+      prospect.companySize = value
+      continue
+    }
+    if (!prospect.website && (title.includes('domain') || title.includes('website') || looksLikeDomain(value))) {
+      prospect.website = value.startsWith('http') ? value : `https://${value}`
+      continue
+    }
+    if (!prospect.jobTitle && (title.includes('job title') || title === 'title' || looksLikeJobTitle(value))) {
+      prospect.jobTitle = value
+      continue
+    }
+    if (!prospect.company && (title.includes('company') || title.includes('organization'))) {
+      prospect.company = value
+      continue
+    }
+    if ((!prospect.fullName || prospect.fullName === 'Profile Found') && title.includes('name')) {
+      prospect.fullName = value
+    }
+  }
+
+  return prospect
+}
+
+function buildFitScore(prospect: Prospect): number {
+  const scoreSignals = [
+    prospect.email ? 25 : 0,
+    prospect.linkedinUrl ? 20 : 0,
+    prospect.company && prospect.company !== 'Unknown' ? 15 : 0,
+    prospect.jobTitle && prospect.jobTitle !== 'Unknown' ? 10 : 0,
+    prospect.companySize ? 10 : 0,
+    prospect.industry ? 10 : 0,
+    prospect.website ? 10 : 0,
+  ]
+
+  return Math.min(100, scoreSignals.reduce((sum, value) => sum + value, 0))
+}
+
+function normalizeProspect(item: WebsetItem): Prospect {
+  const structuredEnrichments = normalizeStructuredEnrichments(item.enrichments)
+  const fields = extractProspectFields(item, structuredEnrichments)
+
+  const prospect: Prospect = {
+    id: item.id,
+    exaItemId: item.id,
+    fullName: fields.fullName || 'Profile Found',
+    jobTitle: fields.jobTitle || 'Unknown',
+    company: fields.company || 'Unknown',
+    email: fields.email,
+    linkedinUrl: fields.linkedinUrl,
+    phone: fields.phone,
+    location: fields.location,
+    industry: fields.industry,
+    companySize: fields.companySize,
+    website: fields.website || item.url,
+    enrichments: structuredEnrichments,
+    avatarUrl: fields.avatarUrl,
+    companyLogoUrl: fields.companyLogoUrl
+  }
+
+  ;(prospect as any).fitScore = buildFitScore(prospect)
+  ;(prospect as any).summary = buildSummary(prospect.company, prospect.industry, prospect.companySize)
+
+  return prospect
+}
+
 export class ExaWebsetsClient {
   private exa: Exa
   private useFastApi: boolean
@@ -221,106 +445,7 @@ export class ExaWebsetsClient {
    * Convert Webset item to our Prospect format
    */
   convertToProspect(item: WebsetItem): Prospect {
-    console.log('🔄 [ExaWebsetsClient] Converting item to prospect:', item.id)
-    
-    // Parse enrichments from the Exa API format
-    const enrichments = item.enrichments || {}
-    let fullName = 'Unknown'
-    let jobTitle = 'Unknown'
-    let company = 'Unknown'
-    let email: string | undefined
-    let linkedinUrl: string | undefined
-    let phone: string | undefined
-    let location: string | undefined
-    let industry: string | undefined
-    let companySize: string | undefined
-    
-    // Extract data from enrichment results
-    if (Array.isArray(enrichments)) {
-      enrichments.forEach((enrichment: any) => {
-        if (enrichment.status === 'completed' && enrichment.result && enrichment.result.length > 0) {
-          const value = enrichment.result[0]
-          
-          // Map enrichment titles to our fields
-          if (enrichment.enrichmentId?.includes('Full Name') || value.includes(' ')) {
-            fullName = value
-          } else if (enrichment.enrichmentId?.includes('Job Title') || 
-                     value.toLowerCase().includes('cto') || 
-                     value.toLowerCase().includes('chief') ||
-                     value.toLowerCase().includes('technology')) {
-            jobTitle = value
-          } else if (enrichment.enrichmentId?.includes('Company') || 
-                     !value.includes('@') && !value.includes('linkedin.com')) {
-            company = value
-          } else if (enrichment.enrichmentId?.includes('Email') || value.includes('@')) {
-            email = value
-          } else if (enrichment.enrichmentId?.includes('LinkedIn') || value.includes('linkedin.com')) {
-            linkedinUrl = value
-          } else if (
-            enrichment.enrichmentId?.toLowerCase?.().includes('phone') ||
-            /\+?\d[\d\s().-]{7,}/.test(value)
-          ) {
-            phone = value
-          }
-        }
-      })
-    }
-    
-    // Fallback to direct property access if enrichments array parsing didn't work
-    if (fullName === 'Unknown') {
-      fullName = item.title || 'Unknown'
-    }
-    if (jobTitle === 'Unknown') {
-      const enrichmentsObj = enrichments as Record<string, any>
-      jobTitle = enrichmentsObj.jobTitle || enrichmentsObj['Job Title'] || 'Unknown'
-    }
-    if (company === 'Unknown') {
-      const enrichmentsObj = enrichments as Record<string, any>
-      company = enrichmentsObj.company || enrichmentsObj['Company'] || 'Unknown'
-    }
-    if (!email) {
-      const enrichmentsObj = enrichments as Record<string, any>
-      email = enrichmentsObj.email || enrichmentsObj['Email']
-    }
-    if (!linkedinUrl) {
-      const enrichmentsObj = enrichments as Record<string, any>
-      linkedinUrl = enrichmentsObj.linkedin || enrichmentsObj['LinkedIn'] || item.url
-    }
-    if (!phone) {
-      const enrichmentsObj = enrichments as Record<string, any>
-      phone = enrichmentsObj.phone || enrichmentsObj['Phone']
-    }
-    if (!location) {
-      const enrichmentsObj = enrichments as Record<string, any>
-      location = enrichmentsObj.location || enrichmentsObj['Location']
-    }
-    if (!industry) {
-      const enrichmentsObj = enrichments as Record<string, any>
-      industry = enrichmentsObj.industry || enrichmentsObj['Industry']
-    }
-    if (!companySize) {
-      const enrichmentsObj = enrichments as Record<string, any>
-      companySize = enrichmentsObj.companySize || enrichmentsObj['Company Size']
-    }
-    
-    const prospect: Prospect = {
-      id: item.id,
-      exaItemId: item.id,
-      fullName,
-      jobTitle,
-      company,
-      email,
-      linkedinUrl,
-      phone,
-      location,
-      industry,
-      companySize,
-      website: item.url,
-      enrichments: enrichments
-    }
-    
-    console.log('✅ [ExaWebsetsClient] Converted prospect:', prospect.fullName, 'at', prospect.company)
-    return prospect
+    return normalizeProspect(item)
   }
 }
 
@@ -508,94 +633,7 @@ export function createProspectEnrichments(): WebsetEnrichment[] {
 
 export function convertToProspect(item: WebsetItem): Prospect {
   logger.debug('Converting item to prospect', { itemId: item.id })
-  
-  // Parse enrichments from the Exa API format
-  const enrichments = item.enrichments || {}
-  let fullName = 'Unknown'
-  let jobTitle = 'Unknown'
-  let company = 'Unknown'
-  let email: string | undefined
-  let linkedinUrl: string | undefined
-  let location: string | undefined
-  let industry: string | undefined
-  let companySize: string | undefined
-  
-  // Extract data from enrichment results
-  if (Array.isArray(enrichments)) {
-    enrichments.forEach((enrichment: any) => {
-      if (enrichment.status === 'completed' && enrichment.result && enrichment.result.length > 0) {
-        const value = enrichment.result[0]
-        
-        // Map enrichment titles to our fields
-        if (enrichment.enrichmentId?.includes('Full Name') || value.includes(' ')) {
-          fullName = value
-        } else if (enrichment.enrichmentId?.includes('Job Title') || 
-                   value.toLowerCase().includes('cto') || 
-                   value.toLowerCase().includes('chief') ||
-                   value.toLowerCase().includes('technology')) {
-          jobTitle = value
-        } else if (enrichment.enrichmentId?.includes('Company') || 
-                   !value.includes('@') && !value.includes('linkedin.com')) {
-          company = value
-        } else if (enrichment.enrichmentId?.includes('Email') || value.includes('@')) {
-          email = value
-        } else if (enrichment.enrichmentId?.includes('LinkedIn') || value.includes('linkedin.com')) {
-          linkedinUrl = value
-        }
-      }
-    })
-  }
-  
-  // Fallback to direct property access if enrichments array parsing didn't work
-  if (fullName === 'Unknown') {
-    fullName = item.title || 'Unknown'
-  }
-  if (jobTitle === 'Unknown') {
-    const enrichmentsObj = enrichments as Record<string, any>
-    jobTitle = enrichmentsObj.jobTitle || enrichmentsObj['Job Title'] || 'Unknown'
-  }
-  if (company === 'Unknown') {
-    const enrichmentsObj = enrichments as Record<string, any>
-    company = enrichmentsObj.company || enrichmentsObj['Company'] || 'Unknown'
-  }
-  if (!email) {
-    const enrichmentsObj = enrichments as Record<string, any>
-    email = enrichmentsObj.email || enrichmentsObj['Email']
-  }
-  if (!linkedinUrl) {
-    const enrichmentsObj = enrichments as Record<string, any>
-    linkedinUrl = enrichmentsObj.linkedin || enrichmentsObj['LinkedIn'] || item.url
-  }
-  if (!location) {
-    const enrichmentsObj = enrichments as Record<string, any>
-    location = enrichmentsObj.location || enrichmentsObj['Location']
-  }
-  if (!industry) {
-    const enrichmentsObj = enrichments as Record<string, any>
-    industry = enrichmentsObj.industry || enrichmentsObj['Industry']
-  }
-  if (!companySize) {
-    const enrichmentsObj = enrichments as Record<string, any>
-    companySize = enrichmentsObj.companySize || enrichmentsObj['Company Size']
-  }
-  
-  const prospect: Prospect = {
-    id: item.id,
-    exaItemId: item.id,
-    fullName,
-    jobTitle,
-    company,
-    email,
-    linkedinUrl,
-    location,
-    industry,
-    companySize,
-    website: item.url,
-    enrichments: enrichments
-  }
-  
-  console.log('✅ [ExaWebsetsClient] Converted prospect:', prospect.fullName, 'at', prospect.company)
-  return prospect
+  return normalizeProspect(item)
 }
 
 // Create client instance with proper error handling

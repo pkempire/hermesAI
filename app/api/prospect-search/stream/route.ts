@@ -1,5 +1,6 @@
 import { canAccessWebset } from '@/lib/auth/authorize-webset-access'
 import { requireAuthUser } from '@/lib/auth/require-auth-user'
+import { convertToProspect } from '@/lib/clients/exa-websets'
 import { logger } from '@/lib/utils/logger'
 import Exa from 'exa-js'
 import { NextRequest } from 'next/server'
@@ -85,17 +86,7 @@ export async function GET(req: NextRequest) {
           let prospects: any[] = []
           try {
             const itemsResponse = await exa.websets.items.list(websetId, { limit: 100 })
-            prospects =
-              itemsResponse.data?.map((item: any) => ({
-                id: item.id,
-                exaItemId: item.id,
-                fullName: item.title || 'Profile Found',
-                company: 'Unknown',
-                jobTitle: 'Unknown',
-                linkedinUrl: item.url || undefined,
-                website: item.url,
-                enrichments: item.enrichments || []
-              })) || []
+            prospects = itemsResponse.data?.map((item: any) => convertToProspect(item)) || []
           } catch (itemsError) {
             logger.error('Error listing stream items:', itemsError)
           }
