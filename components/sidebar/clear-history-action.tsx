@@ -17,7 +17,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import { SidebarGroupAction } from '@/components/ui/sidebar'
 import { Spinner } from '@/components/ui/spinner'
 import { clearChats } from '@/lib/actions/chat'
 import { MoreHorizontal, Trash2 } from 'lucide-react'
@@ -43,10 +42,13 @@ export function ClearHistoryAction({ empty }: ClearHistoryActionProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <SidebarGroupAction disabled={empty} className="static size-7 p-1">
+        <button 
+          disabled={empty} 
+          className="size-7 p-1 text-gray-400 hover:text-gray-900 transition-colors disabled:opacity-30 disabled:cursor-not-allowed items-center justify-center flex rounded-lg hover:bg-gray-100"
+        >
           <MoreHorizontal size={16} />
           <span className="sr-only">History Actions</span>
-        </SidebarGroupAction>
+        </button>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end">

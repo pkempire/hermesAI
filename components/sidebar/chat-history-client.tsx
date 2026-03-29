@@ -1,10 +1,5 @@
 'use client'
 
-import {
-    SidebarGroup,
-    SidebarGroupLabel,
-    SidebarMenu
-} from '@/components/ui/sidebar'
 import { Chat } from '@/lib/types'
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { toast } from 'sonner'
@@ -113,23 +108,23 @@ export function ChatHistoryClient() {
 
   return (
     <div className="flex flex-col flex-1 h-full">
-      <SidebarGroup>
+      <div className="p-2">
         <div className="flex items-center justify-between w-full">
-          <SidebarGroupLabel className="p-0 text-gray-500 font-semibold tracking-wide">History</SidebarGroupLabel>
+          <div className="p-0 text-[10px] font-bold uppercase tracking-[0.18em] text-amber-600/70">Campaign history</div>
           <ClearHistoryAction empty={isHistoryEmpty} />
         </div>
-      </SidebarGroup>
-      <div className="flex-1 overflow-y-auto mb-2 relative">
+      </div>
+      <div className="flex-1 overflow-y-auto mb-2 relative px-2">
         {isHistoryEmpty && !isPending ? (
-          <div className="px-2 py-4 text-center text-sm text-gray-400">
+          <div className="py-4 text-center text-sm text-gray-400">
             No search history
           </div>
         ) : (
-          <SidebarMenu>
+          <ul className="flex w-full min-w-0 flex-col gap-1">
             {chats.map(
               (chat: Chat) => chat && <ChatMenuItem key={chat.id} chat={chat} />
             )}
-          </SidebarMenu>
+          </ul>
         )}
         <div ref={loadMoreRef} style={{ height: '1px' }} />
         {(isLoading || isPending) && (

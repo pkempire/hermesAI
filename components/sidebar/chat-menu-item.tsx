@@ -17,12 +17,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import {
-  SidebarMenuAction,
-  SidebarMenuButton,
-  SidebarMenuItem
-} from '@/components/ui/sidebar'
 import { Chat } from '@/lib/types'
+import { cn } from '@/lib/utils'
 import { MoreHorizontal, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -109,25 +105,31 @@ export function ChatMenuItem({ chat }: ChatMenuItemProps) {
   }
 
   return (
-    <SidebarMenuItem>
-      <SidebarMenuButton
-        asChild
-        isActive={isActive}
-        className="h-auto flex-col items-start gap-0.5 rounded-xl p-2 pr-8 text-gray-700 hover:bg-white hover:text-gray-900 border border-transparent hover:border-gray-200 transition-colors data-[active=true]:bg-white data-[active=true]:text-gray-900 data-[active=true]:border-gray-200 data-[active=true]:shadow-sm"
+    <li className="group/menu-item relative list-none">
+      <Link 
+        href={chat.path}
+        className={cn(
+          "flex flex-col items-start gap-0.5 rounded-xl p-2 pr-10 text-gray-700 hover:bg-white hover:text-gray-900 border border-transparent hover:border-gray-200 transition-colors cursor-pointer",
+          isActive && "bg-white text-gray-900 border-gray-200 shadow-sm"
+        )}
       >
-        <Link href={chat.path}>
-          <div className="text-xs font-medium truncate select-none w-full">
-            {chat.title}
-          </div>
-          <div className="w-full text-xs text-gray-400">
-            {formatDateWithTime(chat.createdAt)}
-          </div>
-        </Link>
-      </SidebarMenuButton>
+        <div className="text-xs font-medium truncate select-none w-full">
+          {chat.title}
+        </div>
+        <div className="w-full text-xs text-gray-400">
+          {formatDateWithTime(chat.createdAt)}
+        </div>
+      </Link>
 
       <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
         <DropdownMenuTrigger asChild>
-          <SidebarMenuAction disabled={isPending} className="mr-1 size-7 p-1 text-gray-400 hover:text-gray-900">
+          <button 
+            disabled={isPending} 
+            className={cn(
+              "absolute right-1 top-2 size-7 p-1 text-gray-400 hover:text-gray-900 transition-opacity disabled:cursor-not-allowed items-center justify-center flex rounded-lg hover:bg-gray-100",
+              isMenuOpen ? "opacity-100" : "opacity-0 group-hover/menu-item:opacity-100"
+            )}
+          >
             {isPending ? (
               <div className="flex items-center justify-center size-full">
                 <Spinner />
@@ -136,7 +138,7 @@ export function ChatMenuItem({ chat }: ChatMenuItemProps) {
               <MoreHorizontal size={16} />
             )}
             <span className="sr-only">Chat Actions</span>
-          </SidebarMenuAction>
+          </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent side="right" align="start">
           <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -146,7 +148,6 @@ export function ChatMenuItem({ chat }: ChatMenuItemProps) {
                 className="gap-2 text-destructive focus:text-destructive"
                 onSelect={e => {
                   e.preventDefault()
-                  // Don't call onDelete directly, just open the dialog
                 }}
               >
                 <Trash2 size={14} />
@@ -167,7 +168,7 @@ export function ChatMenuItem({ chat }: ChatMenuItemProps) {
                 </AlertDialogCancel>
                 <AlertDialogAction
                   disabled={isPending}
-                  onClick={onDelete} // Call onDelete here
+                  onClick={onDelete}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
                   {isPending ? (
@@ -183,6 +184,6 @@ export function ChatMenuItem({ chat }: ChatMenuItemProps) {
           </AlertDialog>
         </DropdownMenuContent>
       </DropdownMenu>
-    </SidebarMenuItem>
+    </li>
   )
 }
