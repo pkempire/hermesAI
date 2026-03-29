@@ -269,7 +269,7 @@ export function ProspectPreviewCard({
                 className="flex-[0.5] border-gray-200 bg-gray-50 text-gray-500 font-medium hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors shadow-sm rounded-full py-6 text-[14px] px-2"
               >
                 <ThumbsDown className="w-4 h-4 mr-1.5" />
-                Not What I'm Looking For
+                Not What I&apos;m Looking For
               </Button>
             </div>
           )}
