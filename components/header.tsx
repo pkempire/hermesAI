@@ -1,6 +1,5 @@
 'use client'
 
-import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar'
 import { cn } from '@/lib/utils'
 import { User } from '@supabase/supabase-js'
 import { ArrowUpRight, Mail, Network, UserRound } from 'lucide-react'
@@ -16,7 +15,6 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ user }) => {
-  useSidebar()
   const [credits, setCredits] = useState<number | null>(null)
 
   useEffect(() => {
@@ -82,21 +80,7 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
         <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-white to-transparent" />
       </div>
 
-      <div className="relative z-20 flex items-center justify-between px-2 py-2 md:px-3">
-        <div className="flex items-center gap-2">
-          <SidebarTrigger className="rounded-full border border-gray-200 bg-white text-gray-500 shadow-sm hover:bg-gray-50" />
-          <div className="hidden items-center gap-2 md:inline-flex">
-            <a
-              href={process.env.NEXT_PUBLIC_STRIPE_CHECKOUT_URL || 'https://buy.stripe.com/cNi00i7UMc0xgLCfk56sw03'}
-              className="rounded-full border border-[hsl(var(--hermes-gold))]/30 bg-[hsl(var(--hermes-gold))]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[hsl(var(--hermes-gold-dark))] shadow-sm transition-all hover:bg-[hsl(var(--hermes-gold))]/20"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Unlock Premium
-            </a>
-          </div>
-        </div>
-
+      <div className="relative z-20 flex items-center justify-between px-4 py-2 md:px-5">
         <div className="flex items-center gap-3">
           {user && credits !== null && (
             <div className="hidden items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm sm:inline-flex">

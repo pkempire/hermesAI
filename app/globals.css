@@ -176,3 +176,29 @@ textarea,
 select {
   @apply transition-all duration-200 ease-out;
 }
+
+/* Keyframes */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Body page background — ultra-subtle constellation */
+body {
+  background-image: url('/images/hermes-bg-texture.png');
+  background-size: cover;
+  background-attachment: fixed;
+  background-position: center;
+}
+

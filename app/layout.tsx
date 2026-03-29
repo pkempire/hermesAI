@@ -2,11 +2,10 @@ import { Analytics } from '@vercel/analytics/react'
 import type { Metadata, Viewport } from 'next'
 import { Cormorant_Garamond, Inter } from 'next/font/google'
 
-import AppSidebar from '@/components/app-sidebar'
+import { FloatingSidebar } from '@/components/floating-sidebar'
 import ArtifactRoot from '@/components/artifact/artifact-root'
 import { Header } from '@/components/header'
 import { ThemeProvider } from '@/components/theme-provider'
-import { SidebarProvider } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
 import { createClient } from '@/lib/supabase/server'
 import { cn } from '@/lib/utils'
@@ -102,15 +101,13 @@ export default async function RootLayout({
           enableSystem={false}
           disableTransitionOnChange
         >
-          <SidebarProvider defaultOpen={true}>
-            <AppSidebar user={user} />
-            <div className="flex flex-col flex-1 min-h-0">
-              <Header user={user} />
-              <main className={cn('relative flex flex-1 min-h-0 pt-0', user ? 'overflow-hidden' : 'overflow-x-hidden overflow-y-auto')}>
-                <ArtifactRoot>{children}</ArtifactRoot>
-              </main>
-            </div>
-          </SidebarProvider>
+          <FloatingSidebar user={user} />
+          <div className={cn('flex flex-col flex-1 min-h-0', user ? 'pl-14' : '')}>
+            <Header user={user} />
+            <main className={cn('relative flex flex-1 min-h-0 pt-0', user ? 'overflow-hidden' : 'overflow-x-hidden overflow-y-auto')}>
+              <ArtifactRoot>{children}</ArtifactRoot>
+            </main>
+          </div>
           <Toaster />
           <Analytics />
         </ThemeProvider>
