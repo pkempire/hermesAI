@@ -48,3 +48,7 @@ brain/
 
 # remotion (ignore entire folder)
 remotion/
+# Loose screenshots and local images
+Screenshot*.png
+image*.png
+Gemini_Generated_Image*.png

@@ -250,7 +250,7 @@ export function ChatPanel({
           <div className="mt-8 text-left w-full max-w-[42rem] bg-gray-50/50 border border-gray-200 rounded-[2rem] p-6 shadow-sm ring-1 ring-gray-100/50 transition-all hover:shadow-md">
             <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[hsl(var(--hermes-gold-dark))] mb-2 ml-1">Example</h3>
             <p className="text-[13px] text-gray-500 font-medium leading-relaxed mb-4 ml-1 max-w-xl">
-              Breaking into a new regional market. You need a warm list of dental practices you've never engaged before.
+              Breaking into a new regional market. You need a warm list of dental practices you&apos;ve never engaged before.
             </p>
             
             <div 

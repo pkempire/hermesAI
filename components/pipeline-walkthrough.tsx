@@ -58,7 +58,7 @@ const steps = [
         >
           Exa Webset <ExternalLink className="w-3 h-3" />
         </a>{' '}
-        — an async semantic search job that finds companies matching your ICP across the live web. Exa searches by meaning, not keywords, so it surfaces companies even if they'd never self-categorize. Each result is verified against your criteria and enriched with the fields your offer actually needs.
+        — an async semantic search job that finds companies matching your ICP across the live web. Exa searches by meaning, not keywords, so it surfaces companies even if they&apos;d never self-categorize. Each result is verified against your criteria and enriched with the fields your offer actually needs.
       </span>
     ),
     facts: [
