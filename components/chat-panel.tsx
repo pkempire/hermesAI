@@ -239,13 +239,35 @@ export function ChatPanel({
             <img src="/images/hermes-pixel-icon.png" alt="Hermes AI Icon" className="h-full w-full object-contain drop-shadow-[0_4px_12px_rgba(214,157,74,0.3)]" />
           </div>
           
-          <h1 className="font-serif text-[2.75rem] md:text-[3.5rem] leading-[1.05] text-gray-900 tracking-[-0.03em] mb-5">
-            Who are we reaching today?
+          <h1 className="font-serif text-[2.5rem] md:text-[3rem] leading-[1.05] text-gray-900 tracking-[-0.03em] mb-4">
+            Turn outbound chaos into revenue.
           </h1>
           
-          <p className="text-[16px] md:text-[18px] font-medium leading-[1.6] text-gray-500 max-w-2xl px-4">
-            Tell Hermes what your offer is, and it will deploy neural networks across the open web to find exact-match companies, resolve decision-makers, and draft executive-grade emails instantly.
+          <p className="text-[15px] md:text-[17px] font-medium leading-[1.6] text-gray-500 max-w-xl px-4">
+            Tell Hermes who to reach. It finds the companies, resolves the right person, verifies their email, and drafts a personalized pitch — automatically.
           </p>
+
+          <div className="mt-8 text-left w-full max-w-[42rem] bg-gray-50/50 border border-gray-200 rounded-[2rem] p-6 shadow-sm ring-1 ring-gray-100/50 transition-all hover:shadow-md">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[hsl(var(--hermes-gold-dark))] mb-2 ml-1">Example</h3>
+            <p className="text-[13px] text-gray-500 font-medium leading-relaxed mb-4 ml-1 max-w-xl">
+              Breaking into a new regional market. You need a warm list of dental practices you've never engaged before.
+            </p>
+            
+            <div 
+              className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm relative group cursor-pointer hover:border-[hsl(var(--hermes-gold))]/40 transition-colors"
+              onClick={() => {
+                if (setInput) setInput("Hey, I run a dental SaaS company (dentalsaas.com) and I'm trying to break into the Massachusetts market. Find me 20 private dental practices in MA with 10-50 employees that have been around for more than 5 years. I need the contact info for their founder, and please extract how many Google reviews they currently have.")
+                try { inputRef.current?.focus() } catch {}
+              }}
+            >
+              <p className="text-[14px] leading-relaxed text-gray-800 font-medium pr-8">
+                &quot;Hey, I run a dental SaaS company (<span className="text-blue-600">dentalsaas.com</span>) and I&apos;m trying to break into the Massachusetts market. Find me 20 private dental practices in MA with 10-50 employees that have been around for more than 5 years. I need the contact info for their founder, and please extract how many Google reviews they currently have.&quot;
+              </p>
+              <div className="absolute top-5 right-5 text-gray-300 group-hover:text-[hsl(var(--hermes-gold))] transition-all duration-300 transform group-hover:translate-x-1">
+                <ArrowUp className="w-5 h-5 rotate-45" />
+              </div>
+            </div>
+          </div>
         </div>
       )}
       
@@ -284,7 +306,7 @@ export function ChatPanel({
               tabIndex={0}
               onCompositionStart={handleCompositionStart}
               onCompositionEnd={handleCompositionEnd}
-              placeholder="Example: Find 20 Fintech CTOs in New York. Pitch them my fractional dev-ops offering."
+              placeholder="Find 20 Fintech CTOs in New York — pitch them my developer tool"
               spellCheck={false}
               value={input}
               disabled={isLoading || isToolInvocationInProgress()}

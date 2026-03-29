@@ -554,7 +554,7 @@ function extractProspectFields(
       prospect.industry = value
       continue
     }
-    if (!prospect.companySize && (title.includes('employee') || title.includes('company size') || title.includes('headcount'))) {
+    if (!prospect.companySize && (title.includes('employee') || title.includes('size') || title.includes('headcount'))) {
       prospect.companySize = value
       continue
     }
@@ -562,15 +562,16 @@ function extractProspectFields(
       prospect.website = value.startsWith('http') ? value : `https://${value}`
       continue
     }
-    if (!prospect.jobTitle && (title.includes('job title') || title === 'title' || looksLikeJobTitle(value))) {
+    if (!prospect.jobTitle && (title.includes('title') || title.includes('role') || title.includes('position') || looksLikeJobTitle(value))) {
       prospect.jobTitle = value
       continue
     }
-    if (!prospect.company && (title.includes('company') || title.includes('organization') || title.includes('firm'))) {
+    if (!prospect.company && (title.includes('company') || title.includes('organization') || title.includes('firm') || title === 'account')) {
       prospect.company = value
       continue
     }
-    if ((!prospect.fullName || prospect.fullName === inferredCompany) && (title.includes('name') || title.includes('decision maker'))) {
+    if ((!prospect.fullName || prospect.fullName === inferredCompany) && 
+        (title.includes('name') || (title.includes('decision maker') && !title.includes('email') && !title.includes('linkedin')))) {
       prospect.fullName = value
     }
   }
@@ -642,6 +643,9 @@ function normalizeProspect(item: WebsetItem): Prospect {
   ;(prospect as any).summary =
     fields.summary ||
     buildSummary(prospect.company, prospect.industry, prospect.companySize)
+  // Preserve Exa source evidence — the page Exa found/indexed to qualify this company
+  ;(prospect as any).sourceUrl = item.url || undefined
+  ;(prospect as any).exaText = item.text ? truncateText(stripHtml(item.text), 400) : undefined
 
   return prospect
 }
@@ -683,6 +687,9 @@ function normalizeProspectWithDescriptions(
   ;(prospect as any).summary =
     fields.summary ||
     buildSummary(prospect.company, prospect.industry, prospect.companySize)
+  // Preserve Exa source evidence — the page Exa found/indexed to qualify this company
+  ;(prospect as any).sourceUrl = item.url || undefined
+  ;(prospect as any).exaText = item.text ? truncateText(stripHtml(item.text), 400) : undefined
 
   return prospect
 }

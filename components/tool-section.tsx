@@ -4,6 +4,7 @@ import { ProspectSearchSection } from './prospect-search-section'
 import RetrieveSection from './retrieve-section'
 import { SearchSection } from './search-section'
 import { VideoSearchSection } from './video-search-section'
+import { ErrorBoundary } from './error-boundary'
 
 interface ToolSectionProps {
   tool: any
@@ -71,7 +72,7 @@ export function ToolSection({
                 
                 const { InteractiveEmailDrafter } = require('./interactive-email-drafter') as any
                 const Comp = InteractiveEmailDrafter
-                if (Comp) return <Comp {...props} />
+                if (Comp) return <ErrorBoundary label="EmailDrafter"><Comp {...props} /></ErrorBoundary>
               }
             } catch {}
             return null
@@ -109,11 +110,13 @@ export function ToolSection({
       )
     case 'prospect_search':
       return (
-        <ProspectSearchSection
-          tool={tool}
-          isOpen={isOpen}
-          onOpenChange={onOpenChange}
-        />
+        <ErrorBoundary label="ProspectSearch">
+          <ProspectSearchSection
+            tool={tool}
+            isOpen={isOpen}
+            onOpenChange={onOpenChange}
+          />
+        </ErrorBoundary>
       )
     case 'scrape_site':
 

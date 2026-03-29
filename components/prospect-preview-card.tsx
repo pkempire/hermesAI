@@ -115,13 +115,23 @@ export function ProspectPreviewCard({
           <div className="flex items-start justify-between">
             <div className="space-y-1">
               <CardTitle className="text-[2rem] font-serif tracking-tight flex items-center space-x-3 text-gray-900">
-                <div className="bg-[hsl(var(--hermes-gold))]/10 p-2 rounded-xl">
-                    <User className="w-5 h-5 text-[hsl(var(--hermes-gold-dark))]" />
+                <div className="bg-[hsl(var(--hermes-gold))]/10 w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden shrink-0">
+                  {prospect.avatarUrl ? (
+                    <img src={prospect.avatarUrl} alt={prospect.fullName || 'Contact'} className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-6 h-6 text-[hsl(var(--hermes-gold-dark))]" />
+                  )}
                 </div>
                 <span>{prospect.fullName}</span>
               </CardTitle>
-              <CardDescription className="flex items-center space-x-2 text-[14px] font-medium text-gray-500 pt-1">
-                <Building className="w-4 h-4 text-gray-400" />
+              <CardDescription className="flex items-center space-x-2 text-[14px] font-medium text-gray-500 pt-1 ml-[3.75rem]">
+                <div className="w-5 h-5 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center border border-gray-200 shrink-0">
+                  {prospect.companyLogoUrl ? (
+                    <img src={prospect.companyLogoUrl} alt={prospect.company || 'Company'} className="w-full h-full object-cover" />
+                  ) : (
+                    <Building className="w-3 h-3 text-gray-400" />
+                  )}
+                </div>
                 <span>{prospect.jobTitle} at {prospect.company}</span>
               </CardDescription>
             </div>
@@ -215,6 +225,51 @@ export function ProspectPreviewCard({
               </div>
             </div>
           </div>
+
+          {/* Custom Enrichments */}
+          {Array.isArray(prospect.enrichments) && prospect.enrichments.filter(e => e?.title && e?.result && !e.title.match(/Name|Email|Summary|Title|LinkedIn Profile/i) && e.result !== 'null' && e.result !== 'undefined').length > 0 && (
+            <>
+              <Separator className="bg-gray-100" />
+              <div className="space-y-4">
+                <h4 className="font-bold uppercase tracking-wider text-[11px] text-gray-400">Custom Enrichments</h4>
+                <div className="space-y-3 text-[14px] font-medium text-gray-700 bg-gray-50/50 p-5 rounded-2xl border border-gray-100">
+                  {prospect.enrichments
+                    .filter((entry: any) => 
+                      entry?.title && 
+                      entry?.result && 
+                      !entry.title.match(/Name|Email|Summary|Title|LinkedIn Profile/i) &&
+                      entry.result !== 'null' && 
+                      entry.result !== 'undefined'
+                    )
+                    .map((entry: any, i: number) => (
+                    <div key={i} className="flex flex-col sm:flex-row sm:items-start border-b border-gray-100/80 pb-3 last:border-0 last:pb-0">
+                      <span className="text-gray-400 w-40 shrink-0 text-[11px] font-bold uppercase tracking-wider mb-1 sm:mb-0 mt-0.5">{entry.title}</span>
+                      <span className="flex-1 text-gray-900 font-semibold bg-white border border-gray-100 rounded-md px-3 py-1.5 text-[13px] shadow-sm whitespace-pre-wrap">{entry.result}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Hermes Take (if exists) */}
+          {prospect.hermesTake && prospect.note && (
+            <>
+              <Separator className="bg-gray-100" />
+              <div className="rounded-2xl border border-[hsl(var(--hermes-gold))]/20 bg-[hsl(var(--hermes-gold))]/5 p-5 shadow-sm">
+                <div className="mb-3 flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.2em] text-[hsl(var(--hermes-gold-dark))]">
+                  <img src="/images/hermes-pixel-icon.png" alt="Hermes" className="w-5 h-5 rounded-full object-contain" />
+                  Hermes take
+                </div>
+                <div className="space-y-2 text-[14px] leading-relaxed text-gray-800">
+                  <p><span className="font-semibold text-gray-900">Why fit:</span> {prospect.hermesTake.whyFit || prospect.note}</p>
+                  {prospect.hermesTake.outreachAngle && (
+                    <p><span className="font-semibold text-gray-900">Angle:</span> {prospect.hermesTake.outreachAngle}</p>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
 
           <Separator className="bg-gray-100" />
 

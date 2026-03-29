@@ -246,7 +246,7 @@ Write an analytical prospect note for one target.
 CRITICAL RULES:
 1. "whyFit": Write 2-3 sharp sentences explaining precisely how this company matches (or doesn't match) the user's campaign criteria. Reference specific signals or enrichments (e.g., "They just raised $2M, making them a prime target for...").
 2. "outreachAngle": Write a 1-2 sentence angle on how to approach them, using their specific data.
-3. MAX 4 items for "evidence", referencing concrete facts found in the enrichments.`,
+3. "evidence": MAX 4 items. Each MUST be a concrete fact — pulled verbatim or paraphrased from the enrichments or the Exa source excerpt provided. Do NOT invent or generalize. If an Exa text excerpt is available, extract specific quotes or signals from it. Format as short factual statements, e.g. "Founded 2018, 47 staff per LinkedIn", "Homepage confirms AWS partnership", "Hiring 3 AE roles per job board".`,
       prompt: JSON.stringify({
         campaignBrief: context?.originalQuery || null,
         offer: context?.offer || null,
@@ -256,7 +256,10 @@ CRITICAL RULES:
         decisionMaker: prospect.fullName || null,
         decisionMakerTitle: prospect.jobTitle || null,
         summary,
-        signals: signalRows.slice(0, 6)
+        signals: signalRows.slice(0, 6),
+        // Exa evidence — ground truth from the web page Exa found for this company
+        exaSourceUrl: (prospect as any).sourceUrl || null,
+        exaTextExcerpt: (prospect as any).exaText || null
       })
     })
 
@@ -448,6 +451,226 @@ export async function enrichProspectWithOrangeslice(
       }
     } catch (error) {
       logger.warn('Orangeslice contact waterfall failed:', error)
+    }
+  }
+
+  const signalRows = (Array.isArray(enriched.enrichments) ? enriched.enrichments : [])
+    .map((entry: any) => ({
+      title: String(entry?.title || '').trim(),
+      value: String(entry?.result || entry?.value || '').trim(),
+      result: String(entry?.result || entry?.value || '').trim()
+    }))
+    .filter(entry => entry.title && entry.result)
+
+  enriched.hermesTake = await generateHermesTake({
+    prospect: enriched,
+    context,
+    companyDescription: (enriched as any).summary,
+    signalRows
+  })
+  enriched.note = enriched.hermesTake.whyFit
+  enriched.reviewReady = true
+
+  return enriched
+}
+
+/**
+ * Step 1 enrichment: company data only (LinkedIn info, size, description, location).
+ * Fast and cheap. Use for the initial "company card" display before the user requests
+ * contacts. The result is marked reviewReady so it can be rendered immediately.
+ */
+export async function enrichCompanyData(
+  prospect: Prospect,
+  context?: ProspectSearchContext
+): Promise<Prospect> {
+  ensureOrangesliceConfigured()
+  if (!process.env.ORANGESLICE_API_KEY) return { ...prospect, reviewReady: true }
+
+  const enriched: Prospect = {
+    ...prospect,
+    enrichments: Array.isArray(prospect.enrichments) ? [...prospect.enrichments] : []
+  }
+
+  const website = sanitizeWebsite(prospect.website)
+  const domain = extractDomain(website)
+  const isCompanyLinkedin =
+    typeof prospect.linkedinUrl === 'string' &&
+    /linkedin\.com\/company\//i.test(prospect.linkedinUrl)
+
+  let companyLinkedinUrl = isCompanyLinkedin ? prospect.linkedinUrl : undefined
+
+  try {
+    let companyData: OrangesliceCompany | null = null
+    if (domain) {
+      companyData = (await services.company.linkedin.enrich({ domain })) as OrangesliceCompany | null
+    }
+    if (!companyData && (prospect.company || website)) {
+      const foundUrl = await services.company.linkedin.findUrl({
+        companyName: prospect.company || undefined,
+        website: website || undefined,
+        location: prospect.location || undefined
+      })
+      if (foundUrl) {
+        companyLinkedinUrl = foundUrl
+        companyData = (await services.company.linkedin.enrich({ url: foundUrl })) as OrangesliceCompany | null
+      }
+    }
+    if (companyData) {
+      companyLinkedinUrl = companyLinkedinUrl || compact(companyData.linkedin_url, 220)
+      enriched.company = compact(companyData.name, 120) || enriched.company
+      enriched.website = sanitizeWebsite(companyData.website || enriched.website) || enriched.website
+      enriched.location =
+        buildLocation([companyData.locality, companyData.region, companyData.country_name]) ||
+        enriched.location
+      enriched.companySize =
+        compact(
+          typeof companyData.employee_count === 'number'
+            ? `${companyData.employee_count} employees`
+            : (companyData.size as string | undefined),
+          80
+        ) || enriched.companySize
+      enriched.industry = compact(companyData.type, 80) || enriched.industry
+      ;(enriched as any).summary = compact(companyData.description, 260) || (enriched as any).summary
+      mergeEnrichments(enriched, [
+        toSignal('Company Name', companyData.name),
+        toSignal('Company LinkedIn', companyLinkedinUrl),
+        toSignal('Company Location', enriched.location),
+        toSignal('Company Size', enriched.companySize),
+        toSignal('Company Profile', companyData.description),
+        toSignal(
+          'Specialties',
+          Array.isArray(companyData.specialties)
+            ? companyData.specialties.slice(0, 6).join(', ')
+            : typeof companyData.specialties === 'string'
+            ? companyData.specialties
+            : undefined
+        )
+      ])
+    }
+  } catch (error) {
+    logger.warn('enrichCompanyData failed:', error)
+  }
+
+  ;(enriched as any).companyEnrichmentDone = true
+  enriched.reviewReady = true
+  return enriched
+}
+
+/**
+ * Step 2 enrichment: person resolution, email finding, and Hermes Take.
+ * Call on-demand when the user selects companies to find contacts for.
+ * Expects prospect to have already been through enrichCompanyData.
+ */
+export async function enrichPersonData(
+  prospect: Prospect,
+  context?: ProspectSearchContext
+): Promise<Prospect> {
+  ensureOrangesliceConfigured()
+  if (!process.env.ORANGESLICE_API_KEY) return { ...prospect, reviewReady: true }
+
+  const enriched: Prospect = {
+    ...prospect,
+    enrichments: Array.isArray(prospect.enrichments) ? [...prospect.enrichments] : []
+  }
+
+  const website = sanitizeWebsite(prospect.website)
+  const domain = extractDomain(website)
+  const companyLinkedinUrl = (enriched.enrichments as any[])?.find(
+    (e: any) => e?.title === 'Company LinkedIn'
+  )?.result as string | undefined
+
+  let personLinkedinUrl: string | undefined
+
+  try {
+    if (companyLinkedinUrl) {
+      const employeeResult = await services.company.getEmployeesFromLinkedin({
+        linkedinUrl: companyLinkedinUrl,
+        searchStrategy: 'web',
+        titleVariations: buildTitleVariations(context?.targetPersona),
+        titleSqlFilter: buildTitleSqlFilter(context?.targetPersona),
+        limit: 3,
+        onlyCurrent: true,
+        usOnly: false
+      })
+      const employee = employeeResult.employees?.[0]
+      if (employee) {
+        enriched.fullName = compact(employee.lp_formatted_name, 100) || enriched.fullName
+        enriched.jobTitle = compact(employee.lp_title, 120) || enriched.jobTitle
+        personLinkedinUrl = compact(employee.lp_public_profile_url, 220)
+        mergeEnrichments(enriched, [
+          toSignal('Decision Maker Name', employee.lp_formatted_name),
+          toSignal('Decision Maker Title', employee.lp_title),
+          toSignal('Decision Maker LinkedIn', employee.lp_public_profile_url),
+          toSignal('Decision Maker Location', employee.lp_location_name)
+        ])
+      }
+    }
+  } catch (error) {
+    logger.warn('enrichPersonData: employee lookup failed:', error)
+  }
+
+  if (!enriched.fullName) {
+    const websiteContacts = await findWebsiteContacts({ website, targetPersona: context?.targetPersona })
+    const firstContact = websiteContacts[0]
+    if (firstContact) {
+      enriched.fullName = compact(firstContact.name, 100) || enriched.fullName
+      enriched.jobTitle = compact(firstContact.title, 120) || enriched.jobTitle
+      personLinkedinUrl = compact(firstContact.linkedinUrl, 220) || personLinkedinUrl
+      enriched.email = compact(firstContact.email, 160) || enriched.email
+      mergeEnrichments(enriched, [
+        toSignal('Decision Maker Name', firstContact.name),
+        toSignal('Decision Maker Title', firstContact.title),
+        toSignal('Decision Maker LinkedIn', firstContact.linkedinUrl),
+        toSignal('Decision Maker Email', firstContact.email)
+      ])
+    }
+  }
+
+  try {
+    if (personLinkedinUrl) {
+      const person = (await services.person.linkedin.enrich({ url: personLinkedinUrl })) as OrangeslicePerson | null
+      if (person) {
+        enriched.fullName = compact(person.name, 100) || enriched.fullName
+        enriched.jobTitle = compact(person.title, 120) || enriched.jobTitle
+        personLinkedinUrl = compact(person.url || personLinkedinUrl, 220) || personLinkedinUrl
+        mergeEnrichments(enriched, [
+          toSignal('Decision Maker Name', person.name),
+          toSignal('Decision Maker Title', person.title),
+          toSignal('Decision Maker Summary', person.summary || person.headline)
+        ])
+      }
+    }
+  } catch (error) {
+    logger.warn('enrichPersonData: person LinkedIn enrichment failed:', error)
+  }
+
+  enriched.linkedinUrl = personLinkedinUrl || enriched.linkedinUrl
+
+  if (!enriched.email && personLinkedinUrl) {
+    try {
+      const firstName = enriched.fullName?.split(/\s+/)[0]
+      const lastName = enriched.fullName?.split(/\s+/).slice(1).join(' ')
+      const contactInfo = await Promise.race([
+        services.person.contact.get({
+          linkedinUrl: personLinkedinUrl,
+          firstName,
+          lastName,
+          company: enriched.company,
+          domain,
+          required: ['work_email']
+        }),
+        new Promise<null>(resolve => setTimeout(() => resolve(null), 8000))
+      ])
+      const email =
+        contactInfo && 'work_emails' in contactInfo
+          ? contactInfo.work_emails?.[0] || contactInfo.personal_emails?.[0]
+          : undefined
+      if (email) {
+        enriched.email = compact(email, 160) || enriched.email
+        mergeEnrichments(enriched, [toSignal('Decision Maker Email', email)])
+      }
+    } catch (error) {
+      logger.warn('enrichPersonData: contact waterfall failed:', error)
     }
   }
 

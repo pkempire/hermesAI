@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 interface Props {
   children: ReactNode
   fallback?: ReactNode
+  label?: string
 }
 
 interface State {
@@ -27,7 +28,8 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     if (process.env.NODE_ENV !== 'production') {
-      console.error('ErrorBoundary caught an error:', error, errorInfo)
+      const tag = (this.props as Props).label ? `[${(this.props as Props).label}]` : ''
+      console.error(`ErrorBoundary${tag} caught an error:`, error, errorInfo)
     }
   }
 

@@ -452,7 +452,7 @@ export function ProspectSearchSection({
                     {getStatusIcon()}
                   </div>
                   <div>
-                    <CardTitle className="font-serif text-[2.25rem] leading-none text-gray-900 tracking-tight">
+                    <CardTitle className="font-serif text-[1.6rem] leading-none text-gray-900 tracking-tight">
                       Prospect Discovery
                     </CardTitle>
                     <Badge variant={getStatusBadgeVariant()} className="mt-2 border-transparent bg-gray-100/80 text-[10px] uppercase tracking-wider text-gray-500 font-semibold shadow-none">
@@ -687,62 +687,65 @@ export function ProspectSearchSection({
                   
                   {/* Streaming Search Progress */}
                   {uiType === 'streaming' && (
-                    <div className="space-y-4">
-                      <div className="rounded-2xl border border-sky-100 bg-sky-50 p-5 md:p-6 shadow-sm ring-1 ring-sky-100/50">
+                    <div className="space-y-6 mt-2">
+                      <div className="px-1">
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center space-x-3">
-                            <div className="flex bg-white rounded-2xl p-2.5 shadow-sm border border-[hsl(var(--hermes-gold))]/20">
-                               <img src="/hermes-discovery.png" alt="Discovering" className="h-6 w-6 animate-pulse drop-shadow-sm" />
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-50 border border-gray-100 shadow-sm">
+                               <img src="/hermes-discovery.png" alt="Discovering" className="h-5 w-5 animate-pulse drop-shadow-sm opacity-80" />
                             </div>
-                            <p className="text-base font-semibold text-gray-900">
-                              {searchStatus === 'completed' ? 'Search complete' : lastStatus === 'running' ? 'Finding companies and contacts…' : 'Starting search…'}
-                            </p>
+                            <div>
+                                <p className="text-[15px] font-semibold text-gray-900 leading-none">
+                                  {searchStatus === 'completed' ? 'Search complete' : lastStatus === 'running' ? 'Analyzing results in real-time...' : 'Starting search...'}
+                                </p>
+                                <p className="text-[13px] text-gray-500 mt-1.5 font-medium">{searchMessage}</p>
+                            </div>
                           </div>
-                          <div className="text-[11px] font-bold uppercase tracking-wider text-gray-500 bg-white px-2 py-1 rounded-md shadow-sm border border-gray-100">
-                            {prospects.length} found
+                          <div className="text-[11px] font-bold uppercase tracking-wider text-[hsl(var(--hermes-gold-dark))] bg-[hsl(var(--hermes-gold))]/5 px-2.5 py-1 rounded-md shadow-sm border border-[hsl(var(--hermes-gold))]/10">
+                            {prospects.length} extracted
                           </div>
                         </div>
                         
-                        {/* Progress indicators */}
-                        <div className="space-y-3 mt-5">
-                          <div className="flex justify-between text-[13px] font-medium text-gray-600">
-                            <span>Progress</span>
-                            <span>{searchMessage || (lastStatus === 'running' ? 'Streaming matches…' : 'Booting…')}</span>
-                          </div>
-                          <div className="h-4 w-full rounded-full bg-white shadow-inner border border-gray-100 overflow-hidden">
-                            <div 
-                              className="h-full rounded-full transition-all duration-500 bg-[hsl(var(--hermes-gold))] bg-gradient-to-r from-[hsl(var(--hermes-gold))]/80 to-[hsl(var(--hermes-gold-dark))]"
-                              style={{ width: `${Math.min((prospects.length / (displayTargetCount || 25)) * 100, 100)}%` }}
-                            />
-                          </div>
+                        {/* Progress indicator */}
+                        <div className="h-2 w-full rounded-full bg-gray-100/80 overflow-hidden shadow-inner mt-5 mix-blend-multiply">
+                          <div 
+                            className="h-full rounded-full transition-all duration-[800ms] ease-out bg-[hsl(var(--hermes-gold))] bg-gradient-to-r from-[hsl(var(--hermes-gold))]/80 to-[hsl(var(--hermes-gold-dark))]"
+                            style={{ width: `${Math.min((prospects.length / (displayTargetCount || 25)) * 100, 100)}%` }}
+                          />
                         </div>
                       </div>
 
-                      {prospects.length > 0 && <ProspectGrid prospects={prospects} searchContext={searchContext} />}
+                      {prospects.length > 0 && (
+                        <ProspectGrid
+                          prospects={prospects}
+                          searchContext={searchContext}
+                          onFindContacts={async (ids) => {
+                            const toEnrich = prospects.filter(p => ids.includes(p.id))
+                            try {
+                              const storedContext = sessionStorage.getItem('hermes-search-context')
+                              const ctx = storedContext ? JSON.parse(storedContext) : searchContext
+                              const res = await fetch('/api/enrich/people', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ prospects: toEnrich, context: ctx })
+                              })
+                              if (!res.ok) throw new Error('Enrichment failed')
+                              const { enriched } = await res.json()
+                              setProspects(prev => {
+                                const byId = new Map(prev.map(p => [p.id, p]))
+                                for (const p of enriched) byId.set(p.id, p)
+                                return Array.from(byId.values())
+                              })
+                            } catch (err) {
+                              if (process.env.NODE_ENV !== 'production') console.error('Find contacts failed:', err)
+                            }
+                          }}
+                        />
+                      )}
                     </div>
                   )}
 
-                  {/* Show search summary if available */}
-                  {searchSummary && uiType !== 'interactive' && uiType !== 'streaming' && (
-                    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-                      <div className="flex items-start space-x-4">
-                        <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                            <Users className="h-5 w-5 text-gray-500" />
-                        </div>
-                        <div>
-                          <p className="text-[15px] font-semibold text-gray-900">
-                            Search Summary
-                          </p>
-                          <p className="mt-1 text-[14px] text-gray-600 leading-relaxed">
-                            <span className="font-medium text-gray-800">Query:</span> &quot;{searchSummary.query}&quot;<br/>
-                            <span className="font-medium text-gray-800">Entity Type:</span> {searchSummary.entityType}<br/>
-                            <span className="font-medium text-gray-800">Found:</span> {searchSummary.totalFound} prospects
-                            {searchSummary.websetId && ` (ID: ${searchSummary.websetId.slice(-8)})`}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+
 
                   {/* Show preview result with feedback loop */}
                   {searchStatus === 'completed' && prospects.length === 1 && uiType === 'results' && searchSummary?.preview === true && (
@@ -772,26 +775,48 @@ export function ProspectSearchSection({
 
                   {/* Show results if available (multiple prospects) */}
                   {searchStatus === 'completed' && ((prospects.length > 1) || searchSummary?.preview !== true) && uiType !== 'interactive' && (
-                    <div className="space-y-5">
-                      <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5 shadow-sm">
-                        <div className="flex items-center space-x-3">
-                          <div className="bg-white p-2 rounded-lg border border-emerald-100 shadow-sm">
-                            <Users className="h-5 w-5 text-emerald-600" />
-                          </div>
-                          <div>
-                            <p className="text-[15px] font-bold text-gray-900">Discovery complete</p>
-                            <p className="text-[13px] font-medium text-emerald-700 mt-0.5">
-                              Successfully extracted {prospects.length} qualified prospects
-                            </p>
-                          </div>
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white border border-gray-100 shadow-sm">
+                          <img src="/images/hermes-pixel.png" alt="Complete" className="h-4 w-4 object-contain" />
+                        </div>
+                        <div>
+                          <p className="text-[14px] font-semibold text-gray-900">{prospects.length} prospects found</p>
+                          <p className="text-[12px] text-gray-500 mt-0.5">
+                            Select companies and click <span className="font-semibold">Find Contacts</span> to resolve decision-makers and email addresses.
+                          </p>
                         </div>
                       </div>
 
-                      <ProspectGrid prospects={prospects} searchContext={searchContext} />
-                      <div className="flex justify-end mt-6">
+                      <ProspectGrid
+                        prospects={prospects}
+                        searchContext={searchContext}
+                        onFindContacts={async (ids) => {
+                          const toEnrich = prospects.filter(p => ids.includes(p.id))
+                          try {
+                            const storedContext = sessionStorage.getItem('hermes-search-context')
+                            const ctx = storedContext ? JSON.parse(storedContext) : searchContext
+                            const res = await fetch('/api/enrich/people', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ prospects: toEnrich, context: ctx })
+                            })
+                            if (!res.ok) throw new Error('Enrichment failed')
+                            const { enriched } = await res.json()
+                            setProspects(prev => {
+                              const byId = new Map(prev.map(p => [p.id, p]))
+                              for (const p of enriched) byId.set(p.id, p)
+                              return Array.from(byId.values())
+                            })
+                          } catch (err) {
+                            if (process.env.NODE_ENV !== 'production') console.error('Find contacts failed:', err)
+                          }
+                        }}
+                      />
+                      <div className="flex justify-end">
                         <a
                           href={typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_STRIPE_CHECKOUT_URL || 'https://buy.stripe.com/cNi00i7UMc0xgLCfk56sw03') : '#'}
-                          className="rounded-full border border-gray-200 bg-white px-5 py-2.5 text-[14px] font-bold text-gray-800 transition-colors hover:bg-gray-50 shadow-sm"
+                          className="rounded-full border border-gray-200 bg-white px-4 py-2 text-[12px] font-semibold text-gray-500 hover:text-gray-800 hover:bg-gray-50 shadow-sm transition-colors"
                           target="_blank"
                           rel="noreferrer"
                         >

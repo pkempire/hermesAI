@@ -41,7 +41,8 @@ export function ProspectCard({
   
   const hermesTake = prospect.hermesTake || {
     whyFit: prospect.note || `${company} appears relevant to the campaign.`,
-    outreachAngle: 'Lead with a concrete signal about their business.'
+    outreachAngle: 'Lead with a concrete signal about their business.',
+    evidence: [] as string[]
   }
 
   return (
@@ -60,8 +61,12 @@ export function ProspectCard({
               </div>
             )}
             <div className="flex gap-5">
-              <div className="h-[4.5rem] w-[4.5rem] rounded-2xl bg-gradient-to-br from-gray-100 to-gray-50 border border-gray-200 shadow-sm flex items-center justify-center shrink-0">
-                <Building className="w-8 h-8 text-gray-400" />
+              <div className="h-[4.5rem] w-[4.5rem] rounded-2xl bg-gray-50 border border-gray-200 shadow-sm flex items-center justify-center shrink-0 overflow-hidden">
+                {prospect.companyLogoUrl ? (
+                  <img src={prospect.companyLogoUrl} alt={company} className="w-full h-full object-cover" />
+                ) : (
+                  <Building className="w-8 h-8 text-gray-400" />
+                )}
               </div>
               <div className="space-y-1">
                 <div className="flex items-center space-x-3">
@@ -118,6 +123,30 @@ export function ProspectCard({
             <p><span className="font-semibold text-gray-900">Why fit:</span> {hermesTake.whyFit}</p>
             <p><span className="font-semibold text-gray-900">Angle:</span> {hermesTake.outreachAngle}</p>
           </div>
+          {/* Evidence bullets */}
+          {hermesTake.evidence && hermesTake.evidence.length > 0 && (
+            <ul className="mt-4 space-y-1.5">
+              {hermesTake.evidence.map((item: string, i: number) => (
+                <li key={i} className="flex items-start gap-2 text-[13px] text-gray-700">
+                  <span className="mt-1 shrink-0 h-1.5 w-1.5 rounded-full bg-[hsl(var(--hermes-gold))]" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          )}
+          {/* Exa source link — the web page Exa used to qualify this company */}
+          {(prospect as any).sourceUrl && (
+            <a
+              href={(prospect as any).sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-[hsl(var(--hermes-gold-dark))]/70 hover:text-[hsl(var(--hermes-gold-dark))] transition-colors"
+            >
+              <Globe className="w-3 h-3" />
+              View Exa source
+              <ExternalLink className="w-2.5 h-2.5" />
+            </a>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -127,8 +156,12 @@ export function ProspectCard({
             </h4>
             <div className="space-y-4 text-[15px] font-medium text-gray-700 bg-gray-50/70 p-5 md:p-6 rounded-[2rem] border border-gray-100 shadow-sm transition-all hover:bg-white hover:border-gray-200 hover:shadow-md">
               <div className="flex items-center space-x-4 mb-4">
-                <div className="shrink-0 h-14 w-14 rounded-full bg-gradient-to-br from-[hsl(var(--hermes-gold))]/20 to-[hsl(var(--hermes-gold))]/5 border border-[hsl(var(--hermes-gold))]/30 flex items-center justify-center text-[hsl(var(--hermes-gold-dark))] font-bold text-xl uppercase shadow-inner">
-                  {name !== 'Unknown Contact' && name.match(/[a-zA-Z]/) ? name.split(' ').map((n: string) => n[0]).join('').substring(0,2) : '?'}
+                <div className="shrink-0 h-14 w-14 rounded-full flex items-center justify-center bg-gray-50 border border-[hsl(var(--hermes-gold))]/30 overflow-hidden text-[hsl(var(--hermes-gold-dark))] font-bold text-xl uppercase shadow-inner">
+                  {prospect.avatarUrl ? (
+                    <img src={prospect.avatarUrl} alt={name} className="w-full h-full object-cover" />
+                  ) : (
+                    name !== 'Unknown Contact' && name.match(/[a-zA-Z]/) ? name.split(' ').map((n: string) => n[0]).join('').substring(0,2) : '?'
+                  )}
                 </div>
                 <div>
                   <div className="text-[20px] font-bold text-gray-900 tracking-tight">{name}</div>
