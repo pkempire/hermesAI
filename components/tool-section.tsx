@@ -12,21 +12,38 @@ interface ToolSectionProps {
   addToolResult?: (params: { toolCallId: string; result: any }) => void
 }
 
+import { useEffect } from 'react'
+import { campaignStore } from '@/lib/store/campaign-store'
+
 export function ToolSection({
   tool,
   isOpen,
   onOpenChange,
   addToolResult
 }: ToolSectionProps) {
-  // Debug logging removed - use React DevTools for debugging
   
-  // ask_question is rendered inline in chat; no special popup UI here.
+  useEffect(() => {
+    if (tool?.toolName === 'scrape_site' && tool.state === 'result') {
+      try {
+        const res = typeof tool.result === 'string' ? JSON.parse(tool.result) : tool.result
+        const data = res?.siteData || res
+        if (data?.offer || data?.targetAudience || data?.companyName) {
+          campaignStore.setState({
+             businessName: data.companyName || campaignStore.getState().businessName,
+             offer: data.offer || campaignStore.getState().offer,
+             motionIcp: data.targetAudience || campaignStore.getState().motionIcp
+          })
+        }
+      } catch (e) {
+        // no-op
+      }
+    }
+  }, [tool])
 
   switch (tool.toolName) {
     case 'email_drafter':
       return (
-        <div className="rounded-md border p-3">
-          <div className="text-xs text-muted-foreground mb-2">Email Drafter</div>
+        <div className="w-full mt-4">
           {/* Inline renderer if model calls the tool with UI props */}
           {tool?.state === 'result' && tool?.result && (() => {
             try {
@@ -109,67 +126,86 @@ export function ToolSection({
         // If result has site/summary/references structure, extract useful info
         if (result?.site && result?.summary) {
           siteData = {
+            ...result,
             site: result.site,
             summary: result.summary,
-            companyName: result.site?.replace(/^https?:\/\/(www\.)?/, '').split('/')[0] || ''
+            companyName: result.companyName || result.site?.replace(/^https?:\/\/(www\.)?/, '').split('/')[0] || ''
           }
         }
       } catch {}
 
+      const offer = typeof siteData?.offer === 'string' ? siteData.offer.trim() : ''
+      const audience = typeof siteData?.targetAudience === 'string' ? siteData.targetAudience.trim() : ''
+      const whyItMatters =
+        typeof siteData?.whyItMatters === 'string'
+          ? siteData.whyItMatters.trim()
+          : typeof siteData?.referralHook === 'string'
+          ? siteData.referralHook.trim()
+          : ''
+
       return (
-        <div className="rounded-lg border border-blue-200/50 bg-gradient-to-r from-blue-50/30 to-indigo-50/30 p-4 shadow-sm">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 shadow-sm">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm ring-1 ring-gray-100/50">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 shadow-sm border border-blue-100">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9" />
               </svg>
             </div>
             <div className="flex-1">
-              <div className="font-semibold text-gray-900 text-sm">Site Analysis Complete</div>
-              <div className="text-xs text-gray-600">
-                {tool.state === 'call' ? 'Analyzing website...' : 'Extracted key business insights'}
+              <div className="text-[15px] font-semibold text-gray-900 tracking-tight">
+                {tool.state === 'call' ? 'Reading site' : 'Offer snapshot ready'}
+              </div>
+              <div className="text-[13px] text-gray-500">
+                {tool.state === 'call' ? 'Analyzing homepage and key pages...' : 'Homepage signals extracted for search planning'}
               </div>
             </div>
             {tool.state === 'result' && (
-              <div className="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium">
+              <div className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 border border-emerald-100">
                 ✓ Done
               </div>
             )}
           </div>
 
           {tool.state === 'result' && siteData && (
-            <div className="space-y-3 text-sm">
+            <div className="space-y-3 mt-4">
               {siteData.companyName && (
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-blue-700">Company:</span>
-                  <span className="text-gray-700">{siteData.companyName}</span>
+                <div className="flex items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2">
+                  <span className="text-[13px] font-semibold text-gray-600">Company:</span>
+                  <span className="text-[13px] text-gray-900 font-medium">{siteData.companyName}</span>
                 </div>
               )}
-              {siteData.valueProposition && (
-                <div className="flex items-start gap-2">
-                  <span className="font-medium text-blue-700 flex-shrink-0">Value Prop:</span>
-                  <span className="text-gray-700 leading-relaxed">{siteData.valueProposition}</span>
-                </div>
-              )}
-              {siteData.targetAudience && (
-                <div className="flex items-start gap-2">
-                  <span className="font-medium text-blue-700 flex-shrink-0">Target:</span>
-                  <span className="text-gray-700">{siteData.targetAudience}</span>
-                </div>
-              )}
-              {siteData.primaryOffering && (
-                <div className="flex items-start gap-2">
-                  <span className="font-medium text-blue-700 flex-shrink-0">Offering:</span>
-                  <span className="text-gray-700">{siteData.primaryOffering}</span>
+              {(offer || audience || whyItMatters) && (
+                <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm ring-1 ring-gray-50">
+                  <div className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400">Offer Snapshot</div>
+                  <div className="space-y-4">
+                    {offer ? (
+                      <div>
+                        <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[hsl(var(--hermes-gold-dark))]">Offer</div>
+                        <p className="text-[14px] leading-relaxed text-gray-700">{offer}</p>
+                      </div>
+                    ) : null}
+                    {audience ? (
+                      <div>
+                        <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[hsl(var(--hermes-gold-dark))]">Audience</div>
+                        <p className="text-[14px] leading-relaxed text-gray-700">{audience}</p>
+                      </div>
+                    ) : null}
+                    {whyItMatters ? (
+                      <div>
+                        <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[hsl(var(--hermes-gold-dark))]">Why Hermes cares</div>
+                        <p className="text-[14px] leading-relaxed text-gray-700">{whyItMatters}</p>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               )}
             </div>
           )}
 
           {tool.state === 'call' && (
-            <div className="flex items-center gap-2 text-blue-600">
-              <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-              <span className="text-sm">Analyzing website content...</span>
+            <div className="mt-4 flex items-center justify-center gap-3 rounded-xl bg-gray-50 py-3 border border-gray-100">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+              <span className="text-[13px] font-medium text-blue-600">Analyzing homepage content...</span>
             </div>
           )}
         </div>

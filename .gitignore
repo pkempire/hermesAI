@@ -24,6 +24,8 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.next-dev.log
+.next-dev.pid
 
 # local env files
 .env*.local
@@ -38,6 +40,11 @@ next-env.d.ts
 
 # cursor
 .cursor/rules/private
+
+# antigravity
+.gemini
+/artifacts
+brain/
 
 # remotion (ignore entire folder)
 remotion/

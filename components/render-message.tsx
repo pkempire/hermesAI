@@ -58,6 +58,44 @@ export function RenderMessage({
     return typeof m?.content === 'string' ? m.content : ''
   }
 
+  const normalizedParts = useMemo(() => {
+    if (Array.isArray((message as any)?.parts) && (message as any).parts.length > 0) {
+      return (message as any).parts as any[]
+    }
+
+    if (Array.isArray((message as any)?.content) && (message as any).content.length > 0) {
+      return (message as any).content as any[]
+    }
+
+    const fallbackParts: any[] = []
+
+    if (typeof (message as any)?.content === 'string' && (message as any).content.length > 0) {
+      fallbackParts.push({ type: 'text', text: (message as any).content })
+    }
+
+    if (Array.isArray((message as any)?.toolInvocations)) {
+      for (const invocation of (message as any).toolInvocations) {
+        if (invocation?.state === 'result') {
+          fallbackParts.push({
+            type: 'tool-result',
+            toolCallId: invocation.toolCallId,
+            toolName: invocation.toolName,
+            output: invocation.result
+          })
+        } else if (invocation?.toolCallId && invocation?.toolName) {
+          fallbackParts.push({
+            type: 'tool-call',
+            toolCallId: invocation.toolCallId,
+            toolName: invocation.toolName,
+            args: invocation.args
+          })
+        }
+      }
+    }
+
+    return fallbackParts
+  }, [message])
+
   if (message.role === 'user') {
     return (
       <UserMessage
@@ -72,9 +110,53 @@ export function RenderMessage({
   return (
     <>
       {/* Tool calls/results are now rendered from message.parts below */}
-      {message.parts?.map((part, index) => {
+      {normalizedParts.map((part, index) => {
         // Check if this is the last part in the array
-        const isLastPart = index === (message.parts?.length ?? 0) - 1
+        const isLastPart = index === normalizedParts.length - 1
+
+        if (
+          typeof part?.type === 'string' &&
+          part.type.startsWith('tool-') &&
+          part.type !== 'tool-call' &&
+          part.type !== 'tool-result' &&
+          part.type !== 'tool-invocation'
+        ) {
+          const toolName = part.type.replace(/^tool-/, '')
+          const tool: any =
+            part.state === 'output-available'
+              ? {
+                  state: 'result',
+                  toolCallId: part.toolCallId,
+                  toolName,
+                  result: part.output
+                }
+              : part.state === 'output-error'
+              ? {
+                  state: 'result',
+                  toolCallId: part.toolCallId,
+                  toolName,
+                  result: {
+                    type: 'prospect_search_error',
+                    message: part.errorText || 'Tool execution failed'
+                  }
+                }
+              : {
+                  state: 'call',
+                  toolCallId: part.toolCallId,
+                  toolName,
+                  args: part.input
+                }
+
+          return (
+            <ToolSection
+              key={`${messageId}-typedtool-${index}`}
+              tool={tool}
+              isOpen={getIsOpen(tool.toolCallId)}
+              onOpenChange={open => onOpenChange(tool.toolCallId, open)}
+              addToolResult={addToolResult}
+            />
+          )
+        }
 
         switch (part.type) {
           case 'tool-invocation':

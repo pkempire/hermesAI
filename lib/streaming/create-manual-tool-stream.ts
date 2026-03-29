@@ -2,7 +2,8 @@ import {
   createUIMessageStream,
   createUIMessageStreamResponse,
   JSONValue,
-  streamText
+  streamText,
+  convertToCoreMessages
 } from 'ai'
 import { manualResearcher } from '../agents/manual-researcher'
 import { ExtendedCoreMessage } from '../types'
@@ -22,15 +23,7 @@ export function createManualToolStreamResponse(config: BaseStreamConfig) {
 
       try {
         // Convert UI messages to minimal CoreMessage for model
-        const modelMessages = messages.map((msg: any) => ({
-          role: msg.role,
-          content:
-            typeof msg.content === 'string'
-              ? msg.content
-              : Array.isArray(msg.content)
-              ? msg.content
-              : ''
-        })) as any
+        const modelMessages = convertToCoreMessages(messages)
 
         const { toolCallDataAnnotation, toolCallMessages } =
           await executeToolCall(

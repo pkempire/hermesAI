@@ -28,14 +28,29 @@ interface Campaign {
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(true)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   useEffect(() => {
-    fetchCampaigns()
+    initialize()
   }, [])
 
-  const fetchCampaigns = async () => {
+  const initialize = async () => {
     try {
+      const authResponse = await fetch('/api/auth/me', { cache: 'no-store' })
+      const authData = await authResponse.json().catch(() => null)
+      const authenticated = Boolean(authData?.user?.id)
+      setIsAuthenticated(authenticated)
+
+      if (!authenticated) {
+        setCampaigns([])
+        return
+      }
+
       const response = await fetch('/api/campaigns')
+      if (!response.ok) {
+        setCampaigns([])
+        return
+      }
       const data = await response.json()
       setCampaigns(data.campaigns || [])
     } catch (error) {
@@ -84,7 +99,7 @@ export default function CampaignsPage() {
         <Link href="/">
           <Button className="bg-black text-white hover:bg-black/90">
             <Plus className="w-4 h-4 mr-2" />
-            New Campaign
+            {isAuthenticated ? 'New Campaign' : 'Start from Brief'}
           </Button>
         </Link>
       </div>
@@ -95,12 +110,14 @@ export default function CampaignsPage() {
             <Send className="mb-4 h-12 w-12 text-black/45" />
             <h3 className="mb-2 font-serif text-2xl text-gray-950">No campaigns yet</h3>
             <p className="mb-4 max-w-md text-center text-black/60">
-              Start your first cold email campaign by finding prospects
+              {isAuthenticated
+                ? 'Start your first cold email campaign by finding prospects'
+                : 'Sign in, run a brief, and your campaign queue will show up here.'}
             </p>
             <Link href="/">
               <Button className="bg-black text-white hover:bg-black/90">
                 <Plus className="w-4 h-4 mr-2" />
-                Create First Campaign
+                {isAuthenticated ? 'Create First Campaign' : 'Open Hermes'}
               </Button>
             </Link>
           </CardContent>

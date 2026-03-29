@@ -1,4 +1,14 @@
-# HermesAI: Prospecting & Outreach Engine - Implementation Plan
+# HermesAI: Prospecting & Outreach Engine
+
+Current source of truth for launch work:
+
+- `LAUNCH_TODO.md`
+- `docs/PRODUCT_VISION.md`
+- `docs/INTEGRATION_STRATEGY.md`
+- `docs/DEPLOYMENT_SETUP.md`
+- `docs/DB_RECOVERY_PLAN.md`
+
+The phased implementation plan below is historical context and parts of it are outdated relative to the current `main` branch.
 
 This document outlines the step-by-step plan to transform the existing AI chat boilerplate into a powerful, automated sales prospecting and outreach tool. We will build this iteratively, with clear verification steps to ensure each component is working correctly before moving to the next.
 

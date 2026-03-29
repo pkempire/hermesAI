@@ -15,7 +15,7 @@ export function HermesApp({ models }: HermesAppProps) {
 
   return (
     <ErrorBoundary>
-      <div className="h-full w-full hermes-gradient-bg pt-0">
+      <div className="h-full w-full hermes-night hermes-grid pt-0">
         <Chat
           id={chatId}
           models={models}

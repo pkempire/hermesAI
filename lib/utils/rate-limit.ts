@@ -1,5 +1,6 @@
 import { Ratelimit } from "@upstash/ratelimit"
 import { Redis } from "@upstash/redis"
+import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 
 // Create Redis client (uses UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN from env)
 // Fallback to in-memory store if Upstash not configured
@@ -40,6 +41,20 @@ export const emailSendRateLimitPaid = redis ? new Ratelimit({
   prefix: "@hermes/email-send-paid",
 }) : null
 
+const supabaseAdmin =
+  process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? createSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
+        }
+      )
+    : null
+
 /**
  * Check rate limit for a user
  * @param identifier - User ID or IP address
@@ -71,21 +86,31 @@ export async function checkRateLimit(
 }
 
 /**
- * Get user plan from database - placeholder for now
+ * Get user plan from the subscriptions table.
  */
 async function getUserPlan(userId: string): Promise<'trial' | 'paid'> {
-  // TODO: Implement actual database lookup
-  // For now, return trial to avoid build errors
-  return 'trial'
+  if (!supabaseAdmin) {
+    return 'trial'
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('subscriptions')
+    .select('plan')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (error) {
+    return 'trial'
+  }
+
+  return data?.plan && data.plan !== 'free' ? 'paid' : 'trial'
 }
 
 /**
  * Get user-specific rate limiter based on their plan
  */
 export async function getUserRateLimiter(userId: string, type: 'email' | 'search' | 'chat') {
-  // TODO: Fetch user plan from database
-  // For now, assume trial tier - will be dynamic later
-  const userPlan = await getUserPlan(userId) // Default to trial for now
+  const userPlan = await getUserPlan(userId)
   if (type === 'email') {
     return userPlan === 'paid' ? emailSendRateLimitPaid : emailSendRateLimit
   }

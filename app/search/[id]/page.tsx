@@ -13,7 +13,7 @@ export async function generateMetadata(props: {
 }) {
   const { id } = await props.params;
   const userId = await getCurrentUserId();
-  const chat = await getChat(id, userId || 'anonymous'); // Ensure fallback for userId
+  const chat = userId ? await getChat(id, userId) : null;
 
   let metadata: { title: string; openGraph?: { images?: { url: string; width?: number; height?: number }[] } } = {
     title: chat?.title?.toString().slice(0, 50) || 'Search',
@@ -80,7 +80,7 @@ export default async function SearchPage(props: {
   }
   // In development, always render - don't redirect even if chat doesn't exist
 
-  if (chat?.userId !== userId && chat?.userId !== 'anonymous') {
+  if (chat?.userId && chat.userId !== userId) {
     notFound()
   }
 

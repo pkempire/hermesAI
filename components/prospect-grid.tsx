@@ -1,13 +1,15 @@
 "use client";
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Grid3x3, List, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sparkles, Users } from 'lucide-react';
 import { useState } from 'react';
 import { ProspectCard } from './prospect-card';
+import { campaignStore } from '@/lib/store/campaign-store';
+import { toast } from 'sonner';
 
-// Prospect interface definition
 export interface Prospect {
   id: string
   exaItemId?: string
@@ -23,291 +25,205 @@ export interface Prospect {
   website?: string
   enrichments?: Record<string, any>
   note?: string
+  hermesTake?: {
+    whyFit: string
+    outreachAngle: string
+    evidence: string[]
+  }
+  reviewReady?: boolean
   avatarUrl?: string
   companyLogoUrl?: string
 }
 
-export function ProspectGrid({ prospects, onSelectionChange, onReviewComplete }: { prospects: Prospect[]; onSelectionChange?: (ids: string[]) => void; onReviewComplete?: () => void }) {
-  const [current, setCurrent] = useState(0);
-  const [feedback, setFeedback] = useState<{ [id: string]: 'good' | 'bad' }>({});
-  const [notes, setNotes] = useState<{ [id: string]: string }>({});
-  const [viewMode, setViewMode] = useState<'single' | 'grid'>('single');
-  const [selectedProspects, setSelectedProspects] = useState<Set<string>>(new Set());
+export interface ProspectSearchContext {
+  targetPersona?: string
+  offer?: string
+  originalQuery?: string
+}
 
-  // Calculate stats (must be before any early return to keep hooks order stable)
-  const reviewedCount = Object.keys(feedback).length;
-  const goodCount = Object.values(feedback).filter(f => f === 'good').length;
-  const badCount = Object.values(feedback).filter(f => f === 'bad').length;
+export function ProspectGrid({
+  prospects,
+  searchContext,
+  onSelectionChange,
+  onReviewComplete
+}: {
+  prospects: Prospect[]
+  searchContext?: ProspectSearchContext
+  onSelectionChange?: (ids: string[]) => void
+  onReviewComplete?: () => void
+}) {
+  const [current, setCurrent] = useState(0)
+  const [feedback, setFeedback] = useState<{ [id: string]: 'good' | 'bad' }>({})
+  const [selectedProspects, setSelectedProspects] = useState<Set<string>>(new Set())
 
-  // (effects defined once above; ensure no duplicates below)
+  const reviewedCount = Object.keys(feedback).length
+  const goodCount = Object.values(feedback).filter(f => f === 'good').length
+  const progressPercentage = ((current + 1) / Math.max(1, prospects.length)) * 100
 
   if (!prospects || prospects.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-[1.5rem] border border-black/5 bg-white/60 py-12 text-gray-500">
-        <Users className="w-12 h-12 mb-4 opacity-50" />
-        <p className="text-lg font-medium">No prospects found</p>
-        <p className="text-sm text-gray-400">Try adjusting your search criteria</p>
+      <div className="flex flex-col items-center justify-center rounded-2xl border border-gray-100 bg-gray-50 py-12 shadow-sm">
+        <Users className="mb-4 h-12 w-12 text-gray-400" />
+        <p className="text-lg font-medium text-gray-900">No prospects yet</p>
+        <p className="text-sm text-gray-500">Hermes will stream review-ready matches here.</p>
       </div>
-    );
+    )
   }
 
-  const prospect = prospects[current];
-  const progressPercentage = ((current + 1) / prospects.length) * 100;
+  const prospect = prospects[current]
 
   const handleFeedback = (type: 'good' | 'bad') => {
-    setFeedback({ ...feedback, [prospect.id]: type });
-    // Emit a custom event so the model/UI can adapt (e.g., refine criteria)
+    setFeedback({ ...feedback, [prospect.id]: type })
     try {
-      const detail = { prospectId: prospect.id, type, prospect };
-      window.dispatchEvent(new CustomEvent('prospect-feedback', { detail }));
+      const detail = { prospectId: prospect.id, type, prospect }
+      window.dispatchEvent(new CustomEvent('prospect-feedback', { detail }))
     } catch {}
+
+    // Auto-save to campaign store if good fit
+    if (type === 'good') {
+      const currentSaved = campaignStore.getState().savedProspects
+      if (!currentSaved.find((p: Prospect) => p.id === prospect.id)) {
+        campaignStore.setState({ savedProspects: [...currentSaved, prospect] })
+        toast.success(`Saved ${prospect.company || prospect.fullName || 'prospect'} to Draft Studio`)
+      }
+    }
+
     if (current < prospects.length - 1) {
-      setCurrent(current + 1);
-    }
-  };
-  
-  const handleNote = (id: string, n: string) => setNotes({ ...notes, [id]: n });
-  
-  const handleProspectSelect = (prospectId: string, selected: boolean) => {
-    const newSelected = new Set(selectedProspects);
-    if (selected) {
-      newSelected.add(prospectId);
+      setCurrent(current + 1)
     } else {
-      newSelected.delete(prospectId);
+      onReviewComplete?.()
     }
-    setSelectedProspects(newSelected);
-    onSelectionChange?.(Array.from(newSelected));
-  };
+  }
+
+  const handleProspectSelect = (prospectId: string, selected: boolean) => {
+    const next = new Set(selectedProspects)
+    if (selected) next.add(prospectId)
+    else next.delete(prospectId)
+    setSelectedProspects(next)
+    onSelectionChange?.(Array.from(next))
+  }
 
   const navigateProspect = (direction: 'prev' | 'next') => {
-    if (direction === 'prev' && current > 0) {
-      setCurrent(current - 1);
-    } else if (direction === 'next' && current < prospects.length - 1) {
-      setCurrent(current + 1);
-    }
-  };
-
-  // effects defined above. do not duplicate
+    if (direction === 'prev' && current > 0) setCurrent(current - 1)
+    if (direction === 'next' && current < prospects.length - 1) setCurrent(current + 1)
+  }
 
   const handleSelectAll = () => {
     if (selectedProspects.size === prospects.length) {
-      // Deselect all
-      setSelectedProspects(new Set());
-      onSelectionChange?.([]);
-    } else {
-      // Select all
-      const allIds = new Set(prospects.map(p => p.id));
-      setSelectedProspects(allIds);
-      onSelectionChange?.(Array.from(allIds));
+      setSelectedProspects(new Set())
+      onSelectionChange?.([])
+      return
     }
-  };
-
-  const handleDraftEmails = () => {
-    window.dispatchEvent(new CustomEvent('chat-system-suggest', {
-      detail: {
-        text: `Draft personalized emails for the ${selectedProspects.size} selected prospects`
-      }
-    }));
-  };
-
-  if (viewMode === 'grid') {
-    return (
-      <div className="space-y-6">
-        <div className="flex flex-col gap-4 rounded-[1.5rem] border border-black/5 bg-white/60 p-5 backdrop-blur-sm lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap items-center gap-3">
-            <h3 className="flex items-center gap-2 font-serif text-2xl text-gray-900">
-              <Users className="w-5 h-5 text-amber-600" />
-              {prospects.length} Prospects Found
-            </h3>
-            <Badge variant="secondary" className="border border-amber-200 bg-amber-50 text-amber-700">
-              {selectedProspects.size} Selected
-            </Badge>
-            <Button
-              onClick={handleSelectAll}
-              variant="outline"
-              size="sm"
-              className="text-xs"
-            >
-              {selectedProspects.size === prospects.length ? 'Deselect All' : 'Select All'}
-            </Button>
-          </div>
-          <Button onClick={() => setViewMode('single')} variant="outline" size="sm">
-            <List className="w-4 h-4 mr-1" />
-            Single View
-          </Button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          <AnimatePresence mode="popLayout">
-            {prospects.map((prospect, index) => (
-              <motion.div
-                key={prospect.id}
-                initial={{ opacity: 0, y: 30, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ 
-                  delay: index * 0.05,
-                  duration: 0.4,
-                  ease: [0.4, 0, 0.2, 1]
-                }}
-                layout
-              >
-                <ProspectCard
-                  prospect={prospect}
-                  note={notes[prospect.id] || ''}
-                  onNoteChange={n => handleNote(prospect.id, n)}
-                  onSelect={(selected) => handleProspectSelect(prospect.id, selected)}
-                  selected={selectedProspects.has(prospect.id)}
-                />
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
-
-        {/* Bulk Actions */}
-        {selectedProspects.size > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-full border border-amber-200 bg-white/95 p-3 shadow-[0_24px_48px_rgba(62,45,18,0.18)] backdrop-blur-sm"
-          >
-            <span className="text-sm font-medium text-gray-900">
-              {selectedProspects.size} {selectedProspects.size === 1 ? 'prospect' : 'prospects'} selected
-            </span>
-            <Button size="sm" className="bg-black text-white hover:bg-black/90" onClick={handleDraftEmails}>
-              Draft Emails for Selected
-            </Button>
-            <Button size="sm" variant="outline" className="border-gray-300">
-              Export CSV
-            </Button>
-          </motion.div>
-        )}
-      </div>
-    );
+    const allIds = new Set(prospects.map(item => item.id))
+    setSelectedProspects(allIds)
+    onSelectionChange?.(Array.from(allIds))
   }
 
   return (
     <div className="space-y-6">
-      <div className="space-y-4 rounded-[1.5rem] border border-black/5 bg-white/60 p-5 backdrop-blur-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap items-center gap-4">
-            <h3 className="flex items-center gap-2 font-serif text-2xl text-gray-900">
-              <Users className="w-5 h-5" />
-              Prospect Review
-            </h3>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline">
+      <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm ring-1 ring-gray-100/50">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+                <Sparkles className="h-3.5 w-3.5 text-[hsl(var(--hermes-gold-dark))]" />
+                Review queue
+              </div>
+              <Badge className="rounded-full border border-gray-200 bg-gray-50 text-gray-600 shadow-none">
                 {current + 1} of {prospects.length}
               </Badge>
-              {reviewedCount > 0 && (
-                <>
-                  <Badge variant="default" className="bg-green-600">
-                    {goodCount} Good
-                  </Badge>
-                  <Badge variant="secondary" className="bg-red-100 text-red-700">
-                    {badCount} Skip
-                  </Badge>
-                </>
-              )}
+              <Badge className="rounded-full border border-gray-200 bg-gray-50 text-gray-600 shadow-none">
+                {selectedProspects.size} selected
+              </Badge>
+              {reviewedCount > 0 ? (
+                <Badge className="rounded-full border-transparent bg-[hsl(var(--hermes-gold))]/10 text-[hsl(var(--hermes-gold-dark))] font-semibold shadow-none">
+                  {goodCount} approved
+                </Badge>
+              ) : null}
             </div>
+            <h3 className="mt-4 font-serif text-[2.35rem] leading-none text-gray-900 tracking-tight">Review one company at a time</h3>
+            <p className="mt-2 max-w-3xl text-[14px] leading-relaxed text-gray-500 font-medium">
+              Hermes only surfaces review-ready matches here. Approve the accounts worth drafting against and skip the noise.
+            </p>
           </div>
+
           <Button
-            onClick={() => setViewMode('grid')}
+            onClick={handleSelectAll}
             variant="outline"
-            size="sm"
+            className="border-gray-200 bg-white text-gray-700 hover:bg-gray-50 shadow-sm"
           >
-            <Grid3x3 className="w-4 h-4 mr-1" />
-            Grid View
+            {selectedProspects.size === prospects.length ? 'Clear selection' : 'Select all'}
           </Button>
         </div>
 
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">Review Progress</span>
-            <span className="font-medium">{Math.round(progressPercentage)}% Complete</span>
+        <div className="mt-6 space-y-3">
+          <div className="flex items-center justify-between text-[13px] font-semibold text-gray-500 uppercase tracking-wider">
+            <span>Progress</span>
+            <span>{Math.round(progressPercentage)}%</span>
           </div>
-          <Progress value={progressPercentage} className="h-2" />
+          <Progress value={progressPercentage} className="h-2 bg-gray-100 [&>div]:bg-sky-500" />
         </div>
       </div>
 
-      {/* Single Prospect View */}
       <AnimatePresence mode="wait">
         <motion.div
           key={current}
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.3 }}
-          className="mx-auto max-w-2xl"
+          transition={{ duration: 0.22 }}
+          className="mx-auto max-w-[88rem]"
         >
           <ProspectCard
             prospect={prospect}
-            note={notes[prospect.id] || ''}
-            onNoteChange={n => handleNote(prospect.id, n)}
+            searchContext={searchContext}
+            onSelect={(selected) => handleProspectSelect(prospect.id, selected)}
+            selected={selectedProspects.has(prospect.id)}
             onFeedback={handleFeedback}
           />
         </motion.div>
       </AnimatePresence>
 
-      {/* Navigation */}
-      <div className="flex items-center justify-center gap-4 pt-4">
-        <Button
-          onClick={() => navigateProspect('prev')}
-          disabled={current === 0}
-          variant="outline"
-          size="sm"
-        >
-          <ChevronLeft className="w-4 h-4 mr-1" />
-          Previous
-        </Button>
-        
-        <div className="flex items-center gap-2 rounded-full border border-black/5 bg-white/70 px-3 py-2">
-          {prospects.map((_, index) => (
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-2">
+        <div className="flex items-center gap-2 overflow-x-auto rounded-full border border-gray-200 bg-white px-3 py-2 shadow-sm">
+          {prospects.map((item, index) => (
             <button
-              key={index}
+              key={item.id}
               onClick={() => setCurrent(index)}
               className={`h-2.5 w-2.5 rounded-full transition-colors ${
-                index === current 
-                  ? 'bg-black' 
-                  : feedback[prospects[index].id]
-                    ? feedback[prospects[index].id] === 'good'
-                      ? 'bg-green-400'
+                index === current
+                  ? 'bg-[hsl(var(--hermes-gold))] shadow-sm'
+                  : feedback[item.id]
+                    ? feedback[item.id] === 'good'
+                      ? 'bg-emerald-500'
                       : 'bg-red-400'
-                    : 'bg-gray-300'
+                    : 'bg-gray-200 hover:bg-gray-300'
               }`}
             />
           ))}
         </div>
 
-        <Button
-          onClick={() => navigateProspect('next')}
-          disabled={current === prospects.length - 1}
-          variant="outline"
-          size="sm"
-        >
-          Next
-          <ChevronRight className="w-4 h-4 ml-1" />
-        </Button>
-      </div>
-
-      {/* Summary */}
-      {reviewedCount === prospects.length && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="rounded-[1.5rem] border border-emerald-200 bg-emerald-50 p-6 text-center"
-        >
-          <h4 className="text-lg font-semibold text-green-900 mb-2">
-            🎉 Review Complete!
-          </h4>
-          <p className="text-sm text-green-700 mb-4">
-            You&apos;ve reviewed all {prospects.length} prospects. Found {goodCount} good fits!
-          </p>
-          <Button className="bg-black text-white hover:bg-black/90">
-            Create Email Campaign
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={() => navigateProspect('prev')}
+            disabled={current === 0}
+            variant="outline"
+            className="border-gray-200 bg-white text-gray-700 hover:bg-gray-50 shadow-sm rounded-full px-5"
+          >
+            <ChevronLeft className="mr-1 h-4 w-4" />
+            Previous
           </Button>
-        </motion.div>
-      )}
+          <Button
+            onClick={() => navigateProspect('next')}
+            disabled={current === prospects.length - 1}
+            variant="outline"
+            className="border-gray-200 bg-white text-gray-700 hover:bg-gray-50 shadow-sm rounded-full px-5"
+          >
+            Next
+            <ChevronRight className="ml-1 h-4 w-4" />
+          </Button>
+        </div>
+      </div>
     </div>
-  );
+  )
 }

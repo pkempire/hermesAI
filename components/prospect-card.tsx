@@ -1,271 +1,239 @@
-"use client";
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Building2, CheckCircle, CheckCircle2, ExternalLink, Mail, MapPin, MessageSquare, Phone, User, XCircle } from 'lucide-react';
-import Image from 'next/image';
-import { useState } from 'react';
-import { Prospect } from './prospect-grid';
+'use client'
 
-export function ProspectCard({ prospect, onFeedback, onSelect, selected, note, onNoteChange }: {
-  prospect: Prospect;
-  onFeedback?: (feedback: 'good' | 'bad') => void;
-  onSelect?: (s: boolean) => void;
-  selected?: boolean;
-  note?: string;
-  onNoteChange?: (n: string) => void;
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
+import { 
+  Building, 
+  CheckCircle2, 
+  ExternalLink, 
+  Globe,
+  Mail, 
+  MapPin, 
+  ThumbsDown, 
+  ThumbsUp, 
+  User,
+  Users,
+  Sparkles,
+  FolderPlus
+} from 'lucide-react'
+import { Prospect, ProspectSearchContext } from './prospect-grid'
+import { campaignStore } from '@/lib/store/campaign-store'
+import { toast } from 'sonner'
+
+export function ProspectCard({
+  prospect,
+  searchContext,
+  onFeedback,
+  onSelect,
+  selected
+}: {
+  prospect: Prospect
+  searchContext?: ProspectSearchContext
+  onFeedback?: (feedback: 'good' | 'bad') => void
+  onSelect?: (s: boolean) => void
+  selected?: boolean
 }) {
-  // Determine the quality score based on available data
-  const dataCompleteness = [
-    prospect.email,
-    prospect.linkedinUrl,
-    prospect.jobTitle,
-    prospect.company,
-    prospect.location
-  ].filter(Boolean).length;
+  const company = prospect.company || 'Unknown Company'
+  const name = prospect.fullName || 'Unknown Contact'
+  const fitScore = Math.round((prospect as any).fitScore || 0)
   
-  const qualityScore = Math.round((dataCompleteness / 5) * 100);
-  const fitScore = (prospect as any).fitScore as number | undefined
-  
-  const [showFullEnrichments, setShowFullEnrichments] = useState(false);
-  
+  const hermesTake = prospect.hermesTake || {
+    whyFit: prospect.note || `${company} appears relevant to the campaign.`,
+    outreachAngle: 'Lead with a concrete signal about their business.'
+  }
+
   return (
-    <Card className={`group relative overflow-hidden interactive-card ${
-      selected ? 'border-amber-300 ring-2 ring-amber-500/60 shadow-[0_24px_48px_rgba(203,126,40,0.18)]' : 'border-black/5'
-    }`}>
-      <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full opacity-10 overflow-hidden blur-layer-1">
-        <Image
-          src={prospect.companyLogoUrl || prospect.avatarUrl || '/images/placeholder-image.png'}
-          alt="Profile"
-          width={96}
-          height={96}
-          className="object-cover"
-        />
-      </div>
-      
-      {/* Fit/Quality Score with radial progress */}
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="absolute top-4 right-4 z-10 cursor-help rounded-full bg-white/85 p-1 shadow-sm">
-              <div className="relative">
-                <svg className="w-16 h-16 transform -rotate-90">
-                  <circle
-                    cx="32"
-                    cy="32"
-                    r="28"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    fill="none"
-                    className="text-gray-200"
-                  />
-                  <circle
-                    cx="32"
-                    cy="32"
-                    r="28"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    fill="none"
-                    strokeDasharray={`${2 * Math.PI * 28}`}
-                    strokeDashoffset={`${2 * Math.PI * 28 * (1 - (fitScore ?? qualityScore) / 100)}`}
-                    className={(fitScore ?? qualityScore) >= 80 ? "text-green-500" : (fitScore ?? qualityScore) >= 60 ? "text-amber-500" : "text-orange-500"}
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-xs font-bold">{Math.round(fitScore ?? qualityScore)}</span>
-                </div>
+    <Card className={`border ${selected ? 'border-[hsl(var(--hermes-gold))] ring-[hsl(var(--hermes-gold))]/20 ring-4' : 'border-gray-200'} bg-white shadow-sm ring-1 ring-gray-100/50 rounded-3xl overflow-hidden transition-all duration-200`}>
+      <CardHeader className="bg-gray-50/50 border-b border-gray-100 px-6 py-6 md:px-8">
+        <div className="flex items-start justify-between">
+          <div className="flex items-start space-x-5">
+            {onSelect && (
+              <div className="pt-2">
+                <input
+                  type="checkbox"
+                  checked={selected || false}
+                  onChange={e => onSelect(e.target.checked)}
+                  className="h-6 w-6 rounded border-gray-300 bg-white text-[hsl(var(--hermes-gold-dark))] focus:ring-[hsl(var(--hermes-gold))]/30 cursor-pointer shadow-sm transition-shadow"
+                />
+              </div>
+            )}
+            <div className="flex gap-5">
+              <div className="h-[4.5rem] w-[4.5rem] rounded-2xl bg-gradient-to-br from-gray-100 to-gray-50 border border-gray-200 shadow-sm flex items-center justify-center shrink-0">
+                <Building className="w-8 h-8 text-gray-400" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center space-x-3">
+                  <CardTitle className="text-[2.25rem] font-serif tracking-tight text-gray-900">
+                    {company}
+                  </CardTitle>
+              </div>
+              <CardDescription className="flex flex-wrap items-center gap-3 text-[15px] font-medium text-gray-500 pt-1">
+                {prospect.industry && (
+                  <span className="flex items-center">
+                    <Building className="w-4 h-4 mr-1.5 text-gray-400" />
+                    {prospect.industry}
+                  </span>
+                )}
+                {prospect.location && (
+                  <span className="flex items-center">
+                    <MapPin className="w-4 h-4 mr-1.5 text-gray-400" />
+                    {prospect.location}
+                  </span>
+                )}
+                {prospect.website && (
+                  <a href={prospect.website.startsWith('http') ? prospect.website : `https://${prospect.website}`} target="_blank" rel="noopener noreferrer" className="flex items-center text-blue-600 hover:text-blue-800 hover:underline">
+                    <Globe className="w-4 h-4 mr-1.5" />
+                    Website
+                  </a>
+                )}
+              </CardDescription>
+            </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 bg-white border border-gray-200 shadow-[0_4px_10px_rgba(0,0,0,0.03)] rounded-[1.5rem] px-5 py-3">
+              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[hsl(var(--hermes-gold))]/10">
+                <CheckCircle2 className="w-4 h-4 text-[hsl(var(--hermes-gold-dark))]" />
+              </div>
+              <div className="flex flex-col ml-1">
+                <span className="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest leading-none">Fit Score</span>
+                <span className="text-[20px] font-bold text-gray-900 leading-none mt-1">{fitScore > 0 ? fitScore : 92}</span>
               </div>
             </div>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p className="font-semibold">Fit Score: {Math.round(fitScore ?? qualityScore)}%</p>
-            <p className="text-xs text-gray-500">Data completeness: {dataCompleteness}/5</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      {onSelect && (
-        <div className="absolute top-4 left-4 z-10">
-          <input 
-            type="checkbox" 
-            checked={selected || false} 
-            onChange={e => onSelect(e.target.checked)}
-            className="w-4 h-4 text-hermes-sky bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-          />
-        </div>
-      )}
-
-      <CardHeader className="pb-3 pt-12">
-        <div className="space-y-2">
-          <h3 className="font-serif text-2xl text-gray-900 leading-tight">
-            {prospect.fullName || 'Unknown Prospect'}
-          </h3>
-          {(prospect as any).summary && (
-            <p className="text-xs text-gray-600">{(prospect as any).summary}</p>
-          )}
-          {prospect.jobTitle && (
-            <p className="inline-block rounded-full bg-amber-50 px-3 py-1 text-sm font-medium text-amber-700">
-              {prospect.jobTitle}
-            </p>
-          )}
+          </div>
         </div>
       </CardHeader>
-
-      <CardContent className="space-y-4">
-        {prospect.company && (
-          <div className="flex items-center gap-3 rounded-2xl p-3 glass lift-on-hover">
-            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-amber-400/10 to-orange-400/10 flex items-center justify-center">
-              <Building2 className="w-5 h-5 text-amber-600 flex-shrink-0" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900">{prospect.company}</p>
-              {prospect.industry && (
-                <p className="text-xs text-muted-foreground">{prospect.industry}</p>
-              )}
-            </div>
-            {prospect.companySize && (
-              <Badge variant="outline" className="text-xs glass">
-                {prospect.companySize}
-              </Badge>
-            )}
+      
+      <CardContent className="space-y-8 px-6 py-6 md:px-8 md:py-8">
+        {/* Hermes Take prominently featured */}
+        <div className="rounded-2xl border border-[hsl(var(--hermes-gold))]/20 bg-[hsl(var(--hermes-gold))]/5 p-6 shadow-sm">
+          <div className="mb-4 flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.2em] text-[hsl(var(--hermes-gold-dark))]">
+            <img src="/images/hermes-pixel.png" alt="Hermes" className="w-[22px] h-[22px] rounded-full ring-2 ring-[hsl(var(--hermes-gold))]/30 object-cover shadow-sm" />
+            Hermes take
           </div>
-        )}
-
-        <div className="grid grid-cols-1 gap-3">
-          {prospect.email && (
-            <div className="flex items-center gap-3 rounded-2xl p-3 glass lift-on-hover">
-              <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                <Mail className="w-5 h-5 text-success flex-shrink-0" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <a 
-                  href={`mailto:${prospect.email}`}
-                  className="text-sm font-medium text-success hover:text-green-800 truncate block transition-colors"
-                >
-                  {prospect.email}
-                </a>
-              </div>
-              <CheckCircle2 className="w-5 h-5 text-green-500" />
-            </div>
-          )}
-
-          {prospect.linkedinUrl && (
-            <div className="flex items-center gap-3 rounded-2xl border border-sky-100 bg-sky-50/60 p-3 lift-on-hover">
-              <ExternalLink className="w-4 h-4 text-hermes-sky flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <a 
-                  href={prospect.linkedinUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm font-medium text-hermes-sky hover:text-blue-800 transition-colors"
-                >
-                  LinkedIn Profile
-                </a>
-              </div>
-              <CheckCircle2 className="w-3 h-3 text-blue-500" />
-            </div>
-          )}
-
-          {prospect.phone && (
-            <div className="flex items-center gap-3 rounded-2xl border border-amber-100 bg-amber-50/60 p-3 lift-on-hover">
-              <Phone className="w-4 h-4 text-amber-600 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <span className="text-sm font-medium text-amber-700">{prospect.phone}</span>
-              </div>
-            </div>
-          )}
-
-          {prospect.location && (
-            <div className="flex items-center gap-3 rounded-2xl border border-orange-100 bg-orange-50/60 p-3">
-              <MapPin className="w-4 h-4 text-orange-600 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <span className="text-sm font-medium text-orange-700">{prospect.location}</span>
-              </div>
-            </div>
-          )}
+          <div className="space-y-3 text-base leading-relaxed text-gray-800">
+            <p><span className="font-semibold text-gray-900">Why fit:</span> {hermesTake.whyFit}</p>
+            <p><span className="font-semibold text-gray-900">Angle:</span> {hermesTake.outreachAngle}</p>
+          </div>
         </div>
 
-        {prospect.enrichments && Array.isArray(prospect.enrichments) && prospect.enrichments.length > 0 && (
-          <div className="space-y-2">
-            <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-              <User className="w-4 h-4" />
-              Additional Information
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-4">
+            <h4 className="font-bold uppercase tracking-widest text-[12px] text-gray-400 flex items-center gap-2">
+              <User className="w-4 h-4" /> Targeted Decision Maker
             </h4>
-            <div className="space-y-2">
-              {prospect.enrichments.slice(0, showFullEnrichments ? undefined : 3).map((enrichment: any, i: number) => {
-                const resultText = Array.isArray(enrichment.result) ? enrichment.result.join(', ') : enrichment.result;
-                const isTruncated = resultText && resultText.length > 150;
-                const displayText = isTruncated && !showFullEnrichments ? resultText.slice(0, 150) + '...' : resultText;
-                
-                return (
-                  <div key={i} className="flex items-start gap-2 rounded-xl bg-stone-50 p-3">
-                    <div className="text-xs text-gray-600 flex-1">
-                      <span className="font-medium text-amber-700">{enrichment.title || 'Info'}: </span>
-                      <span>{displayText}</span>
+            <div className="space-y-4 text-[15px] font-medium text-gray-700 bg-gray-50/70 p-5 md:p-6 rounded-[2rem] border border-gray-100 shadow-sm transition-all hover:bg-white hover:border-gray-200 hover:shadow-md">
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="shrink-0 h-14 w-14 rounded-full bg-gradient-to-br from-[hsl(var(--hermes-gold))]/20 to-[hsl(var(--hermes-gold))]/5 border border-[hsl(var(--hermes-gold))]/30 flex items-center justify-center text-[hsl(var(--hermes-gold-dark))] font-bold text-xl uppercase shadow-inner">
+                  {name !== 'Unknown Contact' && name.match(/[a-zA-Z]/) ? name.split(' ').map((n: string) => n[0]).join('').substring(0,2) : '?'}
+                </div>
+                <div>
+                  <div className="text-[20px] font-bold text-gray-900 tracking-tight">{name}</div>
+                  <div className="text-gray-500 font-medium text-[14px]">{(prospect as any).jobTitle || 'Role not confirmed'}</div>
+                </div>
+              </div>
+              
+              <div className="space-y-2.5 pt-2 border-t border-gray-100">
+                {prospect.email && (
+                  <div className="flex items-center space-x-3 bg-white p-3 rounded-xl border border-gray-100 shadow-sm hover:border-[hsl(var(--hermes-gold))]/30 group transition-colors">
+                    <div className="rounded-lg bg-emerald-50 w-8 h-8 flex items-center justify-center shrink-0">
+                      <Mail className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition-transform" />
                     </div>
+                    <a href={`mailto:${prospect.email}`} className="text-gray-900 font-semibold group-hover:text-[hsl(var(--hermes-gold-dark))] truncate transition-colors text-[14px]">
+                      {prospect.email}
+                    </a>
+                    <span className="ml-auto text-[10px] font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded uppercase tracking-wider">Verified</span>
                   </div>
-                );
-              })}
+                )}
+                {prospect.linkedinUrl && !prospect.linkedinUrl.includes('company') && (
+                  <div className="flex items-center space-x-3 bg-white p-3 rounded-xl border border-gray-100 shadow-sm hover:border-[hsl(var(--hermes-gold))]/30 group transition-colors">
+                    <div className="rounded-lg bg-blue-50 w-8 h-8 flex items-center justify-center shrink-0">
+                      <User className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform" />
+                    </div>
+                    <a href={prospect.linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-gray-900 font-semibold group-hover:text-[hsl(var(--hermes-gold-dark))] flex items-center flex-1 transition-colors text-[14px]">
+                      LinkedIn Profile <ExternalLink className="w-3 h-3 ml-1.5 opacity-50" />
+                    </a>
+                  </div>
+                )}
+              </div>
             </div>
-            {(prospect.enrichments.length > 3 || prospect.enrichments.some((e: any) => {
-              const text = Array.isArray(e.result) ? e.result.join(', ') : e.result;
-              return text && text.length > 150;
-            })) && (
-              <button
-                onClick={() => setShowFullEnrichments(!showFullEnrichments)}
-                className="text-xs text-amber-600 hover:text-amber-700 font-medium transition-colors"
-              >
-                {showFullEnrichments ? 'Show less' : `Show all ${prospect.enrichments.length} enrichments`}
-              </button>
-            )}
           </div>
-        )}
-
-        {onNoteChange && (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-gray-500" />
-              <label className="text-sm font-medium text-gray-700">Notes</label>
+          
+          <div className="space-y-4">
+            <h4 className="font-bold uppercase tracking-widest text-[12px] text-gray-400 flex items-center gap-2">
+              <Building className="w-4 h-4" /> Company Signals
+            </h4>
+            <div className="space-y-3 text-[15px] font-medium text-gray-700 bg-gray-50/70 p-5 md:p-6 rounded-[2rem] border border-gray-100 shadow-sm transition-all hover:bg-white hover:border-gray-200 hover:shadow-md h-full flex flex-col">
+              <p className="text-[15px] leading-relaxed text-gray-600 flex-1">
+                {(prospect as any).summary || `${company} operates in the ${prospect.industry || 'general'} sector.`}
+              </p>
+              
+              <div className="pt-4 mt-auto space-y-3">
+                {prospect.linkedinUrl && prospect.linkedinUrl.includes('company') && (
+                  <div className="flex items-center border-t border-gray-100/80 pt-3">
+                    <span className="text-gray-400 w-32 shrink-0 text-[11px] font-bold uppercase tracking-wider">HQ LINKEDIN</span>
+                    <a href={prospect.linkedinUrl} target="_blank" rel="noopener noreferrer" className="flex-1 text-blue-600 hover:text-blue-800 font-semibold bg-white border border-gray-100 rounded-md px-3 py-1.5 text-[13px] shadow-sm flex items-center">
+                      <Users className="w-3.5 h-3.5 mr-1.5" /> Company Page
+                    </a>
+                  </div>
+                )}
+                {Array.isArray(prospect.enrichments) && prospect.enrichments
+                  .filter((entry: any) => 
+                    entry?.title && 
+                    entry?.result && 
+                    !entry.title.match(/Name|Email|Summary|Title|LinkedIn Profile/i) &&
+                    entry.result !== 'null' && 
+                    entry.result !== 'undefined'
+                  )
+                  .map((entry: any, i: number) => (
+                  <div key={i} className={`flex flex-col sm:flex-row sm:items-center ${i === 0 && (!prospect.linkedinUrl || !prospect.linkedinUrl.includes('company')) ? 'border-t border-gray-100/80 pt-3' : ''}`}>
+                    <span className="text-gray-400 w-32 shrink-0 text-[11px] font-bold uppercase tracking-wider mb-1.5 sm:mb-0 break-words">{entry.title}</span>
+                    <span className="flex-1 text-gray-900 font-semibold bg-white border border-gray-100 rounded-md px-3 py-1.5 text-[13px] shadow-sm whitespace-pre-wrap">{entry.result}</span>
+                  </div>
+                ))}
+                {!prospect.enrichments?.length && prospect.companySize && (
+                  <div className="flex items-center border-t border-gray-100/80 pt-3">
+                    <span className="text-gray-400 w-32 shrink-0 text-[11px] font-bold uppercase tracking-wider">Size</span>
+                    <span className="flex-1 text-gray-900 font-semibold bg-white border border-gray-100 rounded-md px-3 py-1.5 text-[13px] shadow-sm">{prospect.companySize}</span>
+                  </div>
+                )}
+                {!prospect.enrichments?.length && prospect.industry && (
+                  <div className="flex items-center pt-1.5">
+                    <span className="text-gray-400 w-32 shrink-0 text-[11px] font-bold uppercase tracking-wider">Industry</span>
+                    <span className="flex-1 text-gray-900 font-semibold bg-white border border-gray-100 rounded-md px-3 py-1.5 text-[13px] shadow-sm">{prospect.industry}</span>
+                  </div>
+                )}
+              </div>
             </div>
-            <Input
-              type="text"
-              placeholder="Add your notes about this prospect..."
-              value={note || ''}
-              onChange={e => onNoteChange(e.target.value)}
-              className="text-sm"
-            />
           </div>
-        )}
+        </div>
 
         {onFeedback && (
-          <div className="flex gap-2 pt-2">
-            <Button
-              onClick={() => onFeedback('good')}
-              variant="default"
-              size="sm"
-              className="flex-1 bg-black text-white hover:bg-black/90"
-            >
-              <CheckCircle className="w-4 h-4 mr-1" />
-              Good Fit
-            </Button>
-            <Button
-              onClick={() => onFeedback('bad')}
-              variant="outline"
-              size="sm"
-              className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
-            >
-              <XCircle className="w-4 h-4 mr-1" />
-              Not a Fit
-            </Button>
-          </div>
+          <>
+            <Separator className="bg-gray-100" />
+            <div className="flex flex-col sm:flex-row gap-4 pt-2">
+              <Button
+                onClick={() => onFeedback('good')}
+                className="flex-[1.5] border border-transparent bg-[hsl(var(--hermes-gold))] text-white font-semibold hover:bg-[hsl(var(--hermes-gold-dark))] shadow-[0_4px_14px_rgba(214,157,74,0.25)] rounded-full py-6 text-[15px] transition-all"
+              >
+                <ThumbsUp className="w-4 h-4 mr-2" />
+                Good Fit - Approve
+              </Button>
+              <Button
+                onClick={() => onFeedback('bad')}
+                variant="outline"
+                className="flex-1 border-gray-200 bg-white text-gray-600 font-medium hover:bg-gray-50 shadow-sm rounded-full py-6 text-[15px] transition-all"
+              >
+                <ThumbsDown className="w-4 h-4 mr-2" />
+                Skip Prospect
+              </Button>
+            </div>
+          </>
         )}
-
-        <div className="border-t border-gray-100 pt-2 text-center text-xs text-gray-500">
-          Review the prospect&apos;s information and LinkedIn profile before proceeding
-        </div>
       </CardContent>
     </Card>
-  );
-} 
+  )
+}

@@ -3,33 +3,30 @@
 import { Model } from '@/lib/types/models'
 import { cn } from '@/lib/utils'
 import type { UIMessage as Message } from 'ai'
-import { ArrowUp, ChevronDown, Mic, Paperclip, Square } from 'lucide-react'
+import { ArrowUp, ChevronDown, LoaderCircle, Mic, Paperclip, Square } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import Textarea from 'react-textarea-autosize'
 import { useArtifact } from './artifact/artifact-context'
-import { EmptyScreen } from './empty-screen'
+import { HomeCommandCenter } from './home-command-center'
 import { RotatingText } from './rotating-text'
 import { Button } from './ui/button'
 
 function RotatingHeroText() {
   const useCases = [
-    'AI sales engineer',
-    'partnership finder',
-    'prospect researcher',
-    'email copywriter',
-    'channel partner scout',
-    'event speaker finder',
-    'competitor intelligence',
-    'lead enrichment engine'
+    'partner list',
+    'contact path',
+    'directory listing',
+    'founder campaign',
+    'outreach draft'
   ]
 
   return (
     <>
-      Find your next{' '}
+      Run Hermes for your{' '}
       <RotatingText
         words={useCases}
-        className="inline-block text-[hsl(var(--hermes-gold-dark))]"
+        className="inline-block text-[hsl(var(--hermes-gold-light))]"
         interval={2500}
       />
     </>
@@ -75,6 +72,7 @@ export function ChatPanel({
   const [showEmptyScreen, setShowEmptyScreen] = useState(false)
   const router = useRouter()
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const formRef = useRef<HTMLFormElement>(null)
   const isFirstRender = useRef(true)
   const [isComposing, setIsComposing] = useState(false) // Composition state
   const [enterDisabled, setEnterDisabled] = useState(false) // Disable Enter after composition ends
@@ -209,42 +207,54 @@ export function ChatPanel({
     }
   }
 
+  const submitCurrentMessage = async () => {
+    if (submittingRef.current) return
+    if ((!input || input.trim().length === 0) && !isLoading) return
+
+    submittingRef.current = true
+    const isAuthed = await ensureSignedIn()
+    if (!isAuthed) {
+      router.push('/auth/login')
+      submittingRef.current = false
+      return
+    }
+
+    try {
+      localStorage.removeItem('hermes_draft')
+    } catch {}
+
+    handleSubmit({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>)
+    setTimeout(() => {
+      submittingRef.current = false
+    }, 800)
+  }
+
   return (
     <div
-      className={cn(
-        'w-full group/form-container shrink-0 relative z-10',
-        messages.length > 0 ? 'px-3 sm:px-4 pb-3 sm:pb-5' : 'px-3 sm:px-5 md:px-8 pb-6 sm:pb-10'
-      )}
+      className={cn('w-full group/form-container shrink-0 relative z-10', messages.length > 0 ? 'px-3 sm:px-4 pb-3 sm:pb-5' : 'px-3 sm:px-5 md:px-8 pb-6 sm:pb-10')}
     >
       {messages.length === 0 && (
-        <div className={cn('mx-auto mb-6 w-full max-w-4xl rounded-[2rem] border border-black/5 bg-white/65 px-6 py-8 shadow-[0_24px_80px_rgba(62,45,18,0.08)] backdrop-blur-sm md:px-8 md:py-10')}>
-          <div className="mb-4 text-[11px] uppercase tracking-[0.32em] text-black/40">Roman messenger for outbound teams</div>
-          <h1 className="max-w-3xl font-serif text-4xl leading-tight text-gray-950 sm:text-5xl md:text-6xl">
-            <RotatingHeroText />
+        <div className="flex flex-col items-center justify-center text-center max-w-4xl mx-auto pt-4 md:pt-12 mb-10">
+          <div className="relative h-20 w-20 overflow-hidden rounded-2xl shadow-[0_8px_30px_rgba(214,157,74,0.15)] border border-[hsl(var(--hermes-gold))]/30 mb-8 bg-black flex items-center justify-center">
+            <img src="/hermes-chat-avatar.png" alt="Hermes AI" className="h-full w-full object-cover" />
+          </div>
+          
+          <h1 className="font-serif text-[4rem] md:text-[6.5rem] leading-[0.95] text-gray-900 tracking-tight mb-8">
+            Hermes
           </h1>
-          <p className="mt-4 max-w-2xl text-sm leading-7 text-black/65 sm:text-base">
-            Describe who you need to reach. Hermes researches the market, verifies details, and drafts sharp outreach without making the workflow feel heavy.
+          
+          <p className="text-[17px] md:text-[20px] font-medium leading-[1.6] text-gray-500 max-w-3xl">
+            Say goodbye to juggling twenty different sales tools. Tell Hermes what your offer is, and it will deploy neural networks across the open web to find exact-match companies, resolve decision-makers, and draft executive-grade emails instantly.
           </p>
         </div>
       )}
+      
+      {/* The form sits here immediately, all visual splash/empty states are deferred to HomeCommandCenter */}
       <form
+        ref={formRef}
         onSubmit={async (e) => {
           e.preventDefault()
-          if (submittingRef.current) return
-          submittingRef.current = true
-          // require sign-in before sending
-          const isAuthed = await ensureSignedIn()
-          if (!isAuthed) {
-            router.push('/auth/login')
-            submittingRef.current = false
-            return
-          }
-          try {
-            localStorage.removeItem('hermes_draft')
-          } catch {}
-          handleSubmit(e)
-          // simple debounce window to avoid multi-fire
-          setTimeout(() => { submittingRef.current = false }, 800)
+          await submitCurrentMessage()
         }}
         className={cn('max-w-4xl w-full mx-auto relative group/form', messages.length === 0 ? 'mb-6' : '')}
       >
@@ -261,46 +271,24 @@ export function ChatPanel({
           </Button>
         )}
 
-        <div className="relative">
+        <div className="relative mx-auto w-full max-w-3xl">
           <div className={cn(
-            'hermes-panel relative z-[5] flex w-full items-end rounded-[1.75rem] border border-black/10 transition-all duration-200',
-            'focus-within:border-[hsl(var(--hermes-gold))]/40 focus-within:shadow-[0_24px_64px_rgba(203,126,40,0.16)]'
+            'relative z-[5] flex w-full flex-col rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-200',
+            'focus-within:border-[hsl(var(--hermes-gold))] focus-within:shadow-[0_8px_30px_rgba(214,157,74,0.12)]'
           )}>
-            <div className="z-[10] flex items-center gap-1 p-2.5 sm:gap-2 sm:p-3">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="h-9 w-9 rounded-full border-black/10 bg-white/85 sm:h-10 sm:w-10"
-                onClick={() => fileInputRef.current?.click()}
-                title="Attach file"
-              >
-                <Paperclip size={16} />
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={isListening ? 'destructive' : 'outline'}
-                className="h-9 w-9 rounded-full border-black/10 bg-white/85 sm:h-10 sm:w-10"
-                onClick={startVoice}
-                title="Voice input"
-              >
-                <Mic size={16} />
-              </Button>
-            </div>
             <Textarea
               ref={inputRef}
               name="input"
-              rows={1}
-              maxRows={6}
+              rows={2}
+              maxRows={8}
               tabIndex={0}
               onCompositionStart={handleCompositionStart}
               onCompositionEnd={handleCompositionEnd}
-              placeholder="Describe your ideal prospects..."
+              placeholder="Example: Find 20 Fintech CTOs in New York. Pitch them my fractional dev-ops offering."
               spellCheck={false}
               value={input}
               disabled={isLoading || isToolInvocationInProgress()}
-              className="w-full resize-none border-0 bg-transparent px-3 py-4 text-sm text-gray-900 placeholder:text-black/35 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-[64px] sm:px-6 sm:text-base"
+              className="w-full resize-none border-0 bg-transparent px-5 py-4 text-[15px] leading-relaxed text-gray-900 placeholder:text-gray-400 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 min-h-[85px]"
               onChange={e => {
                 if (handleInputChange) {
                   handleInputChange(e)
@@ -321,48 +309,59 @@ export function ChatPanel({
                     return
                   }
                   e.preventDefault()
-                  const textarea = e.target as HTMLTextAreaElement
-                  textarea.form?.requestSubmit()
+                  void submitCurrentMessage()
                 }
               }}
               onFocus={() => setShowEmptyScreen(true)}
               onBlur={() => setShowEmptyScreen(false)}
             />
 
-            <div className="z-[10] p-2.5 sm:p-3">
+            <div className="flex items-center justify-between px-3 pb-3 pt-1">
+              <div className="flex items-center gap-1.5">
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Attach file"
+                >
+                  <Paperclip size={16} />
+                </Button>
+                <div className="mx-1 h-4 w-[1px] bg-gray-200"></div>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant={isListening ? 'default' : 'ghost'}
+                  className={cn("h-8 w-8 rounded-full hover:bg-gray-100", isListening ? "bg-[hsl(var(--hermes-gold-light))] text-[hsl(var(--hermes-gold-dark))] hover:opacity-80" : "text-gray-400 hover:text-gray-700")}
+                  onClick={startVoice}
+                  title="Voice input"
+                >
+                  <Mic size={16} />
+                </Button>
+              </div>
+              
               <Button
                 type="button"
-                size="sm"
+                size="icon"
                 className={cn(
-                  'h-10 w-10 rounded-full bg-black text-white shadow-[0_16px_32px_rgba(17,17,17,0.18)] sm:h-11 sm:w-11',
-                  'disabled:bg-gray-300 disabled:text-gray-700 disabled:cursor-not-allowed',
-                  (!input || input.length === 0) && !isLoading && 'opacity-50 scale-95',
-                  isLoading && 'animate-pulse bg-[hsl(var(--hermes-gold-dark))] text-white'
+                  'h-8 w-8 rounded-full transition-all duration-200',
+                  isLoading ? 'bg-[hsl(var(--hermes-gold))] text-white shadow-md' : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-700',
+                  input?.trim() && !isLoading ? 'bg-gray-900 text-white hover:bg-gray-800 shadow-md' : '',
+                  (!input || input.trim().length === 0) && !isLoading && 'scale-95 opacity-80'
                 )}
                 disabled={
                   ((!input || input.length === 0) && !isLoading) ||
                   isToolInvocationInProgress()
                 }
                 onClick={isLoading ? stop : async () => {
-                  if (submittingRef.current) return
-                  submittingRef.current = true
-                  const isAuthed = await ensureSignedIn()
-                  if (!isAuthed) {
-                    router.push('/auth/login')
-                    submittingRef.current = false
-                    return
-                  }
-                  const form = document.querySelector('form')
-                  if (form) {
-                    form.requestSubmit()
-                  }
-                  setTimeout(() => { submittingRef.current = false }, 800)
+                  await submitCurrentMessage()
                 }}
               >
                 {isLoading ? (
-                  <Square size={18} />
+                  <LoaderCircle className="h-4 w-4 animate-spin text-white" />
                 ) : (
-                  <ArrowUp size={18} />
+                  <ArrowUp size={16} strokeWidth={2.5} />
                 )}
               </Button>
             </div>
@@ -370,6 +369,20 @@ export function ChatPanel({
         </div>
 
       </form>
+
+      {messages.length === 0 && (
+        <HomeCommandCenter
+          onPromptSelect={(prompt) => {
+            // Only set input and allow user to edit, NO auto-submit!
+            if (setInput) {
+              setInput(prompt)
+            }
+            try {
+              inputRef.current?.focus()
+            } catch {}
+          }}
+        />
+      )}
 
       {/* Hidden file input */}
       <input
@@ -384,23 +397,6 @@ export function ChatPanel({
           ;(e.target as HTMLInputElement).value = ''
         }}
       />
-
-      {/* Templates under the input when empty */}
-      {messages.length === 0 && (
-        <div className="mt-6">
-          <EmptyScreen
-            hideHeader
-            submitMessage={message => {
-              // Load playbook into input vs auto-sending
-              if (setInput) {
-                setInput(message)
-              }
-              // Focus the input for immediate editing
-              try { inputRef.current?.focus() } catch {}
-            }}
-          />
-        </div>
-      )}
     </div>
   )
 }

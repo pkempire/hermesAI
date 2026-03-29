@@ -5,71 +5,69 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarRail,
-  SidebarTrigger
+  SidebarRail
 } from '@/components/ui/sidebar'
 import { cn } from '@/lib/utils'
-import { Plus, Search, Send } from 'lucide-react'
+import { Bot, Plus, Send, FolderPlus } from 'lucide-react'
+import Image from 'next/image'
 import Link from 'next/link'
+import { User } from '@supabase/supabase-js'
+import type { CSSProperties } from 'react'
 import { Suspense } from 'react'
 import { ChatHistorySection } from './sidebar/chat-history-section'
 import { ChatHistorySkeleton } from './sidebar/chat-history-skeleton'
-import { IconLogo } from './ui/icons'
 
-export default function AppSidebar() {
+export default function AppSidebar({ user }: { user: User | null }) {
+  if (!user) return null
+
   return (
-    <Sidebar side="left" variant="sidebar" collapsible="offcanvas" className="border-r border-black/5">
-      <SidebarHeader className="flex flex-row items-center justify-between border-b border-black/5 px-3 py-3">
-        <Link href="/" className="flex items-center gap-3 px-2 py-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-black text-white shadow-sm">
-            <IconLogo className={cn('size-4')} />
+    <Sidebar
+      side="left"
+      variant="sidebar"
+      collapsible="offcanvas"
+      className="border-r border-gray-200 bg-gray-50 text-gray-900 [--sidebar-width:16rem]"
+    >
+      <SidebarHeader className="border-b border-gray-100 bg-gray-50 px-4 py-4">
+        <Link href="/" className="flex items-center gap-3 px-1 py-1.5">
+          <div className="relative h-10 w-10 overflow-hidden rounded-[10px] border border-gray-200 bg-white shadow-sm flex items-center justify-center">
+            <Image src="/images/hermes-avatar.png" alt="Hermes" width={28} height={28} className="object-cover" />
           </div>
           <div>
-            <div className="text-[11px] uppercase tracking-[0.28em] text-black/40">Hermes</div>
-            <span className="font-serif text-lg text-gray-950">Operator</span>
+            <span className="font-serif text-[1.4rem] leading-none text-gray-900 font-medium tracking-tight">Hermes Messenger</span>
+            <div className="text-[10px] uppercase tracking-widest text-[hsl(var(--hermes-gold-dark))] mt-1 font-semibold">Campaign Studio</div>
           </div>
         </Link>
-        <SidebarTrigger className="rounded-full border border-black/10 bg-white/70 shadow-sm" />
       </SidebarHeader>
-      <SidebarContent className="flex h-full flex-col px-3 py-4">
-        <div className="px-2 pb-4">
-          <div className="rounded-[1.25rem] border border-amber-200/70 bg-white/80 p-4 shadow-sm">
-            <div className="text-[11px] uppercase tracking-[0.24em] text-black/45">Mission Control</div>
-            <p className="mt-2 text-sm leading-6 text-black/70">
-              Research prospects, write outreach, and launch campaigns from one messenger.
-            </p>
-          </div>
-        </div>
+      <SidebarContent className="flex h-full flex-col bg-gray-50 px-3 py-4">
         <SidebarMenu className="space-y-1">
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
-              <Link href="/" className="flex items-center gap-3 rounded-xl px-3 py-2.5">
+              <Link href="/" className="flex items-center gap-3 rounded-lg px-3 py-2 text-gray-600 transition-colors hover:bg-white hover:text-gray-900 hover:shadow-sm border border-transparent hover:border-gray-200">
                 <Plus className="size-4" />
-                <span>New Chat</span>
+                <span className="text-sm font-medium">New brief</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
-              <Link href="/" className="flex items-center gap-3 rounded-xl px-3 py-2.5">
-                <Search className="size-4" />
-                <span>Find Prospects</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <Link href="/campaigns" className="flex items-center gap-3 rounded-xl px-3 py-2.5">
+              <Link href="/campaigns" className="flex items-center gap-3 rounded-lg px-3 py-2 text-gray-600 transition-colors hover:bg-white hover:text-gray-900 hover:shadow-sm border border-transparent hover:border-gray-200">
                 <Send className="size-4" />
-                <span>Campaigns</span>
+                <span className="text-sm font-medium">Campaigns</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <Link href="/studio" className="flex items-center gap-3 rounded-lg px-3 py-2 text-gray-600 transition-colors hover:bg-white hover:text-[hsl(var(--hermes-gold-dark))] hover:shadow-sm border border-transparent hover:border-gray-200 font-bold">
+                <FolderPlus className="size-4 text-[hsl(var(--hermes-gold))]" />
+                <span className="text-sm">Draft Studio</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        <div className="mt-6 px-2 text-[11px] uppercase tracking-[0.28em] text-black/35">
-          Recent dispatches
-        </div>
-        <div className="mt-3 flex-1 overflow-y-auto rounded-[1.25rem] border border-black/5 bg-white/55 p-2">
+        
+        {/* Campaign brief removed per user feedback */}
+        <div className="mt-6 flex-1 overflow-y-auto rounded-xl border border-gray-200 bg-white p-2 shadow-sm">
           <Suspense fallback={<ChatHistorySkeleton />}>
             <ChatHistorySection />
           </Suspense>

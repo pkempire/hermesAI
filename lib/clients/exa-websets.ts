@@ -54,6 +54,7 @@ export interface WebsetItem {
   title?: string
   text?: string
   enrichments?: Record<string, any>
+  properties?: Record<string, any>
   metadata?: Record<string, any>
   createdAt: string
   updatedAt: string
@@ -81,11 +82,129 @@ export interface Webset {
   updatedAt: string
 }
 
+type EnrichmentDescriptionMap = Record<string, string>
+
 export interface ListItemsResponse {
   data: WebsetItem[]
   object: string
   hasMore: boolean
   nextCursor?: string
+}
+
+export type CanonicalProspectEnrichment = {
+  label: string
+  value: string
+  required: boolean
+}
+
+const CANONICAL_ENRICHMENT_DEFINITIONS: Record<string, { description: string; instructions: string }> = {
+  company_name: {
+    description: 'Extract the company name',
+    instructions: 'Return the official company or firm name.'
+  },
+  company_domain: {
+    description: 'Extract the company domain',
+    instructions: 'Return the canonical website domain for the firm.'
+  },
+  company_linkedin: {
+    description: 'Extract the company LinkedIn URL',
+    instructions: 'Return the LinkedIn company page URL if available.'
+  },
+  location: {
+    description: 'Extract the company location',
+    instructions: 'Return the primary city, metro, or region for the firm.'
+  },
+  industry: {
+    description: 'Extract the company specialization',
+    instructions: 'Describe the company specialization, niche, or core market.'
+  },
+  company_size: {
+    description: 'Estimate the company size',
+    instructions: 'Return a concise company size or team-size estimate if available.'
+  },
+  decision_maker_name: {
+    description: 'Find the primary decision maker name',
+    instructions: 'Identify the founder, owner, CEO, or most relevant operator likely to evaluate partnerships.'
+  },
+  decision_maker_title: {
+    description: 'Find the primary decision maker title',
+    instructions: 'Return the title of the founder, owner, CEO, or most relevant operator likely to evaluate partnerships.'
+  },
+  decision_maker_linkedin: {
+    description: 'Find the primary decision maker LinkedIn URL',
+    instructions: 'Return the LinkedIn profile URL for the founder, owner, CEO, or most relevant operator likely to evaluate partnerships.'
+  },
+  decision_maker_email: {
+    description: 'Find the primary decision maker email',
+    instructions: 'Return a direct or best available business email for the primary decision maker if confidently available.'
+  },
+  email: {
+    description: 'Find a business email address',
+    instructions: 'Return a business email address if confidently available.'
+  }
+}
+
+export function buildCanonicalProspectEnrichments(targetPersona?: string): CanonicalProspectEnrichment[] {
+  return [
+    { label: 'Company Name', value: 'company_name', required: true },
+    { label: 'Company Domain', value: 'company_domain', required: true },
+    { label: 'Company LinkedIn', value: 'company_linkedin', required: false },
+    { label: 'Location', value: 'location', required: false },
+    { label: 'Decision Maker Name', value: 'decision_maker_name', required: true },
+    { label: 'Decision Maker Title', value: 'decision_maker_title', required: true },
+    { label: 'Decision Maker LinkedIn', value: 'decision_maker_linkedin', required: true },
+    { label: 'Decision Maker Email', value: 'decision_maker_email', required: false }
+  ].map(enrichment => ({
+    ...enrichment,
+    label:
+      enrichment.value === 'decision_maker_name' && targetPersona
+        ? `${targetPersona} Name`
+        : enrichment.value === 'decision_maker_title' && targetPersona
+        ? `${targetPersona} Title`
+        : enrichment.label
+  }))
+}
+
+export function buildWebsetEnrichments(
+  enrichments: Array<string | { value?: string; label?: string; description?: string }>
+): WebsetEnrichment[] {
+  const seen = new Set<string>()
+  const result: WebsetEnrichment[] = []
+
+  for (const enrichment of enrichments) {
+    const key =
+      typeof enrichment === 'string'
+        ? enrichment
+        : enrichment.value || enrichment.label || enrichment.description || ''
+
+    const normalizedKey = key.toLowerCase().trim()
+    if (!normalizedKey || seen.has(normalizedKey)) continue
+
+    const definition = CANONICAL_ENRICHMENT_DEFINITIONS[normalizedKey]
+    const displayLabel =
+      (typeof enrichment === 'object' && enrichment.label?.trim()) ||
+      definition?.description
+        ?.replace(/^Extract\s+/i, '')
+        .replace(/^Find\s+/i, '')
+        .replace(/^Estimate\s+/i, '')
+        .trim() ||
+      humanizePropertyKey(normalizedKey)
+
+    result.push({
+      description:
+        displayLabel,
+      format: 'text',
+      instructions:
+        (typeof enrichment === 'object' && enrichment.description?.trim()) ||
+        definition?.instructions ||
+        (typeof enrichment === 'object' && enrichment.label
+          ? `Return ${enrichment.label.toLowerCase()} if confidently available.`
+          : `Look for and extract ${normalizedKey.replace(/_/g, ' ')} from the source content.`)
+    })
+    seen.add(normalizedKey)
+  }
+
+  return result.slice(0, 10)
 }
 
 function toCleanString(value: unknown): string | undefined {
@@ -104,6 +223,15 @@ function toFirstString(value: unknown): string | undefined {
   return toCleanString(value)
 }
 
+function stripHtml(value: string): string {
+  return value.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+function truncateText(value: string, max = 220): string {
+  if (value.length <= max) return value
+  return `${value.slice(0, max).trim()}…`
+}
+
 function looksLikeDomain(value: string): boolean {
   return /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(value)
 }
@@ -116,10 +244,135 @@ function looksLikeJobTitle(value: string): boolean {
   return /\b(founder|ceo|cto|coo|chief|director|manager|lead|head|partner|president|vp|engineer|marketer|sales|growth|recruiter)\b/i.test(value)
 }
 
+function looksLikePersonName(value: string): boolean {
+  const clean = value.trim()
+  if (!clean) return false
+  if (clean.length > 60) return false
+  if (/\b(inc|llc|corp|company|college|university|school|education|consulting|admissions|academy|group|partners|firm)\b/i.test(clean)) {
+    return false
+  }
+
+  const parts = clean.split(/\s+/).filter(Boolean)
+  if (parts.length < 2 || parts.length > 4) return false
+
+  return parts.every(part => /^[A-Z][a-z.'-]+$/.test(part))
+}
+
+function looksLikeOrganizationName(value: string): boolean {
+  return /\b(inc|llc|corp|company|college|university|school|education|consulting|admissions|academy|group|partners|firm|directory|network|association|foundation|community)\b/i.test(
+    value
+  )
+}
+
 function titleCaseFromSlug(slug: string): string {
   return slug
     .replace(/[-_]+/g, ' ')
     .replace(/\b\w/g, char => char.toUpperCase())
+}
+
+function inferCompanyFromUrl(url?: string): string | undefined {
+  const clean = toCleanString(url)
+  if (!clean) return undefined
+
+  try {
+    const hostname = new URL(clean.startsWith('http') ? clean : `https://${clean}`).hostname
+      .replace(/^www\./, '')
+      .split('.')
+      .slice(0, -1)
+      .join(' ')
+    return hostname ? titleCaseFromSlug(hostname) : undefined
+  } catch {
+    return undefined
+  }
+}
+
+function humanizePropertyKey(key: string): string {
+  return key
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, char => char.toUpperCase())
+}
+
+function extractCompanyFromDescription(value?: string): string | undefined {
+  const clean = toCleanString(value)
+  if (!clean) return undefined
+
+  const normalized = stripHtml(clean)
+  const match = normalized.match(/^([A-Z][A-Za-z0-9&.,'’\- ]{1,80}?)\s+(?:is|offers|provides|helps|serves)\b/)
+  return toCleanString(match?.[1])
+}
+
+function cleanLongText(value?: string): string | undefined {
+  const clean = toCleanString(value)
+  if (!clean) return undefined
+  const stripped = stripHtml(clean)
+  if (!stripped) return undefined
+  return truncateText(stripped, 240)
+}
+
+const EXCLUDED_PROPERTY_KEYS = new Set([
+  'id',
+  'object',
+  'websetid',
+  'type',
+  'url',
+  'urls',
+  'content',
+  'text',
+  'html',
+  'title',
+  'name',
+  'description',
+  'createdat',
+  'updatedat',
+  'metadata',
+  'source',
+  'search',
+  'query',
+  'raw',
+  'image',
+  'avatar',
+  'logo'
+])
+
+const CORE_PROPERTY_KEYS = new Set([
+  'company_name',
+  'company',
+  'organization',
+  'company_domain',
+  'website',
+  'company_linkedin',
+  'decision_maker_name',
+  'decision_maker_title',
+  'decision_maker_linkedin',
+  'decision_maker_email',
+  'email',
+  'location',
+  'industry',
+  'company_size',
+  'phone'
+])
+
+function normalizePropertyEnrichments(rawProperties: unknown): Array<{ title: string; value: string; result: string; format?: string }> {
+  if (!rawProperties || typeof rawProperties !== 'object' || Array.isArray(rawProperties)) return []
+
+  return Object.entries(rawProperties as Record<string, any>)
+    .map(([key, value]) => {
+      const normalizedKey = key.toLowerCase().trim()
+      if (!normalizedKey || EXCLUDED_PROPERTY_KEYS.has(normalizedKey) || CORE_PROPERTY_KEYS.has(normalizedKey)) {
+        return null
+      }
+
+      const result = toFirstString(value)
+      if (!result) return null
+      if (result.length > 280) return null
+
+      return {
+        title: humanizePropertyKey(key),
+        value: result,
+        result
+      }
+    })
+    .filter(Boolean) as Array<{ title: string; value: string; result: string; format?: string }>
 }
 
 function parseItemTitle(title?: string): Partial<Prospect> {
@@ -146,7 +399,11 @@ function parseItemTitle(title?: string): Partial<Prospect> {
     }
   }
 
-  return { fullName: cleanTitle }
+  if (looksLikePersonName(cleanTitle)) {
+    return { fullName: cleanTitle }
+  }
+
+  return { company: cleanTitle }
 }
 
 function buildSummary(company?: string, industry?: string, companySize?: string): string | undefined {
@@ -154,7 +411,10 @@ function buildSummary(company?: string, industry?: string, companySize?: string)
   return parts.length > 0 ? parts.join(' • ') : undefined
 }
 
-function normalizeStructuredEnrichments(rawEnrichments: unknown): Array<{ title: string; result: string; format?: string }> {
+function normalizeStructuredEnrichments(
+  rawEnrichments: unknown,
+  enrichmentDescriptions?: EnrichmentDescriptionMap
+): Array<{ title: string; value: string; result: string; format?: string }> {
   if (!rawEnrichments) return []
 
   if (Array.isArray(rawEnrichments)) {
@@ -166,16 +426,18 @@ function normalizeStructuredEnrichments(rawEnrichments: unknown): Array<{ title:
 
         const title =
           toCleanString(entry?.description) ||
+          toCleanString(entry?.enrichmentId ? enrichmentDescriptions?.[entry.enrichmentId] : undefined) ||
           toCleanString(entry?.enrichmentId) ||
           `Enrichment ${index + 1}`
 
         return {
           title,
+          value: result,
           result,
           format: toCleanString(entry?.format)
         }
       })
-      .filter(Boolean) as Array<{ title: string; result: string; format?: string }>
+      .filter(Boolean) as Array<{ title: string; value: string; result: string; format?: string }>
   }
 
   if (typeof rawEnrichments === 'object') {
@@ -187,6 +449,7 @@ function normalizeStructuredEnrichments(rawEnrichments: unknown): Array<{ title:
           if (!result) return null
           return {
             title: toCleanString(value.description) || key,
+            value: result,
             result,
             format: toCleanString(value.format)
           }
@@ -194,31 +457,76 @@ function normalizeStructuredEnrichments(rawEnrichments: unknown): Array<{ title:
 
         const result = toCleanString(value)
         if (!result) return null
-        return { title: key, result }
+        return { title: key, value: result, result }
       })
-      .filter(Boolean) as Array<{ title: string; result: string; format?: string }>
+      .filter(Boolean) as Array<{ title: string; value: string; result: string; format?: string }>
   }
 
   return []
 }
 
+function mergeEnrichmentSources(
+  sources: unknown[],
+  enrichmentDescriptions?: EnrichmentDescriptionMap
+): Array<{ title: string; value: string; result: string; format?: string }> {
+  const seen = new Set<string>()
+  const merged: Array<{ title: string; value: string; result: string; format?: string }> = []
+
+  for (const source of sources) {
+    const entries = normalizeStructuredEnrichments(source, enrichmentDescriptions)
+    for (const entry of entries) {
+      const key = `${entry.title.toLowerCase().trim()}:${entry.result.toLowerCase().trim()}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      merged.push(entry)
+    }
+  }
+
+  return merged
+}
+
 function extractProspectFields(
   item: WebsetItem,
-  structuredEnrichments: Array<{ title: string; result: string; format?: string }>
-): Partial<Prospect> {
+  structuredEnrichments: Array<{ title: string; value: string; result: string; format?: string }>
+): Partial<Prospect> & { summary?: string } {
   const base = parseItemTitle(item.title)
+  const inferredCompany = inferCompanyFromUrl(item.url)
+  const descriptionText =
+    cleanLongText(toFirstString(item.properties?.description)) ||
+    cleanLongText(item.text) ||
+    cleanLongText(item.title)
+  const descriptionCompany = extractCompanyFromDescription(descriptionText)
   const inferredFromUrl = item.url?.includes('linkedin.com/in/')
     ? titleCaseFromSlug(item.url.split('/in/')[1]?.split('/')[0] || '')
     : undefined
 
-  const prospect: Partial<Prospect> = {
-    fullName: base.fullName || inferredFromUrl || 'Profile Found',
-    jobTitle: base.jobTitle,
-    company: base.company,
-    linkedinUrl: item.url?.includes('linkedin.com') ? item.url : undefined,
-    website: item.url,
+  const prospect: Partial<Prospect> & { summary?: string } = {
+    fullName:
+      toFirstString(item.properties?.decision_maker_name) ||
+      toFirstString(item.properties?.name) ||
+      (base.fullName && looksLikePersonName(base.fullName) ? base.fullName : undefined) ||
+      inferredFromUrl,
+    jobTitle:
+      toFirstString(item.properties?.decision_maker_title) ||
+      base.jobTitle,
+    company:
+      toFirstString(item.properties?.company_name) ||
+      toFirstString(item.properties?.company) ||
+      toFirstString(item.properties?.organization) ||
+      base.company ||
+      descriptionCompany ||
+      inferredCompany,
+    linkedinUrl:
+      toFirstString(item.properties?.decision_maker_linkedin) ||
+      toFirstString(item.properties?.company_linkedin) ||
+      (item.url?.includes('linkedin.com') ? item.url : undefined),
+    website:
+      toFirstString(item.properties?.company_domain) ||
+      toFirstString(item.properties?.website) ||
+      item.url,
     avatarUrl: toCleanString(item.metadata?.image) || toCleanString(item.metadata?.avatar),
-    companyLogoUrl: toCleanString(item.metadata?.logo)
+    companyLogoUrl: toCleanString(item.metadata?.logo),
+    summary: descriptionText
   }
 
   for (const enrichment of structuredEnrichments) {
@@ -242,7 +550,7 @@ function extractProspectFields(
       prospect.location = value
       continue
     }
-    if (!prospect.industry && title.includes('industry')) {
+    if (!prospect.industry && (title.includes('industry') || title.includes('specialization') || title.includes('offering') || title.includes('description'))) {
       prospect.industry = value
       continue
     }
@@ -258,13 +566,29 @@ function extractProspectFields(
       prospect.jobTitle = value
       continue
     }
-    if (!prospect.company && (title.includes('company') || title.includes('organization'))) {
+    if (!prospect.company && (title.includes('company') || title.includes('organization') || title.includes('firm'))) {
       prospect.company = value
       continue
     }
-    if ((!prospect.fullName || prospect.fullName === 'Profile Found') && title.includes('name')) {
+    if ((!prospect.fullName || prospect.fullName === inferredCompany) && (title.includes('name') || title.includes('decision maker'))) {
       prospect.fullName = value
     }
+  }
+
+  if (
+    prospect.fullName &&
+    ((prospect.company && prospect.fullName.trim().toLowerCase() === prospect.company.trim().toLowerCase()) ||
+      looksLikeOrganizationName(prospect.fullName))
+  ) {
+    prospect.fullName = undefined
+  }
+
+  if (
+    prospect.jobTitle &&
+    prospect.company &&
+    prospect.jobTitle.trim().toLowerCase() === prospect.company.trim().toLowerCase()
+  ) {
+    prospect.jobTitle = undefined
   }
 
   return prospect
@@ -285,31 +609,92 @@ function buildFitScore(prospect: Prospect): number {
 }
 
 function normalizeProspect(item: WebsetItem): Prospect {
-  const structuredEnrichments = normalizeStructuredEnrichments(item.enrichments)
+  const structuredEnrichments = mergeEnrichmentSources(
+    [item.enrichments, normalizePropertyEnrichments(item.properties)],
+    undefined
+  )
   const fields = extractProspectFields(item, structuredEnrichments)
+  const inferredCompany = inferCompanyFromUrl(item.url)
+  const resolvedCompany = fields.company || inferredCompany || ''
 
   const prospect: Prospect = {
     id: item.id,
     exaItemId: item.id,
-    fullName: fields.fullName || 'Profile Found',
-    jobTitle: fields.jobTitle || 'Unknown',
-    company: fields.company || 'Unknown',
+    fullName: fields.fullName || '',
+    jobTitle: fields.jobTitle,
+    company: resolvedCompany,
     email: fields.email,
     linkedinUrl: fields.linkedinUrl,
     phone: fields.phone,
     location: fields.location,
     industry: fields.industry,
     companySize: fields.companySize,
-    website: fields.website || item.url,
+    website:
+      fields.website && looksLikeDomain(fields.website)
+        ? `https://${fields.website}`
+        : fields.website || item.url,
     enrichments: structuredEnrichments,
     avatarUrl: fields.avatarUrl,
     companyLogoUrl: fields.companyLogoUrl
   }
 
   ;(prospect as any).fitScore = buildFitScore(prospect)
-  ;(prospect as any).summary = buildSummary(prospect.company, prospect.industry, prospect.companySize)
+  ;(prospect as any).summary =
+    fields.summary ||
+    buildSummary(prospect.company, prospect.industry, prospect.companySize)
 
   return prospect
+}
+
+function normalizeProspectWithDescriptions(
+  item: WebsetItem,
+  enrichmentDescriptions?: EnrichmentDescriptionMap
+): Prospect {
+  const structuredEnrichments = mergeEnrichmentSources(
+    [item.enrichments, normalizePropertyEnrichments(item.properties)],
+    enrichmentDescriptions
+  )
+  const fields = extractProspectFields(item, structuredEnrichments)
+  const inferredCompany = inferCompanyFromUrl(item.url)
+  const resolvedCompany = fields.company || inferredCompany || ''
+
+  const prospect: Prospect = {
+    id: item.id,
+    exaItemId: item.id,
+    fullName: fields.fullName || '',
+    jobTitle: fields.jobTitle,
+    company: resolvedCompany,
+    email: fields.email,
+    linkedinUrl: fields.linkedinUrl,
+    phone: fields.phone,
+    location: fields.location,
+    industry: fields.industry,
+    companySize: fields.companySize,
+    website:
+      fields.website && looksLikeDomain(fields.website)
+        ? `https://${fields.website}`
+        : fields.website || item.url,
+    enrichments: structuredEnrichments,
+    avatarUrl: fields.avatarUrl,
+    companyLogoUrl: fields.companyLogoUrl
+  }
+
+  ;(prospect as any).fitScore = buildFitScore(prospect)
+  ;(prospect as any).summary =
+    fields.summary ||
+    buildSummary(prospect.company, prospect.industry, prospect.companySize)
+
+  return prospect
+}
+
+export function createEnrichmentDescriptionMap(webset?: Pick<Webset, 'enrichments'> | null): EnrichmentDescriptionMap {
+  if (!webset?.enrichments) return {}
+  return webset.enrichments.reduce<EnrichmentDescriptionMap>((acc, enrichment) => {
+    if (enrichment?.id && enrichment?.description) {
+      acc[enrichment.id] = enrichment.description
+    }
+    return acc
+  }, {})
 }
 
 export class ExaWebsetsClient {
@@ -359,14 +744,18 @@ export class ExaWebsetsClient {
    * Create a new Webset with search and enrichments
    */
   async createWebset(params: CreateWebsetParams): Promise<Webset> {
-    console.log('🔗 [ExaWebsetsClient] Creating webset with params:', JSON.stringify(params, null, 2))
-    
     try {
+      logger.debug('[ExaWebsetsClient] Creating webset', {
+        query: params.search?.query,
+        entityType: params.search?.entity?.type,
+        criteriaCount: params.search?.criteria?.length || 0,
+        enrichmentsCount: params.enrichments?.length || 0
+      })
       const result = await this.exa.websets.create(params as any) as any
-      console.log('✅ [ExaWebsetsClient] Webset created successfully:', result.id)
+      logger.debug('[ExaWebsetsClient] Webset created', result.id)
       return result
     } catch (error) {
-      console.error('❌ [ExaWebsetsClient] Error creating webset:', error)
+      logger.error('[ExaWebsetsClient] Error creating webset:', error)
       throw error
     }
   }
@@ -375,14 +764,11 @@ export class ExaWebsetsClient {
    * Get Webset by ID
    */
   async getWebset(websetId: string): Promise<Webset> {
-    console.log(`🔗 [ExaWebsetsClient] Getting webset: ${websetId}`)
-    
     try {
       const result = await this.exa.websets.get(websetId) as any
-      console.log('✅ [ExaWebsetsClient] Webset retrieved:', result.id, 'Status:', result.status)
       return result
     } catch (error) {
-      console.error('❌ [ExaWebsetsClient] Error getting webset:', error)
+      logger.error('[ExaWebsetsClient] Error getting webset:', error)
       throw error
     }
   }
@@ -395,14 +781,11 @@ export class ExaWebsetsClient {
     pollInterval?: number
     onPoll?: (status: string) => void
   }): Promise<Webset> {
-    console.log(`⏳ [ExaWebsetsClient] Waiting for webset to be idle: ${websetId}`)
-    
     try {
       const result = await this.exa.websets.waitUntilIdle(websetId, options) as any
-      console.log('✅ [ExaWebsetsClient] Webset is now idle:', result.id)
       return result
     } catch (error) {
-      console.error('❌ [ExaWebsetsClient] Error waiting for webset to be idle:', error)
+      logger.error('[ExaWebsetsClient] Error waiting for webset to be idle:', error)
       throw error
     }
   }
@@ -414,14 +797,11 @@ export class ExaWebsetsClient {
     limit?: number
     cursor?: string
   }): Promise<ListItemsResponse> {
-    console.log(`📋 [ExaWebsetsClient] Listing items for webset: ${websetId}`)
-    
     try {
       const result = await this.exa.websets.items.list(websetId, options) as any
-      console.log('✅ [ExaWebsetsClient] Items listed:', result.data.length, 'items')
       return result
     } catch (error) {
-      console.error('❌ [ExaWebsetsClient] Error listing items:', error)
+      logger.error('[ExaWebsetsClient] Error listing items:', error)
       throw error
     }
   }
@@ -430,13 +810,10 @@ export class ExaWebsetsClient {
    * Cancel a running Webset
    */
   async cancelWebset(websetId: string): Promise<void> {
-    console.log(`🚫 [ExaWebsetsClient] Canceling webset: ${websetId}`)
-    
     try {
       await this.exa.websets.cancel(websetId) as any
-      console.log('✅ [ExaWebsetsClient] Webset canceled successfully')
     } catch (error) {
-      console.error('❌ [ExaWebsetsClient] Error canceling webset:', error)
+      logger.error('[ExaWebsetsClient] Error canceling webset:', error)
       throw error
     }
   }
@@ -444,8 +821,10 @@ export class ExaWebsetsClient {
   /**
    * Convert Webset item to our Prospect format
    */
-  convertToProspect(item: WebsetItem): Prospect {
-    return normalizeProspect(item)
+  convertToProspect(item: WebsetItem, enrichmentDescriptions?: EnrichmentDescriptionMap): Prospect {
+    return enrichmentDescriptions
+      ? normalizeProspectWithDescriptions(item, enrichmentDescriptions)
+      : normalizeProspect(item)
   }
 }
 
@@ -455,7 +834,7 @@ export class ExaWebsetsClient {
 export function createProspectSearchCriteria(
   criteria: ProspectCriteria & { allCriteria?: Array<{ label: string; value: string; type: string }> }
 ): WebsetSearchConfig {
-  console.log('🔧 [createProspectSearchCriteria] Creating search criteria for:', criteria.query)
+  logger.debug('[createProspectSearchCriteria] Creating search criteria for:', criteria.query)
   
   const entityType = criteria.entityType || 'company'
   
@@ -464,9 +843,9 @@ export function createProspectSearchCriteria(
   
   // If we have detailed criteria from the AI extraction, use those
   if (criteria.allCriteria?.length) {
-    console.log('🎯 [createProspectSearchCriteria] Using detailed AI-extracted criteria:', criteria.allCriteria.length)
+    logger.debug('[createProspectSearchCriteria] Using detailed AI-extracted criteria:', criteria.allCriteria.length)
     
-    // Sort criteria by importance/type and take only the top 5 to respect Exa's limit
+    // Websets performs best with a small number of strong verification criteria.
     const prioritizedCriteria = criteria.allCriteria
       .map((criterion) => {
         let successRate = 70 // Default success rate
@@ -513,10 +892,10 @@ export function createProspectSearchCriteria(
           priority
         }
       })
-      .sort((a, b) => b.priority - a.priority) // Sort by priority (highest first)
-      .slice(0, 5) // Take only top 5 criteria to respect Exa's limit
+      .sort((a, b) => b.priority - a.priority)
+      .slice(0, 3)
     
-    console.log(`🔢 [createProspectSearchCriteria] Limited to top ${prioritizedCriteria.length} criteria (Exa max: 5)`)
+    logger.debug(`[createProspectSearchCriteria] Limited to top ${prioritizedCriteria.length} criteria`)
     
     prioritizedCriteria.forEach((criterion) => {
       verificationCriteria.push({
@@ -526,7 +905,7 @@ export function createProspectSearchCriteria(
     })
   } else {
     // Fallback to basic filter-based criteria
-    console.log('📋 [createProspectSearchCriteria] Using basic filter criteria')
+    logger.debug('[createProspectSearchCriteria] Using basic filter criteria')
     
     if (criteria.filters.jobTitles?.length) {
       verificationCriteria.push({
@@ -571,10 +950,9 @@ export function createProspectSearchCriteria(
     }
   }
 
-  // Final safeguard: Ensure we never exceed Exa's 5-criteria limit
-  if (verificationCriteria.length > 5) {
-    logger.warn(`Too many criteria (${verificationCriteria.length}), trimming to 5`)
-    verificationCriteria.splice(5) // Keep only first 5
+  if (verificationCriteria.length > 3) {
+    logger.warn(`Too many criteria (${verificationCriteria.length}), trimming to 3`)
+    verificationCriteria.splice(3)
   }
 
   const searchConfig: WebsetSearchConfig = {
@@ -597,43 +975,20 @@ export function createProspectSearchCriteria(
  * Create enrichments for prospect data
  */
 export function createProspectEnrichments(): WebsetEnrichment[] {
-  logger.debug('Creating enrichments')
-  
-  const enrichments: WebsetEnrichment[] = [
-    {
-      description: "Extract the full name from the LinkedIn profile or bio",
-      format: 'text',
-      instructions: "Look for the person's full name as displayed on their LinkedIn profile, bio, or about section. Return just the name."
-    },
-    {
-      description: "Extract current job title and role",
-      format: 'text',
-      instructions: "Find the person's current job title, role, or position. Look for titles like 'Marketing Director', 'CTO', 'VP of Sales', etc."
-    },
-    {
-      description: "Extract current company name",
-      format: 'text',
-      instructions: "Find the name of the company where this person currently works. Look in LinkedIn employment section or bio."
-    },
-    {
-      description: "Extract email address",
-      format: 'text',
-      instructions: "Look for any email addresses mentioned in contact info, bio, or contact sections. Return only valid email format."
-    },
-    {
-      description: "Extract LinkedIn profile URL",
-      format: 'text',
-      instructions: "Return the full LinkedIn profile URL for this person if available."
-    }
-  ]
-  
+  const enrichments = buildWebsetEnrichments(
+    buildCanonicalProspectEnrichments().map(enrichment => enrichment.value)
+  )
   logger.debug('Created enrichments', { count: enrichments.length })
   return enrichments
 }
 
-export function convertToProspect(item: WebsetItem): Prospect {
-  logger.debug('Converting item to prospect', { itemId: item.id })
-  return normalizeProspect(item)
+export function convertToProspect(
+  item: WebsetItem,
+  enrichmentDescriptions?: EnrichmentDescriptionMap
+): Prospect {
+  return enrichmentDescriptions
+    ? normalizeProspectWithDescriptions(item, enrichmentDescriptions)
+    : normalizeProspect(item)
 }
 
 // Create client instance with proper error handling

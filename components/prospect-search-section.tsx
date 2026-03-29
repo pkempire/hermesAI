@@ -5,12 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { motion } from 'framer-motion'
 import { AlertCircle, CheckCircle, ChevronDown, ChevronRight, Search, Users } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { EnhancedProspectSearchBuilder } from './enhanced-prospect-search-builder'
 import { InteractiveEmailDrafter } from './interactive-email-drafter'
-import { Prospect, ProspectGrid } from './prospect-grid'
+import { Prospect, ProspectGrid, ProspectSearchContext } from './prospect-grid'
 import { ProspectPreviewCard } from './prospect-preview-card'
-import { ProspectTable } from './prospect-table'
+import { campaignStore } from '@/lib/store/campaign-store'
 
 interface ProspectSearchSectionProps {
   tool: any
@@ -32,9 +33,12 @@ export function ProspectSearchSection({
   const [uiType, setUiType] = useState<'idle' | 'interactive' | 'streaming' | 'results' | 'error'>('idle')
   const [streamingWebsetId, setStreamingWebsetId] = useState<string | null>(null)
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const appliedResultKeyRef = useRef<string | null>(null)
   const [lastStatus, setLastStatus] = useState<'idle' | 'running' | 'completed' | 'failed'>('idle')
   const [showEmailDrafter, setShowEmailDrafter] = useState(false)
   const [evidenceMode, setEvidenceMode] = useState(false)
+  const [searchContext, setSearchContext] = useState<ProspectSearchContext | undefined>(undefined)
+  const router = useRouter()
 
   // Extract search criteria from tool arguments for display
   const getSearchCriteria = useCallback(() => {
@@ -62,11 +66,7 @@ export function ProspectSearchSection({
     }
   }, [tool.args])
 
-  const [currentSearchCriteria, setCurrentSearchCriteria] = useState(getSearchCriteria())
-
-  useEffect(() => {
-    setCurrentSearchCriteria(getSearchCriteria())
-  }, [getSearchCriteria])
+  const currentSearchCriteria = useMemo(() => getSearchCriteria(), [getSearchCriteria])
 
   // Parse the tool result to determine UI type and handle different response formats
   const parseToolResult = useCallback(() => {
@@ -114,15 +114,12 @@ export function ProspectSearchSection({
   }, [tool])  // Add dependencies for useCallback
 
   // Start SSE streaming for real-time search updates
-  const startStreamingPolling = useCallback((websetId: string, target?: number, criteria?: { query?: string; entityType?: string; targetCount?: number }) => {
+  const startStreamingPolling = useCallback((websetId: string, target?: number, criteria?: { query?: string; entityType?: string; targetCount?: number }, searchContext?: { targetPersona?: string; offer?: string; originalQuery?: string }) => {
     // Clean up any existing polling
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current)
       pollingIntervalRef.current = null
     }
-
-    let hasDispatchedSuggestion = false // Prevent duplicate messages
-    let lastItemCount = 0
 
     // Use Server-Sent Events (SSE) instead of polling
     const targetParam = target ? `&target=${target}` : ''
@@ -135,19 +132,17 @@ export function ProspectSearchSection({
         
         // Update progress messages
         if (data.found > 0 || data.analyzed > 0) {
-          setSearchMessage(`Processing: ${data.analyzed} analyzed, ${data.found} prospects found...`)
+          setSearchMessage(`${data.found} matches found so far.`)
         }
         
         // Update prospects if available (only new ones)
         if (data.prospects && Array.isArray(data.prospects) && data.prospects.length > 0) {
           setProspects(prev => {
-            // Optimized incremental update: only add truly new prospects
-            const existingIds = new Set(prev.map((p: Prospect) => p.id))
-            const newProspects = data.prospects.filter((p: Prospect) => !existingIds.has(p.id))
-            lastItemCount = data.totalProspects || (prev.length + newProspects.length)
-            
-            // Only create new array if there are actually new prospects
-            return newProspects.length > 0 ? [...prev, ...newProspects] : prev
+            const byId = new Map(prev.map((p: Prospect) => [p.id, p]))
+            for (const nextProspect of data.prospects as Prospect[]) {
+              byId.set(nextProspect.id, nextProspect)
+            }
+            return Array.from(byId.values())
           })
         }
 
@@ -156,15 +151,15 @@ export function ProspectSearchSection({
           const targetTotal = target || criteria?.targetCount || 25
           const found = typeof data.found === 'number' ? data.found : (data.totalProspects || 0)
           const percent = Math.max(0, Math.min(100, Math.round((found / Math.max(1, targetTotal)) * 100)))
-          window.dispatchEvent(new CustomEvent('pipeline-progress', {
-            detail: {
-              stepNumber: 1,
-              totalSteps: 5,
-              percent,
-              label: 'Searching and analyzing'
-            }
-          }))
-        } catch {}
+              window.dispatchEvent(new CustomEvent('pipeline-progress', {
+                detail: {
+                  stepNumber: 1,
+                  totalSteps: 5,
+                  percent,
+                  label: 'Finding companies'
+                }
+              }))
+            } catch {}
         
         // Check if search is complete
         if (data.event === 'complete' || data.type === 'prospect_search_complete' || data.status === 'completed' || data.status === 'idle') {
@@ -184,9 +179,9 @@ export function ProspectSearchSection({
             
             setSearchSummary({
               totalFound: finalProspects.length,
-              query: (criteria?.query || streamingWebsetId),
+              query: (criteria?.query || websetId),
               entityType: (criteria?.entityType || 'company'),
-              websetId: streamingWebsetId
+              websetId
             })
             try {
               window.dispatchEvent(new CustomEvent('pipeline-progress', {
@@ -198,17 +193,16 @@ export function ProspectSearchSection({
             try {
               sessionStorage.setItem('hermes-latest-prospects', JSON.stringify(finalProspects))
               sessionStorage.setItem('hermes-search-summary', JSON.stringify({
-                query: currentSearchCriteria.query || '',
-                entityType: currentSearchCriteria.entityType || 'company',
+                query: criteria?.query || '',
+                entityType: criteria?.entityType || 'company',
                 totalFound: finalProspects.length
               }))
               // Also store search context (targetPersona, offer) from tool result
-              const toolResult = parseToolResult()
-              if (toolResult?.props) {
+              if (searchContext) {
                 sessionStorage.setItem('hermes-search-context', JSON.stringify({
-                  targetPersona: toolResult.props.targetPersona,
-                  offer: toolResult.props.offer,
-                  originalQuery: toolResult.props.originalQuery
+                  targetPersona: searchContext.targetPersona,
+                  offer: searchContext.offer,
+                  originalQuery: searchContext.originalQuery
                 }))
               }
               
@@ -217,7 +211,7 @@ export function ProspectSearchSection({
               campaigns.unshift({
                 id: `camp_${Date.now()}`,
                 name: (criteria?.query || 'Untitled Campaign'),
-                websetId: streamingWebsetId,
+                websetId,
                 query: criteria?.query,
                 entityType: criteria?.entityType,
                 totalFound: finalProspects.length,
@@ -232,17 +226,6 @@ export function ProspectSearchSection({
               }
             }
             
-            // Ask the model to propose next step via a short assistant message (ONLY ONCE)
-            if (!hasDispatchedSuggestion && finalProspects.length > 0) {
-              hasDispatchedSuggestion = true
-              setTimeout(() => {
-                window.dispatchEvent(new CustomEvent('chat-system-suggest', {
-                  detail: {
-                    text: `Found ${finalProspects.length} ${finalProspects.length === 1 ? 'prospect' : 'prospects'}. Ready to draft personalized emails?`
-                  }
-                }))
-              }, 300)
-            }
           } else {
             setSearchMessage('Search completed but no prospects found. Try broadening your criteria.')
             setSearchStatus('completed')
@@ -266,16 +249,34 @@ export function ProspectSearchSection({
     }
 
     eventSource.onerror = (error) => {
-      // SSE connection error
-      setSearchStatus('failed')
-      setSearchMessage('Connection error. Please refresh and try again.')
+      // SSE connection dropped unexpectedly (like Vercel 60s timeout limit)
       eventSource.close()
-      setUiType('error')
+      setProspects(current => {
+        if (current.length > 0) {
+          // Graceful recovery: if we found some before crashing, just accept them.
+          setSearchStatus('completed')
+          setSearchMessage(`Search completed! Recovered ${current.length} prospects before connection limit.`)
+          setSearchSummary({
+            totalFound: current.length,
+            query: criteria?.query || websetId,
+            entityType: criteria?.entityType || 'company',
+            websetId
+          })
+          if (current.length > 1) {
+             setUiType('results')
+          }
+        } else {
+          setSearchStatus('failed')
+          setSearchMessage('Search timed out due to volume. Please try again with stricter geography or keywords.')
+          setUiType('error')
+        }
+        return current
+      })
     }
 
     // Store eventSource reference for cleanup
     pollingIntervalRef.current = eventSource as any
-  }, [currentSearchCriteria.entityType, currentSearchCriteria.query, parseToolResult, streamingWebsetId])
+  }, [])
 
   // Cleanup SSE on unmount
   useEffect(() => {
@@ -292,41 +293,71 @@ export function ProspectSearchSection({
     }
   }, [])
 
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem('hermes-search-context')
+      if (!stored) return
+      const parsed = JSON.parse(stored)
+      setSearchContext({
+        targetPersona: parsed?.targetPersona || undefined,
+        offer: parsed?.offer || undefined,
+        originalQuery: parsed?.originalQuery || undefined
+      })
+      campaignStore.setState({
+        offer: parsed?.offer || '',
+        motionIcp: parsed?.targetPersona || '',
+        summary: parsed?.originalQuery || ''
+      })
+    } catch {}
+  }, [])
+
   // Parse tool result whenever tool changes
   useEffect(() => {
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('🔄 [ProspectSearchSection] Tool changed, parsing result...', { tool, toolState: (tool as any)?.state, toolResult: (tool as any)?.result })
-    }
-    const result = parseToolResult()
-    
-    if (!result) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('⚠️ [ProspectSearchSection] No result parsed from tool')
-      }
+      const result = parseToolResult()
+    if (!result) return
+
+    const resultKey = JSON.stringify({
+      type: result.type,
+      websetId: (result as any).websetId ?? null,
+      message: result.message ?? null,
+      prospectCount: Array.isArray((result as any).prospects)
+        ? (result as any).prospects.length
+        : null,
+      originalQuery: (result as any).props?.originalQuery ?? null,
+      step: (result as any).props?.step ?? null
+    })
+
+    if (appliedResultKeyRef.current === resultKey) {
       return
     }
-    
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('✅ [ProspectSearchSection] Parsed result:', result)
-    }
-    
-    // Initialize UI from tool result - always process when available
+    appliedResultKeyRef.current = resultKey
+
     if (result.type === 'interactive') {
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('🎨 [ProspectSearchSection] Setting UI type to interactive')
-      }
       setUiType('interactive')
       setEvidenceMode(Boolean(result.props?.evidenceMode))
       setSearchStatus('idle')
       setSearchMessage(result.message || 'Interactive search builder ready')
-      // Initial criteria are now derived from tool.args automatically
     } else if (result.type === 'streaming') {
       setUiType('streaming')
       setSearchStatus('running')
       setSearchMessage(result.message || 'Search started...')
       if (result.websetId) {
         setStreamingWebsetId(result.websetId)
-        startStreamingPolling(result.websetId, currentSearchCriteria.targetCount, currentSearchCriteria)
+        startStreamingPolling(result.websetId, currentSearchCriteria.targetCount, currentSearchCriteria, {
+          targetPersona: result.props?.targetPersona,
+          offer: result.props?.offer,
+          originalQuery: result.props?.originalQuery
+        })
+        setSearchContext({
+          targetPersona: result.props?.targetPersona,
+          offer: result.props?.offer,
+          originalQuery: result.props?.originalQuery
+        })
+        campaignStore.setState({
+          offer: result.props?.offer || '',
+          motionIcp: result.props?.targetPersona || '',
+          summary: result.props?.originalQuery || ''
+        })
       }
     } else if (result.type === 'results') {
       setUiType('results')
@@ -334,34 +365,29 @@ export function ProspectSearchSection({
       setProspects(result.prospects || [])
       setSearchMessage(result.message || `Found ${result.prospects?.length || 0} prospects`)
       setSearchSummary(result.summary)
-    } else if (result.type === 'prospect_search_error') {
+      setSearchContext(previous => previous || {
+        originalQuery: currentSearchCriteria.query || undefined
+      })
+    } else if (result.type === 'error') {
       setUiType('error')
       setSearchStatus('failed')
       setSearchMessage(result.message || 'Search failed')
     }
-  }, [tool, parseToolResult, startStreamingPolling, uiType, currentSearchCriteria])
-
-  // Track UI type changes for debugging (dev only)
-  useEffect(() => {
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('🎭 [ProspectSearchSection] UI Type changed to:', uiType)
-    }
-  }, [uiType])
+  }, [parseToolResult, startStreamingPolling, currentSearchCriteria])
 
   const toolResult = useMemo(() => parseToolResult(), [parseToolResult])
-  
-  // Always log tool state for debugging
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('🔍 [ProspectSearchSection] Tool state:', {
-      toolName: (tool as any)?.toolName,
-      state: (tool as any)?.state,
-      hasResult: !!(tool as any)?.result,
-      resultType: (tool as any)?.result?.type,
-      toolResult,
-      uiType,
-      searchStatus
-    })
-  }
+  const displayEntityType =
+    toolResult?.type === 'interactive'
+      ? toolResult.props?.initialEntityType || currentSearchCriteria.entityType
+      : currentSearchCriteria.entityType
+  const displayTargetCount =
+    toolResult?.type === 'interactive'
+      ? toolResult.props?.initialCount || currentSearchCriteria.targetCount
+      : currentSearchCriteria.targetCount
+  const displayEnrichmentCount =
+    toolResult?.type === 'interactive'
+      ? (toolResult.props?.initialEnrichments?.length || 0) + (toolResult.props?.initialCustomEnrichments?.length || 0)
+      : currentSearchCriteria.enrichments.length
 
   // If we have no prospects yet but status shows counts, synthesize placeholders (optional)
   useEffect(() => {
@@ -389,13 +415,13 @@ export function ProspectSearchSection({
   const getStatusIcon = () => {
     switch (searchStatus) {
       case 'completed':
-        return <CheckCircle className="h-5 w-5 text-white" />
+        return <img src="/images/hermes-pixel.png" alt="Complete" className="h-6 w-6 rounded-full drop-shadow-sm" />
       case 'running':
-        return <Search className="h-5 w-5 text-white animate-pulse" />
+        return <img src="/hermes-discovery.png" alt="Searching" className="h-6 w-6 animate-pulse drop-shadow-sm" />
       case 'failed':
-        return <AlertCircle className="h-5 w-5 text-white" />
+        return <AlertCircle className="h-5 w-5 text-red-500" />
       default:
-        return <Search className="h-5 w-5 text-white" />
+        return <img src="/hermes-discovery.png" alt="Ready" className="h-5 w-5 opacity-50 grayscale transition-all group-hover:grayscale-0 group-hover:opacity-100" />
     }
   }
 
@@ -412,315 +438,76 @@ export function ProspectSearchSection({
     })
   }
 
-  // Suggest refinement based on prospect-feedback events
-  useEffect(() => {
-    const handler = (e: any) => {
-      try {
-        const detail = e?.detail
-        if (!detail) return
-        // For now, just surface a suggestion message
-        setSearchMessage(detail.type === 'good'
-          ? 'Noted good fit — I can prioritize similar titles/companies next.'
-          : 'Got it — I will down-rank similar profiles and suggest tighter criteria.')
-      } catch {}
-    }
-    window.addEventListener('prospect-feedback', handler as any)
-    return () => window.removeEventListener('prospect-feedback', handler as any)
-  }, [])
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 20 }}
-      transition={{ duration: 0.3, ease: 'easeOut' }}
-      className="w-full my-4 rounded-xl bg-card border border-border p-0 md:p-2"
-    >
+    <div className="my-5 w-full rounded-3xl border border-gray-200 bg-white shadow-sm ring-1 ring-gray-100/50 overflow-hidden">
       {/* Removed embedded step progress - handled by global campaign tracker */}
 
       <Collapsible open={isOpen !== false} onOpenChange={onOpenChange}>
-        <Card className="w-full border-none shadow-none bg-transparent">
+        <Card className="w-full border-none bg-transparent shadow-none">
           <CollapsibleTrigger asChild>
-            <CardHeader className="cursor-pointer hover:bg-muted/40 transition-all duration-200 rounded-t-xl px-4 py-3">
+            <CardHeader className="cursor-pointer rounded-t-3xl px-5 py-5 transition-all duration-200 hover:bg-gray-50 md:px-6">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 rounded-lg bg-primary/90">
+                <div className="flex items-center space-x-4">
+                  <div className="rounded-2xl bg-[hsl(var(--hermes-gold))]/10 p-3 shadow-sm">
                     {getStatusIcon()}
                   </div>
                   <div>
-                    <CardTitle className="text-base font-semibold">
+                    <CardTitle className="font-serif text-[2.25rem] leading-none text-gray-900 tracking-tight">
                       Prospect Discovery
                     </CardTitle>
-                    <Badge variant={getStatusBadgeVariant()} className="mt-1 text-[10px]">
-                      {searchStatus === 'completed' ? '✓ Complete' : 
-                       searchStatus === 'running' ? '⏳ Searching...' : 
-                       searchStatus === 'failed' ? '✗ Failed' : 'Ready'}
+                    <Badge variant={getStatusBadgeVariant()} className="mt-2 border-transparent bg-gray-100/80 text-[10px] uppercase tracking-wider text-gray-500 font-semibold shadow-none">
+                      {searchStatus === 'completed' ? 'Complete' : 
+                       searchStatus === 'running' ? 'Searching' : 
+                       searchStatus === 'failed' ? 'Failed' : 'Ready'}
                     </Badge>
                   </div>
                 </div>
-                <div className="p-2 rounded-full bg-muted">
-                  {isOpen ? <ChevronDown className="h-5 w-5 text-gray-600" /> : <ChevronRight className="h-5 w-5 text-gray-600" />}
+                <div className="rounded-full border border-gray-200 bg-white p-2.5 shadow-sm transition-transform duration-200">
+                  {isOpen ? <ChevronDown className="h-5 w-5 text-gray-400" /> : <ChevronRight className="h-5 w-5 text-gray-400" />}
                 </div>
               </div>
-              <div className="space-y-2">
-                <CardDescription className="text-xs">
-                  {searchMessage || `Ready to search for: ${currentSearchCriteria.query}`}
+              <div className="mt-4 space-y-3">
+                <CardDescription className="text-[14px] leading-relaxed text-gray-500 font-medium">
+                  {uiType === 'interactive'
+                    ? 'Edit the filters, keep the strongest fields, then run the search.'
+                    : uiType === 'streaming'
+                    ? 'Hermes is searching and enriching live.'
+                    : searchMessage || 'Ready to configure the search.'}
                 </CardDescription>
-                <div className="flex flex-wrap gap-2 text-[10px]">
-                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                    Type: {currentSearchCriteria.entityType}
-                  </Badge>
-                  <Badge variant="outline" className="bg-info text-info border-info">
-                    Target: {currentSearchCriteria.targetCount} prospects
-                  </Badge>
-                  {prospects.length > 0 && prospects.length < currentSearchCriteria.targetCount && (
-                    <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-                      Found: {prospects.length} ({Math.round((prospects.length / currentSearchCriteria.targetCount) * 100)}%)
-                    </Badge>
+                <div className="flex flex-wrap items-center gap-3 text-[13px] font-semibold text-gray-500 uppercase tracking-widest mt-2">
+                  <span className="text-[hsl(var(--hermes-gold-dark))]">Type: {displayEntityType}</span>
+                  <span className="text-gray-200">|</span>
+                  <span>Target: {displayTargetCount}</span>
+                  {prospects.length > 0 && prospects.length < displayTargetCount && (
+                    <>
+                      <span className="text-gray-200">|</span>
+                      <span className="text-emerald-600">
+                        Found: {prospects.length} ({Math.round((prospects.length / displayTargetCount) * 100)}%)
+                      </span>
+                    </>
                   )}
-                  <Badge variant="outline" className="bg-success text-success border-success">
-                    {currentSearchCriteria.enrichments.length} enrichments
-                  </Badge>
+                  <span className="text-gray-200">|</span>
+                  <span>{displayEnrichmentCount} fields</span>
                 </div>
               </div>
             </CardHeader>
           </CollapsibleTrigger>
               
               <CollapsibleContent>
-                <CardContent className="space-y-4 px-4 pb-4 pt-2">
-                  {/* Enhanced loading animation while generating criteria */}
+                <CardContent className="space-y-6 px-5 pb-6 pt-2 md:px-6 border-t border-gray-100">
+                  {/* Criteria setup */}
                   {uiType === 'idle' && tool && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.6, ease: "easeOut" }}
-                      className="space-y-6"
-                    >
-                      {/* Hermes Analysis Header */}
-                      <motion.div
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ delay: 0.1, duration: 0.4 }}
-                        className="bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-50 border border-amber-200/50 rounded-xl p-6 relative overflow-hidden"
-                      >
-                        {/* Animated background patterns */}
-                        <div className="absolute inset-0 bg-gradient-to-r from-amber-100/20 via-transparent to-yellow-100/20 animate-pulse" />
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-300/10 to-yellow-300/10 rounded-full -translate-y-8 translate-x-8 animate-divine-pulse" />
-
-                        <div className="relative">
-                          <div className="flex items-center gap-4 mb-6">
-                            <motion.div
-                              animate={{
-                                rotate: [0, 360],
-                                scale: [1, 1.1, 1]
-                              }}
-                              transition={{
-                                rotate: { duration: 8, repeat: Infinity, ease: "linear" },
-                                scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
-                              }}
-                              className="h-14 w-14 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center shadow-lg ring-4 ring-amber-200/30"
-                            >
-                              <Search className="h-7 w-7 text-white" />
-                            </motion.div>
-                            <div className="flex-1">
-                              <motion.h3
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.3, duration: 0.4 }}
-                                className="text-lg font-bold text-amber-900 mb-1"
-                              >
-                                Hermes is analyzing your request...
-                              </motion.h3>
-                              <motion.p
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.4, duration: 0.4 }}
-                                className="text-sm text-amber-700"
-                              >
-                                Crafting the perfect search strategy to find your ideal prospects
-                              </motion.p>
-                            </div>
-                          </div>
-
-                          {/* Progressive Analysis Steps */}
-                          <div className="space-y-4">
-                            {/* Step 1: Criteria Generation */}
-                            <motion.div
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: 0.6, duration: 0.4 }}
-                              className="space-y-3"
-                            >
-                              <div className="flex items-center gap-2">
-                                <motion.div
-                                  animate={{ scale: [1, 1.2, 1] }}
-                                  transition={{ duration: 1.5, repeat: Infinity }}
-                                  className="h-2 w-2 bg-amber-500 rounded-full"
-                                />
-                                <span className="text-sm font-semibold text-amber-800">Generating search criteria</span>
-                                <motion.div
-                                  animate={{ opacity: [0.5, 1, 0.5] }}
-                                  transition={{ duration: 1.2, repeat: Infinity }}
-                                  className="text-xs text-amber-600"
-                                >
-                                  ✨ AI thinking...
-                                </motion.div>
-                              </div>
-                              <div className="grid grid-cols-2 gap-3">
-                                {[1,2,3,4].map(i => (
-                                  <motion.div
-                                    key={i}
-                                    initial={{ opacity: 0, scale: 0.8 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    transition={{ delay: 0.8 + (i * 0.1), duration: 0.3 }}
-                                    className="relative"
-                                  >
-                                    <div className="h-10 bg-white/80 rounded-lg border border-amber-200/70 animate-divine-shimmer flex items-center px-3">
-                                      <motion.div
-                                        animate={{ width: ["0%", "100%", "0%"] }}
-                                        transition={{ duration: 2, repeat: Infinity, delay: i * 0.3 }}
-                                        className="h-2 bg-gradient-to-r from-amber-400 to-yellow-400 rounded-full"
-                                      />
-                                    </div>
-                                  </motion.div>
-                                ))}
-                              </div>
-                            </motion.div>
-
-                            {/* Step 2: Enrichment Configuration */}
-                            <motion.div
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: 1.4, duration: 0.4 }}
-                              className="space-y-3"
-                            >
-                              <div className="flex items-center gap-2">
-                                <motion.div
-                                  animate={{ scale: [1, 1.2, 1] }}
-                                  transition={{ duration: 1.5, repeat: Infinity, delay: 0.5 }}
-                                  className="h-2 w-2 bg-yellow-500 rounded-full"
-                                />
-                                <span className="text-sm font-semibold text-amber-800">Configuring data enrichments</span>
-                                <motion.div
-                                  animate={{ opacity: [0.5, 1, 0.5] }}
-                                  transition={{ duration: 1.2, repeat: Infinity, delay: 0.3 }}
-                                  className="text-xs text-amber-600"
-                                >
-                                  🔍 Mapping fields...
-                                </motion.div>
-                              </div>
-                              <div className="space-y-2">
-                                {[1,2,3,4,5].map(i => (
-                                  <motion.div
-                                    key={i}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: 1.6 + (i * 0.1), duration: 0.3 }}
-                                    className="relative"
-                                  >
-                                    <div className="h-8 bg-white/80 rounded-lg border border-amber-200/70 animate-divine-shimmer flex items-center px-3">
-                                      <motion.div
-                                        animate={{
-                                          width: ["0%", "80%", "100%"],
-                                          backgroundColor: ["rgb(245 158 11)", "rgb(251 191 36)", "rgb(34 197 94)"]
-                                        }}
-                                        transition={{
-                                          duration: 1.8,
-                                          repeat: Infinity,
-                                          delay: i * 0.2,
-                                          ease: "easeInOut"
-                                        }}
-                                        className="h-1.5 rounded-full"
-                                      />
-                                    </div>
-                                  </motion.div>
-                                ))}
-                              </div>
-                            </motion.div>
-
-                            {/* Step 3: Final Processing */}
-                            <motion.div
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: 2.2, duration: 0.4 }}
-                              className="flex items-center justify-center gap-3 pt-4 border-t border-amber-200/50"
-                            >
-                              <motion.div
-                                animate={{
-                                  scale: [1, 1.3, 1],
-                                  rotate: [0, 180, 360]
-                                }}
-                                transition={{
-                                  duration: 2,
-                                  repeat: Infinity,
-                                  ease: "easeInOut"
-                                }}
-                                className="h-3 w-3 bg-gradient-to-r from-amber-500 to-yellow-500 rounded-full"
-                              />
-                              <motion.span
-                                animate={{ opacity: [0.7, 1, 0.7] }}
-                                transition={{ duration: 1.5, repeat: Infinity }}
-                                className="text-sm font-medium text-amber-700"
-                              >
-                                Finalizing your divine search parameters...
-                              </motion.span>
-                              <motion.div
-                                animate={{
-                                  scale: [1, 1.3, 1],
-                                  rotate: [360, 180, 0]
-                                }}
-                                transition={{
-                                  duration: 2,
-                                  repeat: Infinity,
-                                  ease: "easeInOut",
-                                  delay: 0.5
-                                }}
-                                className="h-3 w-3 bg-gradient-to-r from-yellow-500 to-amber-500 rounded-full"
-                              />
-                            </motion.div>
-                          </div>
+                    <div className="rounded-2xl border border-gray-100 bg-gray-50 p-5 mt-4">
+                      <div className="flex items-center gap-4">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-gray-500 shadow-sm border border-gray-100">
+                          <Search className="h-5 w-5" />
                         </div>
-                      </motion.div>
-
-                      {/* Progress Indicator */}
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.8, duration: 0.4 }}
-                        className="bg-white/80 border border-amber-200/50 rounded-lg p-4"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-medium text-amber-800">Processing Progress</span>
-                          <motion.span
-                            animate={{ opacity: [0.6, 1, 0.6] }}
-                            transition={{ duration: 1, repeat: Infinity }}
-                            className="text-xs text-amber-600"
-                          >
-                            Crafting your search...
-                          </motion.span>
+                        <div>
+                          <p className="text-[15px] font-semibold text-gray-900">Configuring search</p>
+                          <p className="text-[13px] text-gray-500 mt-1">Shaping the builder from your brief and offer.</p>
                         </div>
-                        <div className="w-full bg-amber-100 rounded-full h-2 overflow-hidden">
-                          <motion.div
-                            animate={{
-                              width: ["0%", "30%", "60%", "85%", "100%"],
-                              backgroundColor: [
-                                "rgb(245 158 11)",
-                                "rgb(251 191 36)",
-                                "rgb(252 211 77)",
-                                "rgb(34 197 94)",
-                                "rgb(16 185 129)"
-                              ]
-                            }}
-                            transition={{
-                              duration: 4,
-                              repeat: Infinity,
-                              ease: "easeInOut"
-                            }}
-                            className="h-2 rounded-full shadow-sm"
-                          />
-                        </div>
-                      </motion.div>
-                    </motion.div>
+                      </div>
+                    </div>
                   )}
                   
                   {/* Interactive UI Component */}
@@ -729,16 +516,12 @@ export function ProspectSearchSection({
                       initialCriteria={toolResult.props.initialCriteria || []}
                       initialEnrichments={toolResult.props.initialEnrichments || []}
                       initialCustomEnrichments={toolResult.props.initialCustomEnrichments || []}
-                      initialEntityType={toolResult.props.initialEntityType || 'person'}
+                      initialEntityType={toolResult.props.initialEntityType || 'company'}
                       initialCount={toolResult.props.initialCount || 25}
                       originalQuery={toolResult.props.originalQuery || ''}
                       step={toolResult.props.step || 1}
                       totalSteps={toolResult.props.totalSteps || 5}
                       onSearchExecute={async (searchParams) => {
-                        if (process.env.NODE_ENV !== 'production') {
-                          console.log('🚀 [ProspectSearchSection] Starting search with:', searchParams)
-                        }
-                        
                         // Validation
                         if (!searchParams?.criteria || searchParams.criteria.length === 0) {
                           setUiType('error')
@@ -762,6 +545,8 @@ export function ProspectSearchSection({
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ 
                               ...searchParams, 
+                              targetPersona: toolResult?.props?.targetPersona,
+                              offer: toolResult?.props?.offer,
                               targetCount: validTargetCount,
                               preview: false 
                             })
@@ -794,14 +579,23 @@ export function ProspectSearchSection({
                           }
                           
                           const result = await response.json()
-                          if (process.env.NODE_ENV !== 'production') {
-                            console.log('📊 [ProspectSearchSection] Search API response:', result)
-                          }
-                          
                           if (result.type === 'prospect_search_start') {
                             setStreamingWebsetId(result.websetId)
                             setSearchMessage(result.message || 'Search started, finding prospects...')
-                            startStreamingPolling(result.websetId, validTargetCount)
+                            setSearchContext({
+                              originalQuery: searchParams.originalQuery,
+                              targetPersona: toolResult?.props?.targetPersona,
+                              offer: toolResult?.props?.offer
+                            })
+                            startStreamingPolling(result.websetId, validTargetCount, {
+                              query: searchParams.originalQuery,
+                              entityType: searchParams.entityType,
+                              targetCount: validTargetCount
+                            }, {
+                              originalQuery: searchParams.originalQuery,
+                              targetPersona: toolResult?.props?.targetPersona,
+                              offer: toolResult?.props?.offer
+                            })
                           } else if (result.type === 'prospect_search_error') {
                             setUiType('error')
                             setSearchStatus('failed')
@@ -817,10 +611,6 @@ export function ProspectSearchSection({
                         }
                       }}
                       onPreviewExecute={async (previewParams) => {
-                        if (process.env.NODE_ENV !== 'production') {
-                          console.log('👁️ [ProspectSearchSection] Starting preview with:', previewParams)
-                        }
-                        
                         // Validation
                         if (!previewParams?.criteria || previewParams.criteria.length === 0) {
                           setUiType('error')
@@ -839,7 +629,13 @@ export function ProspectSearchSection({
                           const response = await fetch('/api/prospect-search/execute', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ ...(previewParams || {}), preview: true, targetCount: 1 })
+                            body: JSON.stringify({
+                              ...(previewParams || {}),
+                              targetPersona: toolResult?.props?.targetPersona,
+                              offer: toolResult?.props?.offer,
+                              preview: true,
+                              targetCount: 1
+                            })
                           })
                           
                           if (!response.ok) {
@@ -847,21 +643,30 @@ export function ProspectSearchSection({
                           }
                           
                           const result = await response.json()
-                          if (process.env.NODE_ENV !== 'production') {
-                            console.log('🔍 [ProspectSearchSection] Preview API response:', result)
-                          }
-                          
                           if (result.type === 'prospect_search_complete') {
                             setUiType('results')
                             setProspects(result.prospects || [])
                             setSearchSummary(result.summary)
                             setSearchStatus('completed')
                             setSearchMessage(result.message || 'Preview completed')
+                            setSearchContext({
+                              originalQuery: previewParams.originalQuery,
+                              targetPersona: toolResult?.props?.targetPersona,
+                              offer: toolResult?.props?.offer
+                            })
                           } else if (result.type === 'prospect_search_progress' && result.event === 'progress') {
                             // Handle timeout - start polling for this webset
                             setStreamingWebsetId(result.websetId)
                             setSearchMessage(result.message || 'Preview taking longer than expected, monitoring...')
-                            startStreamingPolling(result.websetId)
+                            startStreamingPolling(result.websetId, 1, {
+                              query: previewParams.originalQuery,
+                              entityType: previewParams.entityType,
+                              targetCount: 1
+                            }, {
+                              originalQuery: previewParams.originalQuery,
+                              targetPersona: toolResult?.props?.targetPersona,
+                              offer: toolResult?.props?.offer
+                            })
                           } else if (result.type === 'prospect_search_error') {
                             setUiType('error')
                             setSearchStatus('failed')
@@ -883,114 +688,56 @@ export function ProspectSearchSection({
                   {/* Streaming Search Progress */}
                   {uiType === 'streaming' && (
                     <div className="space-y-4">
-                      {/* Real-time Progress Bar */}
-                      <div className="bg-muted/40 border border-border rounded-md p-3">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center space-x-2">
-                            <Search className="h-5 w-5 text-hermes-sky animate-pulse" />
-                            <p className="text-sm font-medium text-hermes-sky">
-                              {searchStatus === 'completed' ? 'Search Completed!' : lastStatus === 'running' ? 'Searching and analyzing sources…' : 'Initializing search…'}
+                      <div className="rounded-2xl border border-sky-100 bg-sky-50 p-5 md:p-6 shadow-sm ring-1 ring-sky-100/50">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center space-x-3">
+                            <div className="flex bg-white rounded-2xl p-2.5 shadow-sm border border-[hsl(var(--hermes-gold))]/20">
+                               <img src="/hermes-discovery.png" alt="Discovering" className="h-6 w-6 animate-pulse drop-shadow-sm" />
+                            </div>
+                            <p className="text-base font-semibold text-gray-900">
+                              {searchStatus === 'completed' ? 'Search complete' : lastStatus === 'running' ? 'Finding companies and contacts…' : 'Starting search…'}
                             </p>
                           </div>
-                          <div className="text-[10px] text-muted-foreground font-mono">
+                          <div className="text-[11px] font-bold uppercase tracking-wider text-gray-500 bg-white px-2 py-1 rounded-md shadow-sm border border-gray-100">
                             {prospects.length} found
                           </div>
                         </div>
                         
                         {/* Progress indicators */}
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-[10px] text-muted-foreground">
+                        <div className="space-y-3 mt-5">
+                          <div className="flex justify-between text-[13px] font-medium text-gray-600">
                             <span>Progress</span>
-                            <span>{searchMessage || (lastStatus === 'running' ? 'Working…' : 'Starting…')}</span>
+                            <span>{searchMessage || (lastStatus === 'running' ? 'Streaming matches…' : 'Booting…')}</span>
                           </div>
-                          <div className="w-full bg-muted rounded-full h-1.5">
+                          <div className="h-4 w-full rounded-full bg-white shadow-inner border border-gray-100 overflow-hidden">
                             <div 
-                              className="bg-primary h-1.5 rounded-full transition-all duration-500 animate-pulse"
-                              style={{ width: `${Math.min((prospects.length / (currentSearchCriteria.targetCount || 25)) * 100, 100)}%` }}
+                              className="h-full rounded-full transition-all duration-500 bg-[hsl(var(--hermes-gold))] bg-gradient-to-r from-[hsl(var(--hermes-gold))]/80 to-[hsl(var(--hermes-gold-dark))]"
+                              style={{ width: `${Math.min((prospects.length / (displayTargetCount || 25)) * 100, 100)}%` }}
                             />
-                          </div>
-                          <div className="flex justify-between text-[10px] text-muted-foreground">
-                            <span>{prospects.length} prospects found</span>
-                            <span>Target: {currentSearchCriteria.targetCount}</span>
                           </div>
                         </div>
                       </div>
 
-                      {/* Empty state while searching */}
-                      {prospects.length === 0 && searchStatus === 'running' && (
-                        <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
-                          <div className="flex items-center space-x-2">
-                            <Search className="h-5 w-5 text-yellow-600 animate-pulse" />
-                            <div>
-                              <p className="text-sm font-medium text-yellow-800">
-                                {lastStatus === 'running' ? 'Scanning sources and enriching…' : 'Starting the pipeline…'}
-                              </p>
-                              <p className="text-[11px] text-amber-700 mt-1">
-                                This might take a moment. We’ll stream results as soon as we verify matches.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Real-time prospect discovery */}
-                      {prospects.length > 0 && (
-                        <div className="space-y-4">
-                          <div className="bg-green-50 border border-green-200 rounded-md p-3">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-2">
-                                <Users className="h-5 w-5 text-success" />
-                                <div>
-                                  <p className="text-sm font-medium text-success">
-                                    {prospects.length} qualified prospects discovered
-                                  </p>
-                                  <p className="text-xs text-success mt-1">
-                                    Live updates • Data enriching in background
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                                <span className="text-[10px] text-green-700 font-mono">LIVE</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Single prospect deep‑dive: show last enriched prospect only */}
-                          <div className="space-y-2">
-                            {(() => {
-                              const p = prospects[prospects.length - 1]
-                              const ready = !!(p?.fullName || p?.email || p?.linkedinUrl || p?.jobTitle)
-                              if (!ready) {
-                                return (
-                                  <div className="text-[11px] text-muted-foreground">Waiting for enrichments…</div>
-                                )
-                              }
-                              return (
-                                <div className="max-w-3xl mx-auto">
-                                  <ProspectGrid prospects={[p]} />
-                                </div>
-                              )
-                            })()}
-                          </div>
-                        </div>
-                      )}
+                      {prospects.length > 0 && <ProspectGrid prospects={prospects} searchContext={searchContext} />}
                     </div>
                   )}
 
                   {/* Show search summary if available */}
                   {searchSummary && uiType !== 'interactive' && uiType !== 'streaming' && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <div className="flex items-center space-x-2">
-                        <Users className="h-5 w-5 text-hermes-sky" />
+                    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                      <div className="flex items-start space-x-4">
+                        <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                            <Users className="h-5 w-5 text-gray-500" />
+                        </div>
                         <div>
-                          <p className="text-sm font-medium text-hermes-sky">
+                          <p className="text-[15px] font-semibold text-gray-900">
                             Search Summary
                           </p>
-                          <p className="text-xs text-hermes-sky mt-1">
-                            Query: &quot;{searchSummary.query}&quot; • Entity Type: {searchSummary.entityType} • 
-                            Found: {searchSummary.totalFound} prospects
-                            {searchSummary.websetId && ` • ID: ${searchSummary.websetId.slice(-8)}`}
+                          <p className="mt-1 text-[14px] text-gray-600 leading-relaxed">
+                            <span className="font-medium text-gray-800">Query:</span> &quot;{searchSummary.query}&quot;<br/>
+                            <span className="font-medium text-gray-800">Entity Type:</span> {searchSummary.entityType}<br/>
+                            <span className="font-medium text-gray-800">Found:</span> {searchSummary.totalFound} prospects
+                            {searchSummary.websetId && ` (ID: ${searchSummary.websetId.slice(-8)})`}
                           </p>
                         </div>
                       </div>
@@ -998,32 +745,23 @@ export function ProspectSearchSection({
                   )}
 
                   {/* Show preview result with feedback loop */}
-                  {searchStatus === 'completed' && prospects.length === 1 && uiType === 'results' && (
+                  {searchStatus === 'completed' && prospects.length === 1 && uiType === 'results' && searchSummary?.preview === true && (
                     <ProspectPreviewCard
                       prospect={prospects[0]}
                       searchSummary={searchSummary}
                       onApprove={(feedback) => {
-                        if (process.env.NODE_ENV !== 'production') {
-                          console.log('✅ [ProspectSearchSection] Preview approved:', feedback)
-                        }
                         // Switch back to interactive mode to run full search
                         setUiType('interactive')
                         setSearchStatus('idle')
                         setSearchMessage('Great! Ready to run the full search with these criteria.')
                       }}
                       onReject={(feedback) => {
-                        if (process.env.NODE_ENV !== 'production') {
-                          console.log('❌ [ProspectSearchSection] Preview rejected:', feedback)
-                        }
                         // Switch back to interactive mode with feedback
                         setUiType('interactive')
                         setSearchStatus('idle')
                         setSearchMessage(`I understand this isn't what you're looking for. Let's refine the search criteria based on your feedback: "${feedback}"`)
                       }}
                       onRefineSearch={(feedback) => {
-                        if (process.env.NODE_ENV !== 'production') {
-                          console.log('🔧 [ProspectSearchSection] Search refinement requested:', feedback)
-                        }
                         // Switch back to interactive mode with refinement suggestions
                         setUiType('interactive')
                         setSearchStatus('idle')
@@ -1033,62 +771,49 @@ export function ProspectSearchSection({
                   )}
 
                   {/* Show results if available (multiple prospects) */}
-                  {searchStatus === 'completed' && prospects.length > 1 && uiType !== 'interactive' && (
-                    <div className="space-y-4">
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                        <div className="flex items-center space-x-2">
-                          <Users className="h-5 w-5 text-success" />
+                  {searchStatus === 'completed' && ((prospects.length > 1) || searchSummary?.preview !== true) && uiType !== 'interactive' && (
+                    <div className="space-y-5">
+                      <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5 shadow-sm">
+                        <div className="flex items-center space-x-3">
+                          <div className="bg-white p-2 rounded-lg border border-emerald-100 shadow-sm">
+                            <Users className="h-5 w-5 text-emerald-600" />
+                          </div>
                           <div>
-                            <p className="text-sm font-medium text-success">
-                              Prospect search completed successfully!
-                            </p>
-                            <p className="text-xs text-success mt-1">
-                              Found {prospects.length} qualified prospects
+                            <p className="text-[15px] font-bold text-gray-900">Discovery complete</p>
+                            <p className="text-[13px] font-medium text-emerald-700 mt-0.5">
+                              Successfully extracted {prospects.length} qualified prospects
                             </p>
                           </div>
                         </div>
                       </div>
 
-                      {/* Display prospects */}
-                      <ProspectTable prospects={prospects} />
-                      <div className="flex justify-end gap-2 mt-4">
+                      <ProspectGrid prospects={prospects} searchContext={searchContext} />
+                      <div className="flex justify-end mt-6">
                         <a
                           href={typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_STRIPE_CHECKOUT_URL || 'https://buy.stripe.com/cNi00i7UMc0xgLCfk56sw03') : '#'}
-                          className="px-3 py-2 text-xs rounded-md border bg-white hover:bg-muted transition-colors"
+                          className="rounded-full border border-gray-200 bg-white px-5 py-2.5 text-[14px] font-bold text-gray-800 transition-colors hover:bg-gray-50 shadow-sm"
                           target="_blank"
                           rel="noreferrer"
                         >
-                          Upgrade $39/mo
+                          Unlock Hermes Premium
                         </a>
-                        <button
-                          className="px-3 py-2 text-xs rounded-md border bg-white hover:bg-muted transition-colors"
-                          onClick={() => {
-                            setShowEmailDrafter(true)
-                            try {
-                              window.dispatchEvent(new CustomEvent('pipeline-progress', {
-                                detail: { stepNumber: 3, totalSteps: 5, percent: 60, label: 'Draft emails' }
-                              }))
-                            } catch {}
-                          }}
-                          disabled={evidenceMode && prospects.every((p: any) => !p?.enrichments || (Array.isArray(p.enrichments) ? p.enrichments.length === 0 : Object.keys(p.enrichments || {}).length === 0))}
-                        >
-                          Draft Emails
-                        </button>
                       </div>
                     </div>
                   )}
 
                   {/* Show error if search failed */}
                   {(searchStatus === 'failed' || uiType === 'error') && uiType !== 'interactive' && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="rounded-2xl border border-red-100 bg-red-50 p-5 shadow-sm">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <AlertCircle className="h-5 w-5 text-error" />
+                        <div className="flex items-center space-x-3">
+                          <div className="bg-white p-2 rounded-lg border border-red-100 shadow-sm">
+                            <AlertCircle className="h-5 w-5 text-red-500" />
+                          </div>
                           <div>
-                            <p className="text-sm font-medium text-error">
+                            <p className="text-[15px] font-bold text-gray-900">
                               Search failed
                             </p>
-                            <p className="text-xs text-error mt-1">
+                            <p className="mt-0.5 text-[13px] font-medium text-red-700">
                               {searchMessage || 'An error occurred during the search'}
                             </p>
                           </div>
@@ -1100,7 +825,7 @@ export function ProspectSearchSection({
                             setSearchMessage('Let\'s try again with different criteria')
                             setProspects([])
                           }}
-                          className="text-xs text-error hover:text-error underline"
+                          className="text-[13px] font-semibold text-red-600 underline hover:text-red-800"
                         >
                           Try Again
                         </button>
@@ -1110,16 +835,16 @@ export function ProspectSearchSection({
 
                   {/* Show idle state */}
                   {searchStatus === 'idle' && tool.state === 'result' && uiType === 'idle' && (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground mb-4">
+                    <div className="text-center py-10 bg-gray-50 rounded-2xl border border-gray-100">
+                      <p className="text-[14px] font-medium text-gray-500">
                         Ready to search for prospects. The search will execute automatically.
                       </p>
                     </div>
                   )}
                 </CardContent>
                 {false && showEmailDrafter && prospects.length > 0 && (
-                  <div className="px-4 pb-4">
-                    <div className="rounded-md border bg-card p-3 mb-3 text-xs text-muted-foreground">
+                  <div className="px-5 pb-5">
+                    <div className="rounded-xl border border-gray-200 bg-white p-4 mb-4 text-[13px] font-medium text-gray-500 shadow-sm">
                       Drafting emails for {prospects.length} prospects. You can define a template and add natural‑language enrichments.
                     </div>
                     {/* Inline interactive email drafter */}
@@ -1141,7 +866,7 @@ export function ProspectSearchSection({
               </CollapsibleContent>
             </Card>
           </Collapsible>
-        </motion.div>
+    </div>
   )
 }
 

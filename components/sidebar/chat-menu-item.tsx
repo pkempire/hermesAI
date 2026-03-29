@@ -113,13 +113,13 @@ export function ChatMenuItem({ chat }: ChatMenuItemProps) {
       <SidebarMenuButton
         asChild
         isActive={isActive}
-        className="h-auto flex-col gap-0.5 items-start p-2 pr-8"
+        className="h-auto flex-col items-start gap-0.5 rounded-xl p-2 pr-8 text-gray-700 hover:bg-white hover:text-gray-900 border border-transparent hover:border-gray-200 transition-colors data-[active=true]:bg-white data-[active=true]:text-gray-900 data-[active=true]:border-gray-200 data-[active=true]:shadow-sm"
       >
         <Link href={chat.path}>
           <div className="text-xs font-medium truncate select-none w-full">
             {chat.title}
           </div>
-          <div className="text-xs text-muted-foreground w-full">
+          <div className="w-full text-xs text-gray-400">
             {formatDateWithTime(chat.createdAt)}
           </div>
         </Link>
@@ -127,7 +127,7 @@ export function ChatMenuItem({ chat }: ChatMenuItemProps) {
 
       <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
         <DropdownMenuTrigger asChild>
-          <SidebarMenuAction disabled={isPending} className="size-7 p-1 mr-1">
+          <SidebarMenuAction disabled={isPending} className="mr-1 size-7 p-1 text-gray-400 hover:text-gray-900">
             {isPending ? (
               <div className="flex items-center justify-center size-full">
                 <Spinner />

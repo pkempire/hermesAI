@@ -1,11 +1,10 @@
 import { Analytics } from '@vercel/analytics/react'
 import type { Metadata, Viewport } from 'next'
-import { Manrope, Playfair_Display } from 'next/font/google'
+import { Cormorant_Garamond, Inter } from 'next/font/google'
 
 import AppSidebar from '@/components/app-sidebar'
 import ArtifactRoot from '@/components/artifact/artifact-root'
 import { Header } from '@/components/header'
-import { OnboardingModal } from '@/components/onboarding-modal'
 import { ThemeProvider } from '@/components/theme-provider'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
@@ -14,18 +13,19 @@ import { cn } from '@/lib/utils'
 
 import './globals.css'
 
-const manrope = Manrope({
+const inter = Inter({
   subsets: ['latin'],
   variable: '--font-sans'
 })
 
-const playfair = Playfair_Display({
+const cormorant = Cormorant_Garamond({
   subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
   variable: '--font-serif'
 })
 
-const title = 'HermesAI - AI-Powered Cold Email Prospecting'
-const description = 'Stop juggling 7 tools for cold email. Just talk to Hermes. Find prospects, research backgrounds, write personalized emails, and track results - all in one AI-powered platform.'
+const title = 'HermesAI - AI Messenger for Outbound'
+const description = 'Tell Hermes who you want to reach and what you are selling. Hermes researches the market, enriches the list, drafts the outreach, and moves the workflow forward from one clean surface.'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://hermesai.com'),
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
         url: '/opengraph-image.png',
         width: 1200,
         height: 630,
-        alt: 'HermesAI - AI-Powered Cold Email Prospecting'
+        alt: 'HermesAI - AI Messenger for Outbound'
       }
     ]
   },
@@ -89,9 +89,9 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body
         className={cn(
-          'min-h-screen flex flex-col font-sans antialiased hermes-shell',
-          manrope.variable,
-          playfair.variable
+          'min-h-screen flex flex-col font-sans antialiased bg-white text-gray-900',
+          inter.variable,
+          cormorant.variable
         )}
         suppressHydrationWarning
       >
@@ -103,15 +103,14 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <SidebarProvider defaultOpen={true}>
-            <AppSidebar />
+            <AppSidebar user={user} />
             <div className="flex flex-col flex-1 min-h-0">
               <Header user={user} />
-              <main className="relative flex flex-1 min-h-0 overflow-hidden pt-0">
+              <main className={cn('relative flex flex-1 min-h-0 pt-0', user ? 'overflow-hidden' : 'overflow-x-hidden overflow-y-auto')}>
                 <ArtifactRoot>{children}</ArtifactRoot>
               </main>
             </div>
           </SidebarProvider>
-          <OnboardingModal />
           <Toaster />
           <Analytics />
         </ThemeProvider>

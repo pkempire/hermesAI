@@ -76,8 +76,30 @@ function addToolMessageToChat({
 }): Array<Message> {
   return messages.map(message => {
     if ((message as any).toolInvocations) {
+      const existingParts = Array.isArray((message as any).parts)
+        ? ([...(message as any).parts] as any[])
+        : []
+
+      for (const toolResult of toolMessage.content) {
+        const alreadyRendered = existingParts.some(
+          part =>
+            part?.type === 'tool-result' &&
+            part?.toolCallId === (toolResult as any).toolCallId
+        )
+
+        if (!alreadyRendered) {
+          existingParts.push({
+            type: 'tool-result',
+            toolCallId: (toolResult as any).toolCallId,
+            toolName: (toolResult as any).toolName,
+            output: (toolResult as any).output ?? (toolResult as any).result
+          })
+        }
+      }
+
       return {
         ...message,
+        parts: existingParts,
         toolInvocations: (message as any).toolInvocations.map((toolInvocation: any) => {
           const toolResult = toolMessage.content.find(
             tool => tool.toolCallId === toolInvocation.toolCallId
@@ -151,27 +173,39 @@ export function convertToUIMessages(
     // Build the text content and tool invocations from message.content.
     let textContent = ''
     let toolInvocations: Array<any> = []
+    let parts: Array<any> = []
 
     if (message.content) {
       if (typeof message.content === 'string') {
         textContent = message.content
+        if (message.content.length > 0) {
+          parts.push({ type: 'text', text: message.content })
+        }
       } else if (Array.isArray(message.content)) {
         for (const content of message.content) {
           if (content && typeof content === 'object' && 'type' in content) {
             if (content.type === 'text' && 'text' in content) {
               textContent += (content as any).text
+              parts.push({ type: 'text', text: (content as any).text })
             } else if (
               content.type === 'tool-call' &&
               'toolCallId' in content &&
               'toolName' in content &&
               'args' in content
             ) {
-              toolInvocations.push({
-                state: 'call',
+              const toolCall = {
+                type: 'tool-call',
                 toolCallId: (content as any).toolCallId,
                 toolName: (content as any).toolName,
                 args: (content as any).args
+              }
+              toolInvocations.push({
+                state: 'call',
+                toolCallId: toolCall.toolCallId,
+                toolName: toolCall.toolName,
+                args: toolCall.args
               })
+              parts.push(toolCall)
             }
           }
         }
@@ -204,6 +238,7 @@ export function convertToUIMessages(
       id: generateId(),
       role: message.role,
       content: textContent,
+      parts: parts.length > 0 ? parts : undefined,
       toolInvocations: toolInvocations.length > 0 ? (toolInvocations as any) : undefined,
       annotations: annotations
     } as any
@@ -259,18 +294,110 @@ export function convertToExtendedCoreMessages(
       })
     }
 
-    // Convert current message: push minimal CoreMessage without converter
-    if (message && typeof message === 'object' && (message as any).role) {
-      const minimal = {
-        role: (message as any).role,
-        content:
-          typeof (message as any).content === 'string'
-            ? (message as any).content
-            : Array.isArray((message as any).content)
-            ? (message as any).content
-            : ''
+    if (!(message && typeof message === 'object' && (message as any).role)) {
+      continue
+    }
+
+    const messageRole = (message as any).role
+    const messageParts = Array.isArray((message as any).parts)
+      ? ((message as any).parts as any[])
+      : []
+    const coreParts: Array<any> = []
+    const toolResults: Array<any> = []
+
+    for (const part of messageParts) {
+      if (!part || typeof part !== 'object') continue
+
+      if (part.type === 'text' && typeof part.text === 'string') {
+        coreParts.push({ type: 'text', text: part.text })
+      } else if (
+        part.type === 'tool-call' &&
+        part.toolCallId &&
+        part.toolName
+      ) {
+        coreParts.push({
+          type: 'tool-call',
+          toolCallId: part.toolCallId,
+          toolName: part.toolName,
+          args: part.args ?? {}
+        })
+      } else if (
+        part.type === 'tool-result' &&
+        part.toolCallId &&
+        part.toolName
+      ) {
+        toolResults.push({
+          type: 'tool-result',
+          toolCallId: part.toolCallId,
+          toolName: part.toolName,
+          output: part.output ?? part.result
+        })
+      } else if (
+        typeof part.type === 'string' &&
+        part.type.startsWith('tool-') &&
+        part.type !== 'tool-call' &&
+        part.type !== 'tool-result'
+      ) {
+        const toolName = part.type.replace(/^tool-/, '')
+        if (
+          (part.state === 'input-streaming' || part.state === 'input-available') &&
+          part.toolCallId
+        ) {
+          coreParts.push({
+            type: 'tool-call',
+            toolCallId: part.toolCallId,
+            toolName,
+            args: part.input ?? {}
+          })
+        } else if (part.state === 'output-available' && part.toolCallId) {
+          toolResults.push({
+            type: 'tool-result',
+            toolCallId: part.toolCallId,
+            toolName,
+            output: part.output
+          })
+        }
+      } else if (part.type === 'tool-invocation' && part.toolInvocation) {
+        const invocation = part.toolInvocation as any
+        if (invocation.state === 'call' && invocation.toolCallId && invocation.toolName) {
+          coreParts.push({
+            type: 'tool-call',
+            toolCallId: invocation.toolCallId,
+            toolName: invocation.toolName,
+            args: invocation.args ?? {}
+          })
+        } else if (
+          invocation.state === 'result' &&
+          invocation.toolCallId &&
+          invocation.toolName
+        ) {
+          toolResults.push({
+            type: 'tool-result',
+            toolCallId: invocation.toolCallId,
+            toolName: invocation.toolName,
+            output: invocation.result ?? invocation.output
+          })
+        }
       }
-      result.push(minimal as any)
+    }
+
+    const fallbackContent =
+      typeof (message as any).content === 'string'
+        ? (message as any).content
+        : Array.isArray((message as any).content)
+        ? (message as any).content
+        : ''
+
+    result.push({
+      role: messageRole,
+      content: coreParts.length > 0 ? coreParts : fallbackContent
+    } as any)
+
+    if (toolResults.length > 0) {
+      result.push({
+        role: 'tool',
+        content: toolResults
+      } as any)
     }
   }
 

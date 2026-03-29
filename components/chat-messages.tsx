@@ -141,16 +141,16 @@ export function ChatMessages({
       role="list"
       aria-roledescription="chat messages"
       className={cn(
-        'relative pt-1 w-full h-full flex-1 overflow-y-auto',
+        'relative pt-8 md:pt-10 w-full h-full flex-1 overflow-y-auto',
         'scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent'
       )}
     >
-      <div className="relative mx-auto w-full max-w-4xl px-3 sm:px-4 md:px-6 pb-24 sm:pb-28">
+      <div className="relative mx-auto w-full max-w-5xl px-4 sm:px-6 md:px-8 pb-24 sm:pb-28">
         {sections.map((section, sectionIndex) => (
           <div
             key={section.id}
             id={`section-${section.id}`}
-            className="chat-section mb-7 md:mb-8"
+            className={cn('chat-section mb-8 md:mb-10', sectionIndex === 0 ? 'pt-8 md:pt-12' : '')}
             style={
               sectionIndex === sections.length - 1
                 ? { minHeight: '50vh' }

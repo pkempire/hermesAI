@@ -3,9 +3,11 @@
 import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar'
 import { cn } from '@/lib/utils'
 import { User } from '@supabase/supabase-js'
+import { ArrowUpRight, Mail, Network, UserRound } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import React, { useEffect, useState } from 'react'
+import { Button } from './ui/button'
 import GuestMenu from './guest-menu'
 import UserMenu from './user-menu'
 
@@ -14,7 +16,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ user }) => {
-  const { open } = useSidebar()
+  useSidebar()
   const [credits, setCredits] = useState<number | null>(null)
 
   useEffect(() => {
@@ -33,42 +35,85 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
     return () => { mounted = false }
   }, [user])
   
+  if (!user) {
+    return (
+      <header className="sticky top-0 right-0 left-0 z-30 border-b border-gray-200 shadow-sm relative overflow-hidden">
+        <div className="absolute inset-0 z-0 bg-white">
+          <Image src="/images/socrates.jpg" alt="Header Art" fill className="object-cover object-[center_22%] opacity-[0.15] mix-blend-multiply filter grayscale-[30%]" priority unoptimized />
+          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-white to-transparent" />
+        </div>
+        
+        <div className="relative z-20 mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-4 md:px-10">
+          <Link
+            href="/"
+            className="group flex items-center gap-3 transition-opacity duration-200 hover:opacity-80"
+          >
+            <div className="relative h-11 w-11 overflow-hidden rounded-[10px] border border-gray-200 bg-white shadow-sm flex items-center justify-center p-1.5">
+              <Image src="/images/hermes-icon.png" alt="Hermes" width={44} height={44} className="object-contain" unoptimized />
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-[0.28em] text-[hsl(var(--hermes-gold-dark))] font-semibold">Campaign messenger</div>
+              <span className="font-serif text-2xl text-gray-900 leading-none tracking-tight">Hermes</span>
+            </div>
+          </Link>
+
+          <div className="hidden items-center gap-3 md:flex">
+            {[
+              { label: 'Find accounts', icon: Network },
+              { label: 'Resolve contact', icon: UserRound },
+              { label: 'Draft in Gmail', icon: Mail }
+            ].map(item => {
+              const Icon = item.icon
+              return (
+                <div key={item.label} className="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--hermes-gold))]/20 bg-[hsl(var(--hermes-gold))]/5 px-4 py-1.5 text-[13px] font-medium text-gray-700 shadow-sm">
+                  <Icon className="h-3.5 w-3.5 text-[hsl(var(--hermes-gold-dark))]" />
+                  {item.label}
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button asChild variant="ghost" className="text-sm text-gray-600 hover:bg-gray-100/80 hover:text-gray-900 font-medium">
+              <Link href="/auth/login">Sign in</Link>
+            </Button>
+            <GuestMenu />
+          </div>
+        </div>
+      </header>
+    )
+  }
+
   return (
     <header
       className={cn(
-        'sticky top-0 right-0 left-0 z-30 transition-all duration-200',
-        'border-b border-black/5 bg-[rgba(255,251,245,0.82)] backdrop-blur-xl',
-        open ? 'md:pl-[calc(var(--sidebar-width)+1rem)]' : 'md:pl-4'
+        'sticky top-0 right-0 left-0 z-30 transition-all duration-200 relative overflow-hidden',
+        'border-b border-gray-200 bg-white/90 backdrop-blur-md shadow-sm'
       )}
     >
-      <div className="flex items-center justify-between px-4 py-2 md:px-6">
-        <div className="flex items-center gap-3">
-          <SidebarTrigger className="mr-1 rounded-full border border-black/10 bg-white/70 shadow-sm" />
-          <Link 
-            href="/" 
-            className="group flex items-center gap-3 transition-all duration-200 hover:opacity-80"
-          >
-            <div className="relative flex items-center gap-3">
-              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-400/20 to-yellow-500/20 blur-md opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-              <Image
-                src="/images/hermes-avatar.png"
-                alt="Hermes"
-                width={32}
-                height={32}
-                className="relative h-8 w-8 rounded-full border border-amber-300/70 shadow-sm transition-colors object-cover md:h-9 md:w-9"
-                unoptimized
-              />
-            </div>
-            <div className="hidden sm:block">
-              <div className="text-[11px] uppercase tracking-[0.28em] text-black/45">Messenger OS</div>
-              <span className="font-serif text-lg text-gray-950 md:text-xl">HermesAI</span>
-            </div>
-          </Link>
+      <div className="absolute inset-0 z-0 bg-white pointer-events-none">
+        <Image src="/images/socrates.jpg" alt="Header Art" fill className="object-cover object-[center_22%] opacity-[0.12] mix-blend-multiply filter pointer-events-none" priority unoptimized />
+        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-white to-transparent" />
+      </div>
+
+      <div className="relative z-20 flex items-center justify-between px-2 py-2 md:px-3">
+        <div className="flex items-center gap-2">
+          <SidebarTrigger className="rounded-full border border-gray-200 bg-white text-gray-500 shadow-sm hover:bg-gray-50" />
+          <div className="hidden items-center gap-2 md:inline-flex">
+            <a
+              href={process.env.NEXT_PUBLIC_STRIPE_CHECKOUT_URL || 'https://buy.stripe.com/cNi00i7UMc0xgLCfk56sw03'}
+              className="rounded-full border border-[hsl(var(--hermes-gold))]/30 bg-[hsl(var(--hermes-gold))]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[hsl(var(--hermes-gold-dark))] shadow-sm transition-all hover:bg-[hsl(var(--hermes-gold))]/20"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Unlock Premium
+            </a>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
           {user && credits !== null && (
-            <div className="hidden items-center gap-2 rounded-full border border-amber-200/80 bg-white/80 px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm sm:inline-flex">
+            <div className="hidden items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm sm:inline-flex">
               <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]" />
               <span className="font-semibold text-gray-900">{credits}</span>
               <span className="text-gray-500">credits</span>

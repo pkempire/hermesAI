@@ -2,8 +2,8 @@
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Building2, ChevronDown, ExternalLink, Linkedin, Mail } from 'lucide-react';
-import { useState } from 'react';
+import { Building2, ExternalLink, Linkedin, Mail } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { Prospect } from './prospect-grid';
 
 interface ProspectTableProps {
@@ -11,242 +11,280 @@ interface ProspectTableProps {
   onSelectionChange?: (ids: string[]) => void;
 }
 
+function normalizeEnrichmentTitle(title?: string) {
+  return (title || '').toLowerCase().trim();
+}
+
+function titleCaseFromHostname(value: string) {
+  return value
+    .replace(/^https?:\/\//, '')
+    .replace(/^www\./, '')
+    .split('/')[0]
+    .split('.')
+    .slice(0, -1)
+    .join(' ')
+    .replace(/[-_]+/g, ' ')
+    .replace(/\b\w/g, char => char.toUpperCase());
+}
+
+function deriveCompanyLabel(prospect: Prospect) {
+  const company = (prospect.company || '').trim();
+  if (company && !/^unknown company$/i.test(company)) {
+    return company;
+  }
+
+  if (prospect.website) {
+    const derived = titleCaseFromHostname(prospect.website);
+    if (derived) return derived;
+  }
+
+  if (prospect.linkedinUrl && prospect.linkedinUrl.includes('linkedin.com/company/')) {
+    const slug = prospect.linkedinUrl.split('/company/')[1]?.split(/[/?#]/)[0];
+    if (slug) {
+      return slug.replace(/[-_]+/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+    }
+  }
+
+  return 'Unknown company';
+}
+
+function getCompanyInitials(value: string) {
+  const parts = value.split(/\s+/).filter(Boolean).slice(0, 2);
+  if (parts.length === 0) return 'H';
+  return parts.map(part => part[0]?.toUpperCase()).join('');
+}
+
+function getWebsiteHost(value?: string) {
+  if (!value) return '';
+  return value.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+}
+
+function getPrimarySummary(prospect: Prospect) {
+  const enrichments = Array.isArray(prospect.enrichments) ? prospect.enrichments : [];
+  const preferred = enrichments.find((entry: any) => {
+    const title = normalizeEnrichmentTitle(entry?.title);
+    return title.includes('specialization') || title.includes('offering') || title.includes('fit') || title.includes('proof');
+  });
+
+  return preferred?.value || preferred?.result || (prospect as any).summary || prospect.industry || 'No summary available';
+}
+
+function getSignalRows(prospect: Prospect) {
+  const enrichments = Array.isArray(prospect.enrichments) ? prospect.enrichments : [];
+
+  return enrichments
+    .filter((entry: any) => {
+      const title = normalizeEnrichmentTitle(entry?.title);
+      return (
+        title &&
+        !title.includes('company name') &&
+        !title.includes('company domain') &&
+        !title.includes('company linkedin') &&
+        !title.includes('decision maker linkedin') &&
+        !title.includes('decision maker email') &&
+        !title.includes('decision maker name') &&
+        !title.includes('decision maker title') &&
+        !title.includes('location') &&
+        !title.includes('type') &&
+        !title.includes('url') &&
+        !title.includes('content') &&
+        !title.includes('description')
+      );
+    })
+    .slice(0, 6)
+    .map((entry: any) => ({
+      title: entry.title,
+      value: typeof entry.value === 'string' ? entry.value : entry.result
+    }))
+    .filter((entry: any) => entry.value);
+}
+
 export function ProspectTable({ prospects, onSelectionChange }: ProspectTableProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const toggleSelect = (id: string) => {
-    const newSelected = new Set(selected);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
+    const next = new Set(selected);
+    if (next.has(id)) {
+      next.delete(id);
     } else {
-      newSelected.add(id);
+      next.add(id);
     }
-    setSelected(newSelected);
-    onSelectionChange?.(Array.from(newSelected));
+    setSelected(next);
+    onSelectionChange?.(Array.from(next));
   };
 
   const toggleSelectAll = () => {
     if (selected.size === prospects.length) {
       setSelected(new Set());
       onSelectionChange?.([]);
-    } else {
-      const allIds = new Set(prospects.map(p => p.id));
-      setSelected(allIds);
-      onSelectionChange?.(Array.from(allIds));
+      return;
     }
+
+    const allIds = new Set(prospects.map(prospect => prospect.id));
+    setSelected(allIds);
+    onSelectionChange?.(Array.from(allIds));
   };
 
-  // Get all unique enrichment titles (visible up to 5)
-  const enrichmentTitles = Array.from(
-    new Set(
-      prospects.flatMap(p => 
-        Array.isArray(p.enrichments) 
-          ? (p.enrichments as any[]).map((e: any) => e.title) 
-          : []
-      )
-    )
-  ).slice(0, 5); // Show first 5 enrichment columns
+  const rows = useMemo(() => {
+    return prospects.map(prospect => {
+      const displayCompany = deriveCompanyLabel(prospect);
+      const displayContact =
+        prospect.fullName && prospect.fullName !== displayCompany ? prospect.fullName : undefined;
+
+      return {
+        ...prospect,
+        displayCompany,
+        displayContact,
+        summary: getPrimarySummary(prospect),
+        signals: getSignalRows(prospect)
+      };
+    });
+  }, [prospects]);
 
   return (
-    <div className="w-full overflow-auto border rounded-lg bg-white">
-      <table className="w-full text-sm">
-        <thead className="bg-gray-50 border-b sticky top-0">
-          <tr>
-            <th className="p-3 text-left w-12">
-              <Checkbox
-                checked={selected.size === prospects.length && prospects.length > 0}
-                onCheckedChange={toggleSelectAll}
-              />
-            </th>
-            <th className="p-3 text-left font-semibold text-gray-700 min-w-[200px]">Name</th>
-            <th className="p-3 text-left font-semibold text-gray-700 min-w-[250px]">Description</th>
-            <th className="p-3 text-left font-semibold text-gray-700 min-w-[150px]">URL</th>
-            <th className="p-3 text-left font-semibold text-gray-700">Contact</th>
-            {enrichmentTitles.map((title, i) => (
-              <th key={i} className="p-3 text-left font-semibold text-gray-700 min-w-[180px]">
-                {title}
+    <div className="overflow-hidden rounded-[1.5rem] border border-black/5 bg-white/90 shadow-[0_18px_48px_rgba(62,45,18,0.08)]">
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead className="border-b border-black/5 bg-stone-50/80 text-left">
+            <tr className="text-[11px] uppercase tracking-[0.16em] text-black/45">
+              <th className="w-12 px-4 py-4">
+                <Checkbox
+                  checked={selected.size === prospects.length && prospects.length > 0}
+                  onCheckedChange={() => toggleSelectAll()}
+                />
               </th>
-            ))}
-            <th className="p-3 text-left font-semibold text-gray-700 w-24">More</th>
-          </tr>
-        </thead>
-        <tbody>
-          {prospects.map((prospect, idx) => {
-            const enrichmentsArray = Array.isArray(prospect.enrichments) ? prospect.enrichments : [];
-            const enrichmentMap = new Map(
-              enrichmentsArray.map((e: any) => [e.title, e.value])
-            );
-
-            return (
-              <tr 
+              <th className="min-w-[300px] px-4 py-4">Company</th>
+              <th className="min-w-[420px] px-4 py-4">Fit Summary</th>
+              <th className="min-w-[240px] px-4 py-4">Decision Maker</th>
+              <th className="min-w-[320px] px-4 py-4">Signals</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((prospect, index) => (
+              <tr
                 key={prospect.id}
-                className={`border-b hover:bg-gray-50 transition-all duration-200 ${
-                  selected.has(prospect.id) ? 'bg-amber-50' : ''
-                } ${idx < 3 ? 'animate-in fade-in slide-in-from-top-2' : ''}`}
-                style={{ animationDelay: `${idx * 50}ms`, animationFillMode: 'backwards' }}
+                className={`border-b border-black/5 align-top transition-colors hover:bg-amber-50/30 ${
+                  selected.has(prospect.id) ? 'bg-amber-50/40' : ''
+                }`}
               >
-                <td className="p-3">
+                <td className="px-4 py-4">
                   <Checkbox
                     checked={selected.has(prospect.id)}
                     onCheckedChange={() => toggleSelect(prospect.id)}
                   />
                 </td>
-                
-                {/* Name */}
-                <td className="p-3">
-                  <div className="flex items-center gap-2">
-                    {prospect.companyLogoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={prospect.companyLogoUrl} alt="logo" className="h-8 w-8 rounded border flex-shrink-0 object-cover" />
-                    ) : (
-                      <div className="h-8 w-8 rounded bg-gradient-to-br from-amber-400 to-orange-400 flex items-center justify-center flex-shrink-0">
-                        <Building2 className="h-4 w-4 text-white" />
+
+                <td className="px-4 py-4">
+                  <div className="flex gap-3">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-amber-300 via-amber-400 to-orange-400 text-white shadow-[0_10px_30px_rgba(203,126,40,0.22)]">
+                      {prospect.companyLogoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={prospect.companyLogoUrl}
+                          alt={prospect.displayCompany}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span className="font-semibold tracking-[0.08em]">
+                          {getCompanyInitials(prospect.displayCompany)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="min-w-0 space-y-1">
+                      <div className="font-serif text-[1.6rem] leading-tight text-gray-950">
+                        {prospect.displayCompany}
                       </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-gray-900">{prospect.fullName || prospect.company}</div>
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        {prospect.companySize && <span>{prospect.companySize} employees</span>}
-                        {enrichmentsArray.find((e: any) => 
-                          e.title?.toLowerCase().includes('role') || 
-                          e.title?.toLowerCase().includes('persona') ||
-                          e.title?.toLowerCase().includes('who')
-                        )?.value && (
-                          <>
-                            <span>•</span>
-                            <span className="text-amber-600 font-medium">
-                              Contact: {enrichmentsArray.find((e: any) => 
-                                e.title?.toLowerCase().includes('role') || 
-                                e.title?.toLowerCase().includes('persona') ||
-                                e.title?.toLowerCase().includes('who')
-                              )?.value}
-                            </span>
-                          </>
-                        )}
-                      </div>
+                      {prospect.location ? (
+                        <div className="text-xs uppercase tracking-[0.16em] text-black/40">{prospect.location}</div>
+                      ) : null}
+                      {prospect.website ? (
+                        <a
+                          href={prospect.website.startsWith('http') ? prospect.website : `https://${prospect.website}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-sm font-medium text-sky-700 hover:text-sky-800"
+                        >
+                          {getWebsiteHost(prospect.website)}
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      ) : null}
                     </div>
                   </div>
                 </td>
 
-                {/* Description */}
-                <td className="p-3">
-                  <div className="text-gray-700 line-clamp-2">
-                    {enrichmentsArray.find((e: any) => 
-                      e.title?.toLowerCase().includes('segment') || 
-                      e.title?.toLowerCase().includes('description')
-                    )?.value || prospect.industry || 'No description available'}
+                <td className="px-4 py-4">
+                  <div className="max-w-[520px] text-[15px] leading-7 text-gray-700">
+                    {prospect.summary}
                   </div>
                 </td>
 
-                {/* URL */}
-                <td className="p-3">
-                  {prospect.website && (
-                    <a 
-                      href={prospect.website.startsWith('http') ? prospect.website : `https://${prospect.website}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-xs"
-                    >
-                      {prospect.website.replace(/^https?:\/\//,'').split('/')[0]}
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  )}
-                </td>
-
-                {/* Contact */}
-                <td className="p-3">
-                  <div className="flex flex-col gap-1">
-                    {prospect.email && (
-                      <a 
-                        href={`mailto:${prospect.email}`}
-                        className="flex items-center gap-1 text-xs text-green-600 hover:text-green-800"
-                      >
-                        <Mail className="h-3 w-3" />
-                        <span className="truncate max-w-[150px]">{prospect.email}</span>
-                      </a>
+                <td className="px-4 py-4">
+                  <div className="space-y-2">
+                    {prospect.displayContact ? (
+                      <div className="text-[15px] font-semibold text-gray-900">{prospect.displayContact}</div>
+                    ) : (
+                      <div className="text-black/35">No named contact yet</div>
                     )}
-                    {prospect.linkedinUrl && (
-                      <a 
-                        href={prospect.linkedinUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
-                      >
-                        <Linkedin className="h-3 w-3" />
-                        Profile
-                      </a>
-                    )}
+                    {prospect.jobTitle ? (
+                      <div className="text-sm text-black/55">{prospect.jobTitle}</div>
+                    ) : null}
+                    <div className="flex flex-wrap gap-2">
+                      {prospect.email ? (
+                        <a
+                          href={`mailto:${prospect.email}`}
+                          className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700"
+                        >
+                          <Mail className="h-3 w-3" />
+                          Email
+                        </a>
+                      ) : null}
+                      {prospect.linkedinUrl ? (
+                        <a
+                          href={prospect.linkedinUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700"
+                        >
+                          <Linkedin className="h-3 w-3" />
+                          LinkedIn
+                        </a>
+                      ) : null}
+                    </div>
                   </div>
                 </td>
 
-                {/* Enrichments */}
-                {enrichmentTitles.map((title, i) => {
-                  const value = enrichmentMap.get(title);
-                  return (
-                    <td key={i} className="p-3">
-                      {value ? (
-                        <div className="text-gray-700 text-xs line-clamp-2">
-                          {typeof value === 'string' && value.length > 100 
-                            ? value.substring(0, 100) + '...' 
-                            : String(value)}
+                <td className="px-4 py-4">
+                  <div className="space-y-2">
+                    {prospect.signals.length > 0 ? (
+                      prospect.signals.map((signal, signalIndex) => (
+                        <div key={`${prospect.id}-signal-${signalIndex}`} className="rounded-xl border border-black/5 bg-stone-50/70 p-3">
+                          <div className="mb-1 text-[11px] uppercase tracking-[0.14em] text-black/40">
+                            {signal.title}
+                          </div>
+                          <div className="text-sm leading-6 text-gray-700">
+                            {String(signal.value)}
+                          </div>
                         </div>
-                      ) : (
-                        <span className="text-gray-400 text-xs">—</span>
-                      )}
-                    </td>
-                  );
-                })}
-                {/* More popover: show remaining enrichments */}
-                <td className="p-3">
-                  {enrichmentsArray.length > enrichmentTitles.length ? (
-                    <details>
-                      <summary className="cursor-pointer text-xs text-gray-600 inline-flex items-center gap-1">
-                        <ChevronDown className="h-3 w-3" /> More
-                      </summary>
-                      <div className="mt-2 space-y-1">
-                        {enrichmentsArray
-                          .filter((e: any) => !enrichmentTitles.includes(e.title))
-                          .map((e: any, i: number) => (
-                            <div key={i} className="text-xs text-gray-600">
-                              <span className="font-medium">{e.title}: </span>
-                              <span>{typeof e.value === 'string' ? e.value : JSON.stringify(e.value)}</span>
-                            </div>
-                          ))}
-                      </div>
-                    </details>
-                  ) : (
-                    <span className="text-gray-400 text-xs">—</span>
-                  )}
+                      ))
+                    ) : (
+                      <div className="text-sm text-black/35">Signals will populate as enrichments complete.</div>
+                    )}
+                  </div>
                 </td>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-      {/* Bulk Actions Bar */}
-      {selected.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-2xl border-2 border-amber-400 p-4 flex items-center gap-4 z-50">
-          <span className="text-sm font-medium text-gray-900">
-            {selected.size} selected
-          </span>
-          <Button 
-            size="sm" 
-            className="bg-amber-500 hover:bg-amber-600 text-amber-950"
-            onClick={() => {
-              window.dispatchEvent(new CustomEvent('chat-system-suggest', {
-                detail: { text: `Draft personalized emails for the ${selected.size} selected prospects` }
-              }));
-            }}
-          >
-            Draft Emails
-          </Button>
+      {selected.size > 0 ? (
+        <div className="flex items-center justify-between border-t border-black/5 bg-stone-50/80 px-4 py-3">
+          <div className="text-sm text-gray-700">{selected.size} selected</div>
           <Button size="sm" variant="outline">
             Export CSV
           </Button>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
-

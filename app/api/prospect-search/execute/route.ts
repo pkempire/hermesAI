@@ -1,6 +1,7 @@
 import { getCurrentUserId } from '@/lib/auth/get-current-user'
 import { createOrReuseWebset } from '@/lib/clients/exa-cache'
-import { createExaWebsetsClient, createProspectSearchCriteria } from '@/lib/clients/exa-websets'
+import { createEnrichmentDescriptionMap, createExaWebsetsClient } from '@/lib/clients/exa-websets'
+import { enrichProspectWithOrangeslice } from '@/lib/clients/orangeslice'
 import { getCachedProspects } from '@/lib/performance/redis-cache'
 import { logger } from '@/lib/utils/logger'
 import { createClient } from '@/lib/supabase/server'
@@ -10,7 +11,17 @@ import { ProspectSearchStartPayload } from '@/lib/types/prospecting'
 
 export async function POST(req: NextRequest) {
   try {
-    const { criteria, enrichments, entityType, targetCount, originalQuery, preview = false, evidenceMode } = await req.json()
+    const {
+      criteria,
+      enrichments,
+      entityType,
+      targetCount,
+      originalQuery,
+      targetPersona,
+      offer,
+      preview = false,
+      evidenceMode
+    } = await req.json()
     const userId = await getCurrentUserId()
     if (!userId || userId === 'anonymous') {
       return NextResponse.json({ type: 'prospect_search_error', event: 'error', message: 'Unauthorized' }, { status: 401 })
@@ -32,7 +43,7 @@ export async function POST(req: NextRequest) {
 
     // Check cache first for significant performance boost
     if (!preview) {
-      const cachedResults = await getCachedProspects(originalQuery, criteria || [], entityType || 'person')
+      const cachedResults = await getCachedProspects(originalQuery, criteria || [], entityType || 'company')
       if (cachedResults && cachedResults.length >= (targetCount || 25)) {
         logger.debug(`Serving ${cachedResults.length} cached prospects`)
         return NextResponse.json({
@@ -64,79 +75,16 @@ export async function POST(req: NextRequest) {
     }
 
     const exa = createExaWebsetsClient()
-    const PROMPT_ONLY = process.env.EXA_PROMPT_ONLY === 'true'
-    
-    // Convert our detailed criteria format to Exa format
-    const searchCriteria = {
-      query: originalQuery,
-      targetCount: preview ? 1 : targetCount,
-      entityType: entityType || 'company',
-      includeEnrichments: enrichments?.map((e: any) => e.value) || [],
-      // Pass through ALL extracted criteria for Exa
-      allCriteria: criteria || [],
-      filters: {
-        // Group criteria by type for backward compatibility
-        jobTitles: criteria?.filter((c: any) => c.type === 'job_title')?.map((c: any) => c.value) || [],
-        industry: criteria?.filter((c: any) => c.type === 'industry')?.map((c: any) => c.value) || [],
-        location: criteria?.filter((c: any) => c.type === 'location')?.map((c: any) => c.value) || [],
-        technologies: criteria?.filter((c: any) => c.type === 'technology')?.map((c: any) => c.value) || [],
-        activities: criteria?.filter((c: any) => c.type === 'activity')?.map((c: any) => c.value) || [],
-        other: criteria?.filter((c: any) => c.type === 'other')?.map((c: any) => c.value) || []
-      }
-    }
 
     let websetId: string
     let isReused = false
 
-    if (PROMPT_ONLY) {
-      // Minimal prompt-only search; let Exa infer criteria
-      const webset = await exa.createWebset({
-        search: {
-          query: originalQuery,
-          count: preview ? 1 : targetCount,
-          entity: { type: (entityType || 'company') as any }
-        }
-      })
-      websetId = webset.id
-    } else {
-      // Build criteria + optional enrichments
-      const websetSearchConfig = createProspectSearchCriteria(searchCriteria)
-
-      const enrichmentMapping: Record<string, string> = {
-        'email': 'email address',
-        'linkedin': 'LinkedIn profile URL',
-        'phone': 'phone number',
-        'location': 'location',
-        'job_title': 'job title',
-        'company_info': 'company name',
-        'full_name': 'full name'
-      }
-
-      const websetEnrichmentsUncapped = enrichments?.map((e: any) => {
-        const enrichmentKey = typeof e === 'string' ? e : e.value || e.label?.toLowerCase()
-        const enrichmentLabel = enrichmentMapping[enrichmentKey] || enrichmentKey
-        return {
-          description: `Extract the person's ${enrichmentLabel}`,
-          format: 'text' as const,
-          instructions: `Look for and extract the ${enrichmentLabel} from the profile or page content.`
-        }
-      }).filter(Boolean) || []
-
-      const seen = new Set<string>()
-      const websetEnrichments: { description: string; format: 'text'; instructions: string }[] = []
-      for (const e of websetEnrichmentsUncapped) {
-        if (!seen.has(e.description)) {
-          websetEnrichments.push(e)
-          seen.add(e.description)
-        }
-        if (websetEnrichments.length >= 10) break
-      }
-
+    {
       logger.debug('Creating or reusing webset...')
       const result = await createOrReuseWebset({
         query: originalQuery,
         criteria: criteria || [],
-        entityType: entityType || 'person',
+        entityType: entityType || 'company',
         enrichments: enrichments || [],
         targetCount: preview ? 1 : targetCount
       }, exa)
@@ -167,12 +115,19 @@ export async function POST(req: NextRequest) {
               user_id: user.id,
               name,
               status: 'active',
-              prospect_query: { query: originalQuery, criteria },
-              entity_type: entityType || 'person',
+              prospect_query: { query: originalQuery, criteria, targetPersona, offer },
+              entity_type: entityType || 'company',
               enrichments: enrichments || [],
               filters: {},
               target_count: targetCount,
-              settings: { exa_webset_id: websetId, reused: isReused, evidence_mode: Boolean(evidenceMode) }
+              settings: {
+                exa_webset_id: websetId,
+                reused: isReused,
+                evidence_mode: Boolean(evidenceMode),
+                target_persona: targetPersona || null,
+                offer: offer || null,
+                original_query: originalQuery
+              }
             })
             .select('id')
             .single()
@@ -197,7 +152,16 @@ export async function POST(req: NextRequest) {
         })
 
         const itemsResponse = await exa.listItems(websetId, { limit: 1 })
-        const prospects = itemsResponse.data.map(item => exa.convertToProspect(item))
+        const enrichmentDescriptions = createEnrichmentDescriptionMap(completedWebset as any)
+        const prospects = await Promise.all(
+          itemsResponse.data.map(item =>
+            enrichProspectWithOrangeslice(exa.convertToProspect(item, enrichmentDescriptions), {
+              originalQuery,
+              targetPersona,
+              offer
+            })
+          )
+        )
 
         return NextResponse.json({
           type: 'prospect_search_complete',
@@ -211,6 +175,7 @@ export async function POST(req: NextRequest) {
             query: originalQuery,
             entityType,
             totalFound: prospects.length,
+            preview: true,
             criteria: criteria?.length || 0,
             enrichments: enrichments?.length || 0
           }

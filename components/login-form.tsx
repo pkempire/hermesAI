@@ -57,7 +57,6 @@ export function LoginForm({
     try {
       // Always use current deployment's origin (critical for preview branches)
       const currentOrigin = typeof window !== 'undefined' ? window.location.origin : ''
-      console.log('🔧 [LoginForm] Initiating Google OAuth from:', currentOrigin)
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -84,25 +83,33 @@ export function LoginForm({
       className={cn('flex flex-col items-center gap-6', className)}
       {...props}
     >
-      <Card className="w-full max-w-sm">
+      <Card className="w-full max-w-md border-black/5 bg-white/85 shadow-[0_30px_90px_rgba(62,45,18,0.08)] backdrop-blur-sm">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl flex flex-col items-center justify-center gap-4">
-            <IconLogo className="size-12" />
-            Welcome back
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl border border-amber-200 bg-amber-50 text-amber-700 shadow-sm">
+            <IconLogo className="size-7" />
+          </div>
+          <CardTitle className="mt-4 font-serif text-3xl text-gray-950">
+            Welcome back to Hermes
           </CardTitle>
-          <CardDescription>Sign in to access your account</CardDescription>
+          <CardDescription className="text-sm leading-6 text-black/60">
+            Sign in to resume your research workflows, prospect lists, and outbound drafts.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-4">
             <Button
               variant="outline"
               type="button"
-              className="w-full"
+              className="h-11 w-full border-black/10 bg-white text-gray-900 hover:bg-stone-50"
               onClick={handleSocialLogin}
               disabled={isLoading}
             >
-              Sign In with Google
+              Continue with Google
             </Button>
+
+            <p className="text-center text-xs leading-5 text-black/45">
+              Google sign-in is the fastest path if you want Hermes to draft and send through Gmail later.
+            </p>
 
             <div className="relative my-2">
               <div className="absolute inset-0 flex items-center">
@@ -145,7 +152,7 @@ export function LoginForm({
                 />
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="h-11 w-full bg-black text-white hover:bg-black/90" disabled={isLoading}>
                 {isLoading ? 'Logging in...' : 'Sign In'}
               </Button>
             </form>

@@ -2,26 +2,23 @@
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Progress } from '@/components/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Separator } from '@/components/ui/separator'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
+import { cn } from '@/lib/utils'
 import {
-  Building,
+  Building2,
   CheckCircle2,
   Eye,
-  Plus,
+  Mail,
+  Paperclip,
   Send,
-  Sparkles,
   User,
-  X
+  Wand2
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Prospect } from './prospect-grid'
 
 interface EmailTemplate {
@@ -52,44 +49,45 @@ interface InteractiveEmailDrafterProps {
   onPreviewEmail?: (template: EmailTemplate, prospect: Prospect) => void
 }
 
+function initials(value?: string) {
+  if (!value) return 'HM'
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0]?.toUpperCase())
+    .join('') || 'HM'
+}
+
 export function InteractiveEmailDrafter({
   prospects = [],
-  searchSummary,
   step = 2,
   totalSteps = 5,
   onEmailsGenerated,
   onPreviewEmail
 }: InteractiveEmailDrafterProps) {
-  // Ensure we have prospects - try to load from sessionStorage if props are empty
   const [actualProspects, setActualProspects] = useState<Prospect[]>(prospects)
-  
+  const [selectedProspectIndex, setSelectedProspectIndex] = useState(0)
+
   useEffect(() => {
-    // If no prospects provided, try to load from sessionStorage
     if (actualProspects.length === 0) {
       try {
         const stored = sessionStorage.getItem('hermes-latest-prospects')
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setActualProspects(parsed)
-          }
+        if (!stored) return
+        const parsed = JSON.parse(stored)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setActualProspects(parsed)
         }
-      } catch (e) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn('Failed to load prospects from sessionStorage:', e)
-        }
-      }
+      } catch {}
     }
-  }, [prospects, actualProspects.length])
-  
-  // Update when props change
+  }, [actualProspects.length])
+
   useEffect(() => {
     if (prospects.length > 0) {
       setActualProspects(prospects)
     }
   }, [prospects])
-  
-  // Pre-fill campaign fields from search context
+
   const getInitialObjective = () => {
     try {
       const stored = sessionStorage.getItem('hermes-search-context')
@@ -97,12 +95,12 @@ export function InteractiveEmailDrafter({
         const context = JSON.parse(stored)
         const persona = context.targetPersona || 'decision makers'
         const offer = context.offer || 'our services'
-        return `Connect with ${persona} to discuss ${offer}`
+        return `Reach ${persona} about ${offer}`
       }
     } catch {}
     return ''
   }
-  
+
   const getInitialValueProp = () => {
     try {
       const stored = sessionStorage.getItem('hermes-search-context')
@@ -113,21 +111,34 @@ export function InteractiveEmailDrafter({
     } catch {}
     return ''
   }
-  
-  // State management
+
   const [campaignType, setCampaignType] = useState<'single' | 'sequence'>('single')
   const [emailCount, setEmailCount] = useState(1)
-  const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>([
-    {
-      id: '1',
-      name: 'Initial Outreach',
-      type: 'initial',
-      subject: '',
-      body: '',
-      tone: 'professional',
-      delayDays: 0
+  const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const stored = sessionStorage.getItem('hermes-draft-templates')
+        if (stored) return JSON.parse(stored)
+      }
+    } catch {}
+    return [
+      {
+        id: '1',
+        name: 'Initial Outreach',
+        type: 'initial',
+        subject: '',
+        body: '',
+        tone: 'professional',
+        delayDays: 0
+      }
+    ]
+  })
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && emailTemplates) {
+      sessionStorage.setItem('hermes-draft-templates', JSON.stringify(emailTemplates))
     }
-  ])
+  }, [emailTemplates])
   const [personalization, setPersonalization] = useState<EmailPersonalizationSettings>({
     includePersonalNote: true,
     includeCompanyContext: true,
@@ -137,89 +148,102 @@ export function InteractiveEmailDrafter({
   })
   const [isGenerating, setIsGenerating] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState(0)
-  const [campaignObjective, setCampaignObjective] = useState(getInitialObjective())
-  const [valueProposition, setValueProposition] = useState(getInitialValueProp())
 
-  // Add new email to sequence
-  const addEmailToSequence = () => {
-    if (emailTemplates.length >= 4) return
-    
-    const nextStep = emailTemplates.length + 1
-    const newEmail: EmailTemplate = {
-      id: Date.now().toString(),
-      name: `Follow-up ${nextStep - 1}`,
-      type: nextStep === 2 ? 'follow_up_1' : nextStep === 3 ? 'follow_up_2' : 'follow_up_3',
-      subject: '',
-      body: '',
-      tone: 'professional',
-      delayDays: nextStep * 3 // Default 3 days between emails
+  // Auto-generate drafts on load if none exist
+  useEffect(() => {
+    if (actualProspects.length > 0 && !emailTemplates[0].body && !isGenerating) {
+      generateEmailContent()
     }
-    setEmailTemplates([...emailTemplates, newEmail])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [actualProspects.length])
+
+  const activeProspect = actualProspects[Math.min(selectedProspectIndex, Math.max(actualProspects.length - 1, 0))]
+  const activeTemplate = emailTemplates[selectedTemplate] || emailTemplates[0]
+
+  useEffect(() => {
+    if (selectedProspectIndex > Math.max(actualProspects.length - 1, 0)) {
+      setSelectedProspectIndex(0)
+    }
+  }, [actualProspects.length, selectedProspectIndex])
+
+  useEffect(() => {
+    if (selectedTemplate > Math.max(emailTemplates.length - 1, 0)) {
+      setSelectedTemplate(0)
+    }
+  }, [emailTemplates.length, selectedTemplate])
+
+  const syncTemplateCount = (count: number) => {
+    const normalized = Math.max(1, Math.min(4, count))
+    setEmailCount(normalized)
+    setEmailTemplates(previous => {
+      const next = [...previous]
+      while (next.length < normalized) {
+        const stepIndex = next.length + 1
+        next.push({
+          id: `${Date.now()}-${stepIndex}`,
+          name: stepIndex === 1 ? 'Initial Outreach' : `Follow-up ${stepIndex - 1}`,
+          type: stepIndex === 2 ? 'follow_up_1' : stepIndex === 3 ? 'follow_up_2' : stepIndex === 4 ? 'follow_up_3' : 'initial',
+          subject: '',
+          body: '',
+          tone: 'professional',
+          delayDays: stepIndex === 1 ? 0 : stepIndex * 3
+        })
+      }
+      return next.slice(0, normalized)
+    })
   }
 
-  // Remove email from sequence
-  const removeEmail = (index: number) => {
-    if (emailTemplates.length <= 1 || index === 0) return
-    setEmailTemplates(emailTemplates.filter((_, i) => i !== index))
-  }
-
-  // Update email template
   const updateTemplate = (index: number, updates: Partial<EmailTemplate>) => {
-    setEmailTemplates(templates => 
-      templates.map((template, i) => 
-        i === index ? { ...template, ...updates } : template
-      )
+    setEmailTemplates(templates =>
+      templates.map((template, i) => (i === index ? { ...template, ...updates } : template))
     )
   }
 
-  // Generate AI-powered email content
   const generateEmailContent = async () => {
     if (actualProspects.length === 0) {
       alert('No prospects available. Please run a prospect search first.')
       return
     }
-    
-    if (!campaignObjective.trim()) {
-      alert('Please enter a campaign objective before generating emails.')
+
+    const objective = getInitialObjective()
+    if (!objective.trim()) {
+      alert('Hermes needs to learn about your offer and objective first.')
       return
     }
-    
+
     setIsGenerating(true)
-    
+
     try {
       const response = await fetch('/api/email/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prospects: actualProspects.slice(0, 3), // Sample prospects for context
-          campaignObjective,
-          valueProposition,
+          prospects: [activeProspect], 
+          campaignObjective: getInitialObjective(),
+          valueProposition: getInitialValueProp(),
           personalization,
           emailTypes: emailTemplates.map(t => ({ type: t.type, tone: t.tone }))
         })
       })
-      
+
       if (!response.ok) {
         const error = await response.json().catch(() => ({ error: 'Failed to generate emails' }))
         throw new Error(error.error || 'Failed to generate emails')
       }
-      
+
       const result = await response.json()
-      
-      if (result.success && result.templates) {
-        const updatedTemplates = emailTemplates.map((template, index) => ({
+      if (!result.success || !result.templates) {
+        throw new Error(result.error || 'Failed to generate email templates')
+      }
+
+      setEmailTemplates(current =>
+        current.map((template, index) => ({
           ...template,
           subject: result.templates[index]?.subject || template.subject,
           body: result.templates[index]?.body || template.body
         }))
-        setEmailTemplates(updatedTemplates)
-      } else {
-        throw new Error(result.error || 'Failed to generate email templates')
-      }
+      )
     } catch (error) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.error('Failed to generate email content:', error)
-      }
       alert(`Failed to generate emails: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsGenerating(false)
@@ -227,383 +251,314 @@ export function InteractiveEmailDrafter({
   }
 
   const handlePreview = () => {
-    if (actualProspects.length > 0 && selectedTemplate < emailTemplates.length) {
-      onPreviewEmail?.(emailTemplates[selectedTemplate], actualProspects[0])
+    if (activeProspect && activeTemplate) {
+      onPreviewEmail?.(activeTemplate, activeProspect)
     }
   }
 
-  const generatingRef = { current: false } as any
   const handleGenerate = () => {
-    if (generatingRef.current) return
     if (actualProspects.length === 0) {
       alert('No prospects available. Please run a prospect search first.')
       return
     }
-    generatingRef.current = true
-    try {
-      onEmailsGenerated?.(emailTemplates)
-    } finally {
-      setTimeout(() => { generatingRef.current = false }, 1000)
-    }
+    onEmailsGenerated?.(emailTemplates)
   }
 
-  const sampleProspect = actualProspects[0]
+  const personalizationRows = useMemo(
+    () => [
+      { key: 'includePersonalNote', label: 'Personal note', desc: 'Reference a person-level signal when available.' },
+      { key: 'includeCompanyContext', label: 'Company context', desc: 'Use site positioning and category context.' },
+      { key: 'includeRecentActivity', label: 'Recent activity', desc: 'Pull fresh program, launch, or listing signals.' },
+      { key: 'includeIndustryInsights', label: 'Industry insight', desc: 'Use one market or category hook in the draft.' }
+    ],
+    []
+  )
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Progress indicator */}
-      <div className="flex items-center space-x-4">
-        <div className="flex-1">
-          <div className="flex justify-between text-sm text-muted-foreground mb-2">
-            <span>Step {step} of {totalSteps}: Draft Email Campaign</span>
-            <span>{Math.round((step / totalSteps) * 100)}% Complete</span>
+    <div className="mx-auto w-full max-w-7xl space-y-6">
+      <div className="bg-white border border-gray-200 shadow-sm rounded-3xl p-6 md:p-8">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div className="text-[11px] uppercase tracking-[0.3em] font-semibold text-gray-400">
+              Step {step} of {totalSteps}
+            </div>
+            <h2 className="mt-3 font-serif text-4xl leading-none text-gray-900 md:text-[3.2rem]">
+              Email Draft Studio
+            </h2>
+            <p className="mt-3 max-w-3xl text-sm leading-7 text-gray-500 md:text-[15px]">
+              Review the queue, generate a draft with GPT-5, then tighten the copy before Hermes prepares the Gmail send.
+            </p>
           </div>
-          <Progress value={(step / totalSteps) * 100} className="w-full" />
+
+          <div className="flex flex-wrap gap-2">
+            <Badge className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-gray-700 font-medium">
+              {actualProspects.length} prospects
+            </Badge>
+            <Badge className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-gray-700 font-medium">
+              {emailTemplates.length} drafts
+            </Badge>
+            <Badge className="rounded-full border border-[hsl(var(--hermes-gold))]/30 bg-[hsl(var(--hermes-gold))]/10 px-3 py-1.5 text-[hsl(var(--hermes-gold-dark))]">
+              Gmail-ready
+            </Badge>
+          </div>
         </div>
       </div>
 
-      {/* Campaign Summary */}
-      <Card className="border-green-200 bg-green-50">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-green-900 flex items-center space-x-2">
-            <CheckCircle2 className="w-5 h-5" />
-            <span>Prospects Found</span>
-          </CardTitle>
-          <CardDescription className="text-green-700">
-            Ready to draft personalized emails for {actualProspects.length} qualified prospect{actualProspects.length !== 1 ? 's' : ''}
-          </CardDescription>
-        </CardHeader>
-        {sampleProspect && (
-          <CardContent className="text-sm text-green-800">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <User className="w-4 h-4" />
-                <span>Example: {sampleProspect.fullName}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Building className="w-4 h-4" />
-                <span>{sampleProspect.jobTitle} at {sampleProspect.company}</span>
+      <div className="grid gap-6 xl:grid-cols-[0.72fr_1.28fr]">
+        <div className="space-y-6">
+          <div className="bg-white border border-gray-200 shadow-sm rounded-3xl p-5">
+            <div className="flex items-center justify-between">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-gray-400">Inbox</div>
+              <div className="text-sm text-gray-500">Choose the company you want to draft against</div>
+            </div>
+            <div className="mt-4 space-y-2">
+              {actualProspects.length === 0 ? (
+                <div className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-4 text-sm text-gray-500">
+                  Run a prospect search first. Hermes will load the review queue here.
+                </div>
+              ) : (
+                actualProspects.slice(0, 8).map((prospect, index) => {
+                  const company = prospect.company || prospect.fullName || 'Unnamed prospect'
+                  const person = prospect.fullName && prospect.fullName !== prospect.company ? prospect.fullName : prospect.jobTitle || 'Role unconfirmed'
+                  const active = index === selectedProspectIndex
+                  return (
+                    <button
+                      key={`${prospect.id}-${index}`}
+                      type="button"
+                      onClick={() => setSelectedProspectIndex(index)}
+                      className={cn(
+                        'flex w-full items-start gap-3 rounded-2xl border px-4 py-4 text-left transition-all',
+                        active
+                          ? 'border-[hsl(var(--hermes-gold))] bg-white shadow-[0_4px_20px_rgba(214,157,74,0.08)]'
+                          : 'border-transparent bg-gray-50 hover:bg-gray-100/80'
+                      )}
+                    >
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--hermes-gold))]/10 text-sm font-semibold text-[hsl(var(--hermes-gold-dark))]">
+                        {initials(company)}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="truncate text-[15px] font-semibold text-gray-900">{company}</div>
+                          <div className="rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-400">
+                            Draft
+                          </div>
+                        </div>
+                        <div className="mt-1 text-sm text-gray-500">{person}</div>
+                      </div>
+                    </button>
+                  )
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Removed manual Campaign Setup blocks to enforce autonomous architecture */}
+        </div>
+
+        <div className="bg-white border border-gray-200 shadow-sm rounded-3xl p-5 md:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-gray-400">Editor</div>
+              <div className="mt-2 text-[15px] font-medium text-gray-600">
+                {activeProspect ? `Drafting against ${activeProspect.company || activeProspect.fullName}` : 'Drafting workspace'}
               </div>
             </div>
-          </CardContent>
-        )}
-      </Card>
+            <div className="flex flex-wrap gap-2">
+              {emailTemplates.length > 1 && emailTemplates.map((template, index) => (
+                <button
+                  key={template.id}
+                  type="button"
+                  onClick={() => setSelectedTemplate(index)}
+                  className={cn(
+                    'rounded-full px-3 py-1.5 text-[13px] font-medium transition-all shadow-sm',
+                    selectedTemplate === index
+                      ? 'bg-[hsl(var(--hermes-gold))] text-white border border-transparent'
+                      : 'border border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
+                  )}
+                >
+                  {index === 0 ? 'Initial' : `Follow-up ${index}`}
+                </button>
+              ))}
+            </div>
+          </div>
 
-      <Tabs defaultValue="setup" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="setup">Campaign Setup</TabsTrigger>
-          <TabsTrigger value="templates">Email Templates ({emailTemplates.length})</TabsTrigger>
-          <TabsTrigger value="personalization">Personalization</TabsTrigger>
-        </TabsList>
-
-        {/* Campaign Setup Tab */}
-        <TabsContent value="setup" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Campaign Configuration</CardTitle>
-              <CardDescription>
-                Define your campaign objective and structure.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="objective">Campaign Objective</Label>
-                  <Textarea
-                    id="objective"
-                    placeholder="e.g., Connect with decision makers to explore partnership opportunities..."
-                    value={campaignObjective}
-                    onChange={(e) => setCampaignObjective(e.target.value)}
-                    className="min-h-20"
-                  />
-                  <p className="text-xs text-gray-500">What do you want to achieve with this outreach?</p>
+          <div className="mt-5 grid gap-4 md:grid-cols-[0.4fr_0.6fr]">
+            <div className="rounded-2xl border border-gray-100 bg-gray-50/50 p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[hsl(var(--hermes-gold))]/10 text-sm font-semibold text-[hsl(var(--hermes-gold-dark))]">
+                  {initials(activeProspect?.company || activeProspect?.fullName)}
                 </div>
-
-                <div>
-                  <Label htmlFor="value-prop">Value Proposition</Label>
-                  <Textarea
-                    id="value-prop"
-                    placeholder="e.g., We help organizations achieve their goals through innovative solutions..."
-                    value={valueProposition}
-                    onChange={(e) => setValueProposition(e.target.value)}
-                    className="min-h-20"
-                  />
-                  <p className="text-xs text-gray-500">What unique value do you offer?</p>
+                <div className="min-w-0">
+                  <div className="text-[15px] font-semibold text-gray-900">{activeProspect?.company || activeProspect?.fullName || 'No prospect selected'}</div>
+                  <div className="mt-1 text-sm text-gray-500">{activeProspect?.location || 'Location not found'}</div>
                 </div>
               </div>
 
-              <Separator />
+              <div className="mt-5 grid gap-3">
+                <div className="rounded-[1rem] border border-gray-200 bg-white px-4 py-3 shadow-sm">
+                  <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-400">
+                    <User className="h-3.5 w-3.5" />
+                    Decision maker
+                  </div>
+                  <div className="text-[14px] font-medium text-gray-900">{activeProspect?.fullName || 'Unknown recipient'}</div>
+                  <div className="mt-0.5 text-[13px] text-gray-500">{activeProspect?.jobTitle || 'Role not confirmed yet'}</div>
+                </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <Label>Campaign Type</Label>
-                  <Select 
-                    value={campaignType} 
-                    onValueChange={(value: 'single' | 'sequence') => setCampaignType(value)}
+                <div className="rounded-[1rem] border border-gray-200 bg-white px-4 py-3 shadow-sm">
+                  <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-400">
+                    <Building2 className="h-3.5 w-3.5" />
+                    Signals
+                  </div>
+                  <div className="text-[13px] leading-relaxed text-gray-600">
+                    {activeProspect?.note || 'Hermes will use company evidence, contact context, and offer fit to personalize the draft.'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] ring-1 ring-gray-200/50">
+              <div className="grid gap-4">
+                <div>
+                  <Label className="text-gray-700">Recipient</Label>
+                  <Input
+                    value={activeProspect?.email || activeProspect?.fullName || ''}
+                    readOnly
+                    className="mt-2 border-transparent bg-gray-50 text-gray-900 placeholder:text-gray-400 focus-visible:ring-0 cursor-default"
+                    placeholder="Decision maker email"
+                  />
+                </div>
+                <div>
+                  <Label className="text-gray-700">Tone</Label>
+                  <Select
+                    value={activeTemplate?.tone || 'professional'}
+                    onValueChange={(value: 'professional' | 'casual' | 'friendly') => updateTemplate(selectedTemplate, { tone: value })}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="mt-2 border-gray-200 bg-white text-gray-900 focus:ring-[hsl(var(--hermes-gold))]/50">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="single">Single Email</SelectItem>
-                      <SelectItem value="sequence">Email Sequence</SelectItem>
+                      <SelectItem value="professional">Professional</SelectItem>
+                      <SelectItem value="friendly">Friendly</SelectItem>
+                      <SelectItem value="casual">Casual</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-
-                {campaignType === 'sequence' && (
-                  <div className="space-y-4">
-                    <Label>Number of Follow-ups</Label>
-                    <Select 
-                      value={emailCount.toString()} 
-                      onValueChange={(value) => {
-                        const count = parseInt(value)
-                        setEmailCount(count)
-                        // Adjust templates array
-                        if (count > emailTemplates.length) {
-                          while (emailTemplates.length < count) {
-                            addEmailToSequence()
-                          }
-                        }
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">1 Email Only</SelectItem>
-                        <SelectItem value="2">1 Follow-up</SelectItem>
-                        <SelectItem value="3">2 Follow-ups</SelectItem>
-                        <SelectItem value="4">3 Follow-ups</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Email Templates Tab */}
-        <TabsContent value="templates" className="space-y-6">
-          {emailTemplates.map((template, index) => (
-            <Card key={template.id} className={selectedTemplate === index ? 'ring-2 ring-blue-500' : ''}>
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <Badge variant={index === 0 ? "default" : "secondary"}>
-                      {index === 0 ? 'Initial Email' : `Follow-up ${index}`}
-                    </Badge>
-                    <Input
-                      value={template.name}
-                      onChange={(e) => updateTemplate(index, { name: e.target.value })}
-                      className="w-40"
-                    />
-                    {index > 0 && (
-                      <span className="text-sm text-muted-foreground">
-                        Send after {template.delayDays} days
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant={selectedTemplate === index ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setSelectedTemplate(index)}
-                    >
-                      {selectedTemplate === index ? 'Editing' : 'Edit'}
-                    </Button>
-                    {index > 0 && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeEmail(index)}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {index > 0 && (
-                    <div>
-                      <Label>Delay (days)</Label>
-                      <Input
-                        type="number"
-                        value={template.delayDays}
-                        onChange={(e) => updateTemplate(index, { delayDays: parseInt(e.target.value) || 0 })}
-                        min="1"
-                        max="30"
-                      />
-                    </div>
-                  )}
-                  
-                  <div>
-                    <Label>Tone</Label>
-                    <Select 
-                      value={template.tone} 
-                      onValueChange={(value: 'professional' | 'casual' | 'friendly') => 
-                        updateTemplate(index, { tone: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="professional">Professional</SelectItem>
-                        <SelectItem value="friendly">Friendly</SelectItem>
-                        <SelectItem value="casual">Casual</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
                 <div>
-                  <Label>Subject Line</Label>
+                  <Label className="text-gray-700">Subject</Label>
                   <Input
-                    placeholder="e.g., Quick question about {{company}}'s API strategy"
-                    value={template.subject}
-                    onChange={(e) => updateTemplate(index, { subject: e.target.value })}
+                    value={activeTemplate?.subject || ''}
+                    onChange={(e) => updateTemplate(selectedTemplate, { subject: e.target.value })}
+                    className="mt-2 border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus-visible:ring-[hsl(var(--hermes-gold))]/50"
+                    placeholder="Subject line"
                   />
                 </div>
-
                 <div>
-                  <Label>Email Body</Label>
+                  <Label className="text-gray-700">Body</Label>
                   <Textarea
-                    placeholder={`Hi {{firstName}},\n\nI noticed {{company}} is... \n\nWould you be interested in a quick 15-minute call to discuss?\n\nBest regards,\n[Your name]`}
-                    value={template.body}
-                    onChange={(e) => updateTemplate(index, { body: e.target.value })}
-                    className="min-h-40"
+                    value={activeTemplate?.body || ''}
+                    onChange={(e) => updateTemplate(selectedTemplate, { body: e.target.value })}
+                    className="mt-2 min-h-[340px] resize-none border-gray-200 bg-white text-[15px] leading-relaxed text-gray-900 placeholder:text-gray-400 focus-visible:ring-[hsl(var(--hermes-gold))]/50"
+                    placeholder="Hermes will write the draft here."
                   />
-                  <div className="text-xs text-muted-foreground mt-2">
-                    Use variables: {'{'}firstName{'}'}, {'{'}lastName{'}'}, {'{'}company{'}'}, {'{'}jobTitle{'}'}, {'{'}industry{'}'}
-                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-
-          {campaignType === 'sequence' && emailTemplates.length < 4 && (
-            <Button onClick={addEmailToSequence} variant="outline" className="w-full">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Follow-up Email
-            </Button>
-          )}
-        </TabsContent>
-
-        {/* Personalization Tab */}
-        <TabsContent value="personalization" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Personalization Settings</CardTitle>
-              <CardDescription>
-                Configure how emails should be personalized for each prospect.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <h4 className="font-medium">Content Personalization</h4>
-                  <div className="space-y-3">
-                    {[
-                      { key: 'includePersonalNote', label: 'Personal note based on LinkedIn activity', desc: 'Reference recent posts or updates' },
-                      { key: 'includeCompanyContext', label: 'Company-specific context', desc: 'Mention recent company news or achievements' },
-                      { key: 'includeRecentActivity', label: 'Recent industry activity', desc: 'Reference industry trends or events' },
-                      { key: 'includeIndustryInsights', label: 'Industry insights', desc: 'Include relevant industry statistics' }
-                    ].map(({ key, label, desc }) => (
-                      <div key={key} className="flex items-start space-x-3">
-                        <Checkbox
-                          checked={personalization[key as keyof EmailPersonalizationSettings] as boolean}
-                          onCheckedChange={(checked) => 
-                            setPersonalization(prev => ({ 
-                              ...prev, 
-                              [key]: checked 
-                            }))
-                          }
-                          className="mt-0.5"
-                        />
-                        <div>
-                          <p className="text-sm font-medium">{label}</p>
-                          <p className="text-xs text-muted-foreground">{desc}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                <div className="flex items-center justify-end gap-2 text-xs text-gray-400">
+                  <Paperclip className="h-3.5 w-3.5" />
+                  Attachments handled in Gmail step
                 </div>
+              </div>
+            </div>
+          </div>
 
-                <div className="space-y-4">
-                  <h4 className="font-medium">Call to Action</h4>
-                  <div className="space-y-3">
-                    <Label>CTA Type</Label>
-                    <Select 
-                      value={personalization.callToActionType} 
-                      onValueChange={(value) => 
-                        setPersonalization(prev => ({ 
-                          ...prev, 
-                          callToActionType: value as any
+          <div className="mt-5 grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.26em] text-gray-400">Personalization</div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {personalizationRows.map((row) => (
+                  <label key={row.key} className="flex cursor-pointer items-start gap-3 rounded-[1rem] border border-transparent bg-gray-50 hover:bg-gray-100 px-4 py-3 transition-colors">
+                    <Checkbox
+                      checked={Boolean(personalization[row.key as keyof EmailPersonalizationSettings])}
+                      onCheckedChange={(checked) =>
+                        setPersonalization(prev => ({
+                          ...prev,
+                          [row.key]: Boolean(checked)
                         }))
                       }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="meeting">Schedule Meeting</SelectItem>
-                        <SelectItem value="demo">Request Demo</SelectItem>
-                        <SelectItem value="call">Quick Call</SelectItem>
-                        <SelectItem value="reply">Simple Reply</SelectItem>
-                        <SelectItem value="custom">Custom CTA</SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    {personalization.callToActionType === 'custom' && (
-                      <div>
-                        <Label>Custom CTA</Label>
-                        <Input
-                          placeholder="e.g., Download our whitepaper"
-                          value={personalization.customCTA || ''}
-                          onChange={(e) => 
-                            setPersonalization(prev => ({ 
-                              ...prev, 
-                              customCTA: e.target.value
-                            }))
-                          }
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
+                      className="mt-0.5 border-gray-300 text-[hsl(var(--hermes-gold))] focus-visible:ring-[hsl(var(--hermes-gold))]"
+                    />
+                    <span>
+                      <span className="block text-sm font-semibold text-gray-900">{row.label}</span>
+                      <span className="mt-0.5 block text-xs leading-relaxed text-gray-500">{row.desc}</span>
+                    </span>
+                  </label>
+                ))}
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </div>
 
-      {/* Action Buttons */}
-      <div className="flex items-center justify-between p-6 border-t bg-muted/30">
-        <div className="text-sm text-muted-foreground">
-          {emailTemplates.length} email{emailTemplates.length > 1 ? 's' : ''} • {actualProspects.length} prospect{actualProspects.length !== 1 ? 's' : ''}
-        </div>
-        <div className="flex space-x-3">
-          <Button variant="outline" onClick={handlePreview} disabled={!sampleProspect}>
-            <Eye className="w-4 h-4 mr-2" />
-            Preview Email
-          </Button>
-          <Button 
-            onClick={generateEmailContent} 
-            disabled={isGenerating || !campaignObjective.trim()}
-            variant="outline"
-          >
-            <Sparkles className="w-4 h-4 mr-2" />
-            {isGenerating ? 'Generating...' : 'AI Generate Content'}
-          </Button>
-          <Button onClick={handleGenerate} className="bg-gradient-to-r from-blue-600 to-purple-600">
-            <Send className="w-4 h-4 mr-2" />
-            Finalize Campaign
-          </Button>
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.26em] text-gray-400">CTA Generation</div>
+              <div className="mt-4 space-y-4">
+                <div>
+                  <Label className="text-gray-700">Call to action</Label>
+                  <Select
+                    value={personalization.callToActionType}
+                    onValueChange={(value) => setPersonalization(prev => ({ ...prev, callToActionType: value as EmailPersonalizationSettings['callToActionType'] }))}
+                  >
+                    <SelectTrigger className="mt-2 border-gray-200 bg-gray-50 text-gray-900 focus:ring-[hsl(var(--hermes-gold))]/50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="meeting">Schedule meeting</SelectItem>
+                      <SelectItem value="demo">Request demo</SelectItem>
+                      <SelectItem value="call">Quick call</SelectItem>
+                      <SelectItem value="reply">Simple reply</SelectItem>
+                      <SelectItem value="custom">Custom CTA</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {personalization.callToActionType === 'custom' ? (
+                  <div>
+                    <Label className="text-gray-700">Custom CTA</Label>
+                    <Input
+                      value={personalization.customCTA || ''}
+                      onChange={(e) => setPersonalization(prev => ({ ...prev, customCTA: e.target.value }))}
+                      className="mt-2 border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus-visible:ring-[hsl(var(--hermes-gold))]/50"
+                      placeholder="What should Hermes ask for?"
+                    />
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-col gap-4 border-t border-gray-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-500">
+              <CheckCircle2 className="h-4 w-4 text-[hsl(var(--hermes-gold-dark))]" />
+              {actualProspects.length} prospects queued • {emailTemplates.length} draft{emailTemplates.length !== 1 ? 's' : ''}
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Button variant="outline" onClick={handlePreview} disabled={!activeProspect} className="border-gray-200 bg-white text-gray-700 hover:bg-gray-50">
+                <Eye className="mr-2 h-4 w-4" />
+                Preview
+              </Button>
+              <Button
+                onClick={generateEmailContent}
+                disabled={isGenerating || !getInitialObjective().trim()}
+                variant="outline"
+                className="border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+              >
+                <Wand2 className="mr-2 h-4 w-4" />
+                {isGenerating ? 'Generating…' : 'Autodraft with GPT-5'}
+              </Button>
+              <Button
+                onClick={handleGenerate}
+                disabled={isGenerating || emailTemplates[0]?.body.length === 0}
+                className="rounded-full shadow-md bg-[hsl(var(--hermes-gold))] px-6 font-semibold text-white hover:bg-[hsl(var(--hermes-gold-dark))]"
+              >
+                <Send className="mr-2 h-4 w-4" />
+                Review & Send
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

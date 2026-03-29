@@ -59,9 +59,22 @@ export interface ApolloPersonSearchParams {
   per_page?: number // max 100
 }
 
+export interface ApolloPersonMatchParams {
+  email?: string
+  linkedin_url?: string
+  first_name?: string
+  last_name?: string
+  organization_name?: string
+  domain?: string
+  reveal_personal_emails?: boolean
+  reveal_phone_number?: boolean
+  run_waterfall_email?: boolean
+  run_waterfall_phone?: boolean
+}
+
 export class ApolloClient {
   private apiKey: string
-  private baseUrl = 'https://api.apollo.io/v1'
+  private baseUrl = 'https://api.apollo.io/api/v1'
   
   constructor(apiKey?: string) {
     this.apiKey = apiKey || process.env.APOLLO_API_KEY || ''
@@ -71,17 +84,21 @@ export class ApolloClient {
     }
   }
   
+  private getHeaders() {
+    return {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache',
+      Authorization: `Bearer ${this.apiKey}`
+    }
+  }
+
   /**
-   * Enrich a person by email or LinkedIn URL
+   * Enrich a person by email or LinkedIn URL.
+   * Official docs:
+   * - POST /api/v1/people/match
+   * - Supports optional waterfall email/phone enrichment
    */
-  async enrichPerson(params: {
-    email?: string
-    linkedin_url?: string
-    first_name?: string
-    last_name?: string
-    organization_name?: string
-    domain?: string
-  }): Promise<ApolloPersonEnrichment | null> {
+  async enrichPerson(params: ApolloPersonMatchParams): Promise<ApolloPersonEnrichment | null> {
     if (!this.apiKey) {
       console.warn('⚠️ [Apollo] Cannot enrich person - no API key')
       return null
@@ -90,11 +107,7 @@ export class ApolloClient {
     try {
       const response = await fetch(`${this.baseUrl}/people/match`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache',
-          'X-Api-Key': this.apiKey
-        },
+        headers: this.getHeaders(),
         body: JSON.stringify(params)
       })
       
@@ -112,7 +125,8 @@ export class ApolloClient {
   }
   
   /**
-   * Search for people matching criteria
+   * Search for people matching criteria.
+   * Uses Apollo's API-first people search endpoint, which is optimized for net-new prospecting.
    */
   async searchPeople(params: ApolloPersonSearchParams): Promise<ApolloPersonEnrichment[]> {
     if (!this.apiKey) {
@@ -121,13 +135,9 @@ export class ApolloClient {
     }
     
     try {
-      const response = await fetch(`${this.baseUrl}/mixed_people/search`, {
+      const response = await fetch(`${this.baseUrl}/mixed_people/api_search`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache',
-          'X-Api-Key': this.apiKey
-        },
+        headers: this.getHeaders(),
         body: JSON.stringify({
           ...params,
           per_page: params.per_page || 25
@@ -157,23 +167,22 @@ export class ApolloClient {
     }
     
     try {
-      const response = await fetch(`${this.baseUrl}/organizations/enrich`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache',
-          'X-Api-Key': this.apiKey
-        },
-        body: JSON.stringify({ domain })
+      const url = new URL(`${this.baseUrl}/organizations/enrich`)
+      url.searchParams.set('domain', domain)
+
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: this.getHeaders(),
+        cache: 'no-store'
       })
-      
+
       if (!response.ok) {
         console.error('❌ [Apollo] Company enrichment failed:', response.statusText)
         return null
       }
-      
+
       const data = await response.json()
-      return data.organization as ApolloCompanyEnrichment
+      return (data.organization || data.account) as ApolloCompanyEnrichment
     } catch (error) {
       console.error('❌ [Apollo] Company enrichment error:', error)
       return null
@@ -184,4 +193,3 @@ export class ApolloClient {
 export function createApolloClient(): ApolloClient {
   return new ApolloClient()
 }
-

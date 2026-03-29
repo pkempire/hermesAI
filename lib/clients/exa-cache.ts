@@ -3,6 +3,7 @@
  * Optimizes speed by reusing existing websets instead of creating new ones
  */
 
+import { logger } from '@/lib/utils/logger'
 import { ExaWebsetsClient } from './exa-websets'
 
 interface CachedWebset {
@@ -71,25 +72,29 @@ class ExaWebsetCache {
         const items = await exa.listItems(cached.websetId, { limit: params.targetCount })
 
         if (items.data.length >= params.targetCount) {
-          console.log(`🔄 [ExaCache] Reusing completed webset ${cached.websetId} with ${items.data.length} results`)
+          logger.debug('[ExaCache] Reusing completed webset', { websetId: cached.websetId, results: items.data.length })
           cached.lastUsed = now
           return cached.websetId
         }
 
         // TODO: Could extend the webset with more results here
         // For now, create new webset if we need more results
-        console.log(`🔄 [ExaCache] Webset ${cached.websetId} has ${items.data.length} results, need ${params.targetCount}`)
+        logger.debug('[ExaCache] Cached webset is short on results', {
+          websetId: cached.websetId,
+          currentResults: items.data.length,
+          requestedResults: params.targetCount
+        })
       }
 
       // If webset is still running, reuse it
       if (webset.status === 'running' || webset.status === 'processing') {
-        console.log(`🔄 [ExaCache] Reusing running webset ${cached.websetId}`)
+        logger.debug('[ExaCache] Reusing running webset', { websetId: cached.websetId })
         cached.lastUsed = now
         return cached.websetId
       }
 
     } catch (error) {
-      console.warn(`⚠️ [ExaCache] Webset ${cached.websetId} no longer accessible:`, error)
+      logger.warn(`[ExaCache] Cached webset ${cached.websetId} is no longer accessible`, error)
       this.cache.delete(cacheKey)
     }
 
@@ -118,7 +123,7 @@ class ExaWebsetCache {
       status: 'active'
     })
 
-    console.log(`💾 [ExaCache] Cached webset ${websetId} with key ${cacheKey}`)
+    logger.debug('[ExaCache] Cached webset', { websetId, cacheKey })
   }
 
   /**
@@ -129,7 +134,7 @@ class ExaWebsetCache {
       if (cached.websetId === websetId) {
         cached.status = status
         cached.lastUsed = Date.now()
-        console.log(`📊 [ExaCache] Updated webset ${websetId} status to ${status}`)
+        logger.debug('[ExaCache] Updated cached webset status', { websetId, status })
         break
       }
     }
@@ -160,7 +165,7 @@ class ExaWebsetCache {
     // Delete entries
     entriesToDelete.forEach(key => {
       this.cache.delete(key)
-      console.log(`🗑️ [ExaCache] Removed cache entry ${key}`)
+      logger.debug('[ExaCache] Removed cache entry', { key })
     })
   }
 
@@ -192,7 +197,7 @@ export async function createOrReuseWebset(
   params: WebsetSearchParams,
   exa: ExaWebsetsClient
 ): Promise<{ websetId: string; isReused: boolean }> {
-  console.log('🚀 [ExaCache] Checking for reusable webset...')
+  logger.debug('[ExaCache] Checking for reusable webset')
 
   // Try to find reusable webset
   const reusableWebsetId = await exaWebsetCache.findReusableWebset(params, exa)
@@ -202,10 +207,10 @@ export async function createOrReuseWebset(
   }
 
   // Create new webset if no reusable one found
-  console.log('🔧 [ExaCache] No reusable webset found, creating new one...')
+  logger.debug('[ExaCache] No reusable webset found, creating a new one')
 
   // Convert params to Exa format (reuse existing function)
-  const { createProspectSearchCriteria, createProspectEnrichments } = await import('./exa-websets')
+  const { buildWebsetEnrichments, createProspectSearchCriteria } = await import('./exa-websets')
 
   const searchCriteria = createProspectSearchCriteria({
     query: params.query,
@@ -216,11 +221,7 @@ export async function createOrReuseWebset(
     filters: {}
   })
 
-  const enrichments = params.enrichments.map(e => ({
-    description: `Extract the person's ${e.label.toLowerCase()}`,
-    format: 'text' as const,
-    instructions: `Look for and extract the ${e.label.toLowerCase()} from the profile or page content.`
-  }))
+  const enrichments = buildWebsetEnrichments(params.enrichments)
 
   // Deterministic externalId for Exa to avoid duplicate websets across restarts
   const normalizedCriteria = params.criteria

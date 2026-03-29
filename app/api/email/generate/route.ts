@@ -75,7 +75,7 @@ ${personalization.includeIndustryInsights ? '- Include industry insights' : ''}
 Sample Prospects:
 ${prospectContext.map((p: any) => `- ${p.name}, ${p.jobTitle} at ${p.company} (${p.industry})`).join('\n')}
 
-Return ONLY a JSON object with "subject" and "body" fields. Use placeholder variables like {{firstName}}, {{company}}, {{jobTitle}} for personalization.`
+Return ONLY a JSON object with "subject" and "body" fields. DO NOT use placeholder variables like {{firstName}} or brackets. Write the final email exactly as it would be sent out using the specific values from the targeted prospect provided in the context above (e.g. use their actual name, real job title, real company, and real signals). If a specific detail is missing, write around it seamlessly.`
 
       const userPrompt = isInitial 
         ? `Generate an initial cold email to introduce our solution and request ${personalization.callToActionType === 'custom' ? personalization.customCTA : `a ${personalization.callToActionType}`}.`
@@ -101,14 +101,14 @@ Return ONLY a JSON object with "subject" and "body" fields. Use placeholder vari
           logger.warn('Failed to parse AI response as JSON:', result.text)
           const lines = result.text.split('\n').filter(line => line.trim())
           emailContent = {
-            subject: lines[0]?.replace(/^Subject:?\s*/i, '') || `${isInitial ? 'Quick question about' : 'Following up on'} {{company}}`,
+            subject: lines[0]?.replace(/^Subject:?\s*/i, '') || `${isInitial ? 'Quick question regarding' : 'Following up with'} ${prospectContext[0]?.company || 'your team'}`,
             body: lines.slice(1).join('\n').replace(/^Body:?\s*/i, '') || result.text
           }
         }
 
         templates.push({
           type: emailType.type,
-          subject: emailContent.subject || `${isInitial ? 'Quick question about' : 'Following up on'} {{company}}`,
+          subject: emailContent.subject || `${isInitial ? 'Quick question regarding' : 'Following up with'} ${prospectContext[0]?.company || 'your team'}`,
           body: emailContent.body || result.text,
           tone: emailType.tone
         })
@@ -118,10 +118,10 @@ Return ONLY a JSON object with "subject" and "body" fields. Use placeholder vari
         // Fallback template
         templates.push({
           type: emailType.type,
-          subject: isInitial ? 'Quick question about {{company}}' : 'Following up on our previous email',
+          subject: isInitial ? `Quick question about ${prospectContext[0]?.company || 'your team'}` : 'Following up on our previous email',
           body: isInitial 
-            ? `Hi {{firstName}},\n\nI noticed {{company}} is in the ${prospectContext[0]?.industry || 'technology'} space.\n\n${valueProposition}\n\nWould you be open to a brief conversation about how we might help {{company}}?\n\nBest regards,`
-            : `Hi {{firstName}},\n\nI wanted to follow up on my previous email about helping {{company}} with ${campaignObjective.split(' ').slice(0, 5).join(' ')}...\n\nWould you have 10 minutes for a quick call this week?\n\nBest regards,`,
+            ? `Hi ${prospectContext[0]?.name?.split(' ')[0] || 'there'},\n\nI noticed ${prospectContext[0]?.company || 'your team'} is scaling in the ${prospectContext[0]?.industry || 'technology'} space.\n\n${valueProposition}\n\nWould you be open to a brief conversation about how we might help?\n\nBest regards,`
+            : `Hi ${prospectContext[0]?.name?.split(' ')[0] || 'there'},\n\nI wanted to follow up on my previous email about helping ${prospectContext[0]?.company || 'your team'} with ${campaignObjective.split(' ').slice(0, 5).join(' ')}.\n\nWould you have 10 minutes for a quick call this week?\n\nBest regards,`,
           tone: emailType.tone
         })
       }

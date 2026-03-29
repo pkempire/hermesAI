@@ -28,6 +28,29 @@ export function SignUpForm({
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
+  const handleGoogleSignUp = async () => {
+    const supabase = createClient()
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const currentOrigin = typeof window !== 'undefined' ? window.location.origin : ''
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${currentOrigin}/auth/oauth?next=/`,
+          scopes: 'https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.modify openid email profile',
+          queryParams: {
+            prompt: 'select_account'
+          }
+        }
+      })
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'An OAuth error occurred')
+      setIsLoading(false)
+    }
+  }
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     const supabase = createClient()
@@ -43,21 +66,8 @@ export function SignUpForm({
     try {
       const { error } = await supabase.auth.signUp({ email, password })
       if (error) throw error
-      // After account creation, redirect to Google sign-in to grant Gmail scopes and get 100 credits
-      // Always use current deployment's origin (critical for preview branches)
-      const currentOrigin = typeof window !== 'undefined' ? window.location.origin : ''
-      console.log('🔧 [SignUpForm] Initiating Google OAuth from:', currentOrigin)
-      await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${currentOrigin}/auth/oauth?next=/`,
-          scopes: 'https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.modify openid email profile',
-          queryParams: {
-            // Force account selection to prevent wrong account issue
-            prompt: 'select_account'
-          }
-        }
-      })
+      router.push('/auth/sign-up-success')
+      router.refresh()
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred')
     } finally {
@@ -70,17 +80,41 @@ export function SignUpForm({
       className={cn('flex flex-col items-center gap-6', className)}
       {...props}
     >
-      <Card className="w-full max-w-sm">
+      <Card className="w-full max-w-md border-black/5 bg-white/85 shadow-[0_30px_90px_rgba(62,45,18,0.08)] backdrop-blur-sm">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl flex flex-col items-center justify-center gap-4">
-            <IconLogo className="size-12" />
-            Create an account
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl border border-amber-200 bg-amber-50 text-amber-700 shadow-sm">
+            <IconLogo className="size-7" />
+          </div>
+          <CardTitle className="mt-4 font-serif text-3xl text-gray-950">
+            Launch your first Hermes workflow
           </CardTitle>
           <CardDescription>
-            Get started with 100 free credits. No credit card required.
+            Start with Google for the smoothest setup, Gmail permissions, and the cleanest first-run experience.
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 flex flex-col gap-3">
+            <Button
+              variant="outline"
+              type="button"
+              className="h-11 w-full border-black/10 bg-white text-gray-900 hover:bg-stone-50"
+              onClick={handleGoogleSignUp}
+              disabled={isLoading}
+            >
+              Continue with Google
+            </Button>
+            <p className="text-center text-xs leading-5 text-black/45">
+              This is the recommended path if you want Hermes to draft and send from your Gmail account.
+            </p>
+            <div className="relative my-1">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-muted-foreground">Or sign up with email</span>
+              </div>
+            </div>
+          </div>
           <form onSubmit={handleSignUp}>
             <div className="flex flex-col gap-4">
               <div className="grid gap-2">
@@ -121,7 +155,7 @@ export function SignUpForm({
                 />
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="h-11 w-full bg-black text-white hover:bg-black/90" disabled={isLoading}>
                 {isLoading ? 'Creating account...' : 'Sign Up'}
               </Button>
             </div>

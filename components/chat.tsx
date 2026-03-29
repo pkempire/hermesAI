@@ -3,9 +3,9 @@
 import { Model } from '@/lib/types/models'
 import { useChat } from '@ai-sdk/react'
 import { ChatRequestOptions, DefaultChatTransport, JSONValue, type UIMessage as Message } from 'ai'
-import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 import { ChatMessages } from './chat-messages'
 import { ChatPanel } from './chat-panel'
 
@@ -27,7 +27,6 @@ export function Chat({
   query?: string
   models?: Model[]
 }) {
-  const router = useRouter()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [isAtBottom, setIsAtBottom] = useState(true)
   const [showProgressTracker, setShowProgressTracker] = useState(false)
@@ -37,7 +36,7 @@ export function Chat({
   const [campaignStepLabel, setCampaignStepLabel] = useState('Configure Prospect Search')
   const stepsBrief = [
     'Configure Prospect Search',
-    'Searching and analyzing',
+    'Finding companies',
     'Discovery complete',
     'Draft emails',
     'Review & next steps'
@@ -54,34 +53,13 @@ export function Chat({
     body: {
       id
     },
-    onFinish: async () => {
-      // CRITICAL: Don't redirect if we're already on the search page
-      // This prevents losing messages by reloading the page
-      if (typeof window === 'undefined') return
-      
-      const currentPath = window.location.pathname
-      const targetPath = `/search/${id}`
-      
-      // If we're already on the search page, DO NOT redirect - just update the URL silently
-      if (currentPath === targetPath) {
-        // Already on the right page, just dispatch event for sidebar updates
-        try { window.dispatchEvent(new CustomEvent('chat-history-updated')) } catch {}
-        return
-      }
-      
-      // Only redirect if we're on a different page (like homepage)
-      // Wait longer for chat to be saved and messages to persist
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
+    onFinish: () => {
+      // Keep the active workspace stable after a streamed response.
+      // Saved chats can still be reopened from history without forcing
+      // an immediate route change that depends on persistence timing.
       try {
-        router.replace(targetPath)
-      } catch {
-        // Fallback for rare cases where router isn't ready yet
-        try { 
-          window.history.replaceState({}, '', targetPath)
-        } catch {}
-      }
-      try { window.dispatchEvent(new CustomEvent('chat-history-updated')) } catch {}
+        window.dispatchEvent(new CustomEvent('chat-history-updated'))
+      } catch {}
     },
     onData: (part: any) => {
       try {
@@ -135,28 +113,32 @@ export function Chat({
 
   const isLoading = status === 'submitted' || status === 'streaming'
   
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('🔧 [Chat] AI SDK v5 hook values:', { 
-      sendMessageExists: typeof sendMessage === 'function',
-      inputValue: input,
-      setInputExists: typeof setInput === 'function',
-      messagesLength: messages.length,
-      status,
-      isLoading,
-      error: error,
-      savedMessagesLength: savedMessages?.length || 0
-    })
-  }
-
   // Detect when prospect search tool is being used
   useEffect(() => {
-    const hasProspectSearchTool = messages.some((message: any) => 
-      message.role === 'assistant' && 
-      (message?.annotations)?.some((annotation: any) => 
-        annotation?.type === 'tool_call' && 
-        annotation?.data?.toolName === 'prospect_search'
+    const hasProspectSearchTool = messages.some((message: any) => {
+      if (message.role !== 'assistant') return false
+
+      const annotationMatch = (message?.annotations)?.some(
+        (annotation: any) =>
+          annotation?.type === 'tool_call' &&
+          annotation?.data?.toolName === 'prospect_search'
       )
-    )
+
+      if (annotationMatch) return true
+
+      const parts = Array.isArray(message?.parts) ? message.parts : []
+      return parts.some((part: any) => {
+        if (part?.type === 'tool-call') {
+          return part.toolName === 'prospect_search'
+        }
+
+        if (part?.type === 'tool-invocation') {
+          return part?.toolInvocation?.toolName === 'prospect_search'
+        }
+
+        return false
+      })
+    })
     
     if (hasProspectSearchTool && !showProgressTracker) {
       setShowProgressTracker(true)
@@ -199,37 +181,6 @@ export function Chat({
     window.addEventListener('pipeline-progress', handler as any)
     return () => window.removeEventListener('pipeline-progress', handler as any)
   }, [showProgressTracker])
-
-  // Surface short assistant suggestions emitted by sections
-  useEffect(() => {
-    const lastSuggestionTextRef = { current: '' as string }
-    const handler = (e: any) => {
-      const text = e?.detail?.text
-      if (!text) return
-      // Prevent duplicate suggestions from rapid successive events
-      if (lastSuggestionTextRef.current === text) return
-      lastSuggestionTextRef.current = text
-      setMessages((prev: any) => {
-        const last = prev[prev.length - 1] as any
-        if (last?.role === 'assistant') {
-          const lastText = Array.isArray(last?.parts)
-            ? (last.parts[last.parts.length - 1]?.text || '')
-            : ''
-          if (lastText === text) return prev
-        }
-        return [
-          ...prev,
-          {
-            id: crypto.randomUUID?.() || String(Date.now()),
-            role: 'assistant',
-            parts: [{ type: 'text', text }]
-          }
-        ]
-      })
-    }
-    window.addEventListener('chat-system-suggest', handler as any)
-    return () => window.removeEventListener('chat-system-suggest', handler as any)
-  }, [setMessages])
 
   // Convert messages array to sections array
   const sections = useMemo<ChatSection[]>(() => {
@@ -385,21 +336,11 @@ export function Chat({
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>, messageOverride?: string) => {
     e.preventDefault()
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('🔧 [Frontend] =================== USER SUBMITTED MESSAGE ===================')
-    }
-    
+
     // Use messageOverride if provided, otherwise use input value
     const messageToSend = messageOverride || input
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('🔧 [Frontend] Message to send:', messageToSend)
-      console.log('🔧 [Frontend] sendMessage function type:', typeof sendMessage)
-    }
-    
+
     if (!messageToSend || messageToSend.trim().length === 0) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('🔧 [Frontend] No message to submit')
-      }
       return
     }
     
@@ -429,29 +370,23 @@ export function Chat({
           setInput('')
         }
       } else {
-        if (process.env.NODE_ENV !== 'production') {
-          console.error('🔧 [Frontend] sendMessage is not a function:', sendMessage)
-        }
         toast.error('Chat functionality not ready, please refresh the page')
       }
     } catch (error) {
-      console.error('🔧 [Frontend] Error submitting message:', error)
       toast.error(`Error submitting message: ${error}`)
     }
   }
   
   // Create a wrapper function for template submissions
   const submitTemplateMessage = (message: string) => {
-    console.log('🔧 [Frontend] Template message submission:', message)
     const fakeEvent = { preventDefault: () => {} } as React.FormEvent<HTMLFormElement>
     onSubmit(fakeEvent, message)
   }
 
   return (
     <div
-      className="relative flex min-w-0 min-h-0 flex-1 overflow-hidden bg-gray-50 pt-0 h-screen md:h-full"
+      className="relative flex min-w-0 min-h-0 flex-1 overflow-hidden bg-gray-50 pt-0 h-full"
       data-testid="full-chat"
-      style={{ height: '100dvh' }} // Dynamic viewport height for mobile browsers
     >
       {showProgressTracker ? (
         // Campaign layout with compact progress at top; chat takes full width
@@ -507,8 +442,8 @@ export function Chat({
         </div>
       ) : (
         // Enhanced default layout with spatial depth
-        <div className="flex flex-col flex-1 relative z-10 min-h-0">
-          <div className="flex-1 relative overflow-hidden min-h-0">
+        <div className={cn("flex flex-col flex-1 relative z-10 min-h-0", messages.length === 0 ? "overflow-y-auto" : "")}>
+          <div className={cn("flex-1 relative min-h-0", messages.length === 0 ? "hidden" : "overflow-hidden")}>
             <ChatMessages
               sections={sections}
               data={uiData}
@@ -525,7 +460,7 @@ export function Chat({
               reload={handleReloadFrom}
             />
           </div>
-          <div className="relative border-t border-border">
+          <div className={cn("relative", messages.length === 0 ? "min-h-full py-12" : "border-t border-border")}>
             <ChatPanel
               input={input}
               handleInputChange={handleInputChange}
