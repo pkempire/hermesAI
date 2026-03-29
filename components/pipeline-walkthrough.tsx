@@ -34,21 +34,21 @@ const steps = [
     iconBg: 'bg-amber-50',
     iconColor: 'text-amber-600',
     accent: 'amber',
-    name: 'Website Scrape',
+    name: 'Read your offer',
     description:
-      'Before searching for anyone, Hermes visits your website — extracting positioning, ICP, and value prop. Every downstream search and email is grounded in what you actually sell.',
+      'Hermes visits your website first. It extracts your positioning, who you sell to, and what makes you different. This seeds every search and every email that follows.',
     facts: [
-      'Reads homepage, /about, and /pricing automatically',
-      'Extracts your ICP, offer, and key differentiators',
-      'Seeds all Exa custom enrichments from your offer context',
+      'Visits dentalsaas.com to extract offer context',
+      'Identifies ICP: Regional private dental practices',
+      'Detects value prop: Scaling patient acquisition in MA',
     ],
     logTitle: 'hermes-scrape.log',
     logLines: [
-      { text: 'GET https://yourdomain.com → 200 OK', color: 'text-emerald-400' },
+      { text: 'GET https://dentalsaas.com → 200 OK', color: 'text-emerald-400' },
       { text: 'Parsing offer context...' },
-      { text: 'ICP: "B2B SaaS founders, seed to Series B"', color: 'text-amber-300' },
-      { text: 'Offer: "outbound intelligence, 3× reply rates"', color: 'text-amber-300' },
-      { text: 'Custom enrichments seeded → ready ✓', color: 'text-emerald-400' },
+      { text: 'ICP: "Private Dental Practices, 10-50 emp"', color: 'text-amber-300' },
+      { text: 'Offer: "Scaling patient acquisition with SaaS"', color: 'text-amber-300' },
+      { text: 'Custom signals seeded for MA market ✓', color: 'text-emerald-400' },
     ],
   },
   {
@@ -59,21 +59,21 @@ const steps = [
     iconBg: 'bg-blue-50',
     iconColor: 'text-blue-600',
     accent: 'blue',
-    name: 'Exa Neural Search',
+    name: 'Map the market with Exa',
     description: null, // JSX below
     facts: [
-      'Neural semantic search — finds meaning, not keywords',
-      'Verified against your specific criteria in real-time',
-      'Custom enrichments generated per company from your offer',
+      'Neural semantic search finds 20 practices in MA',
+      'Filter: "between 10-50 employees"',
+      'Signal: "active for more than 5 years"',
     ],
     logTitle: 'exa-webset.log',
     logLines: [
-      { text: 'POST /websets/ → webset_abc123 created', color: 'text-emerald-400' },
-      { text: 'query: "B2B SaaS outbound intelligence tools..."' },
-      { text: 'enrichments[0]: "LinkedIn profile of VP Sales"' },
-      { text: 'enrichments[1]: "Does company use Salesforce?"' },
-      { text: 'status: running → idle (47 results)', color: 'text-blue-400' },
-      { text: '42 verified against criteria ✓', color: 'text-emerald-400' },
+      { text: 'POST /websets/ → dental_ma_set created', color: 'text-emerald-400' },
+      { text: 'query: "private dental practices in MA, 10-50 emp..."' },
+      { text: 'filter: "presence_on_web > 5 years"' },
+      { text: 'enrichments: "LinkedIn URL of Founder"' },
+      { text: 'status: running → idle (20 results)', color: 'text-blue-400' },
+      { text: '20 verified against criteria ✓', color: 'text-emerald-400' },
     ],
   },
   {
@@ -84,20 +84,20 @@ const steps = [
     iconBg: 'bg-orange-50',
     iconColor: 'text-orange-600',
     accent: 'orange',
-    name: 'Decision-Maker Resolver',
+    name: 'Resolve the Decision-Maker',
     description: null, // JSX below
     facts: [
-      'Resolves exact person by persona (CEO, VP Sales, etc.)',
-      'Business email verification with waterfall fallback',
-      'Hermes Take: why-fit reasoning grounded in real signals',
+      'Resolves exact contact: "Founder"',
+      'Extracts requested signal: "Google Reviews count"',
+      'Verifies email with waterfall fallback',
     ],
     logTitle: 'orangeslice.log',
     logLines: [
-      { text: 'company.linkedin.enrich → "Acme Corp, 120 emp"', color: 'text-emerald-400' },
-      { text: 'person.resolve → "Sarah Kim, VP Sales"', color: 'text-emerald-400' },
-      { text: 'person.contact.get → s.kim@acmecorp.com', color: 'text-amber-300' },
-      { text: 'hermes_take.whyFit: "Series B, scaling sales..."' },
-      { text: 'hermes_take.evidence[0]: "Hired 12 AEs in 6mo"' },
+      { text: 'company.linkedin.enrich → "Beacon Dental, MA"', color: 'text-emerald-400' },
+      { text: 'person.resolve → "Dr. Marcus Chen, Founder"', color: 'text-emerald-400' },
+      { text: 'person.contact.get → m.chen@beacondental.com', color: 'text-amber-300' },
+      { text: 'signal.extract → "Google Reviews: 156"', color: 'text-emerald-400' },
+      { text: 'hermes_take: "Scaling since 2018, 150+ reviews..."' },
       { text: 'email_draft → ready for review ✓', color: 'text-emerald-400' },
     ],
   },
@@ -106,32 +106,12 @@ const steps = [
 const descriptionJSX: Record<string, React.ReactNode> = {
   exa: (
     <span>
-      Hermes creates an{' '}
-      <a
-        href="https://exa.ai"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="font-semibold underline decoration-dotted underline-offset-2 hover:text-amber-700 inline-flex items-center gap-0.5"
-      >
-        Exa Webset <ExternalLink className="w-3 h-3" />
-      </a>
-      {' '}— an async semantic search job that finds companies matching your ICP across the live web.
-      Exa searches by meaning, not keywords, so it surfaces companies even if they&apos;d never self-categorize.
+      Exa finds 20 dental practices in Massachusetts that fit your exact criteria. It doesn&apos;t use keywords—it reads the web by meaning to find established practices with 10-50 employees that have been active for over 5 years.
     </span>
   ),
   orangeslice: (
     <span>
-      Each company passes through{' '}
-      <a
-        href="https://orangeslice.ai"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="font-semibold underline decoration-dotted underline-offset-2 hover:text-amber-700 inline-flex items-center gap-0.5"
-      >
-        Orangeslice <ExternalLink className="w-3 h-3" />
-      </a>
-      {' '}— which resolves the exact person matching your target persona, verifies their email, and pulls fresh signals.
-      Hermes generates a personalized Hermes Take and a ready-to-send email draft per account.
+      Orangeslice enriches each account to find the Founder, verify their email, and pull the exact technical signals requested—like Google Review counts—to build a hyper-personalized pitch.
     </span>
   ),
 }
