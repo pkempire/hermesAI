@@ -6,6 +6,7 @@ import type { UIMessage as Message } from 'ai'
 import { ArrowUp, ChevronDown, LoaderCircle, Mic, Paperclip, Square } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import Image from 'next/image'
 import Textarea from 'react-textarea-autosize'
 import { useArtifact } from './artifact/artifact-context'
 import { HomeCommandCenter } from './home-command-center'
@@ -234,37 +235,45 @@ export function ChatPanel({
       className={cn('w-full group/form-container shrink-0 relative z-10', messages.length > 0 ? 'px-3 sm:px-4 pb-3 sm:pb-5' : 'px-3 sm:px-5 md:px-8 pb-6 sm:pb-10')}
     >
       {messages.length === 0 && (
-        <div className="flex flex-col items-center justify-center text-center max-w-3xl mx-auto pt-8 md:pt-16 mb-8 mt-2">
-          <div className="relative h-14 w-14 mb-5 opacity-90 transition-transform hover:scale-105 duration-500">
-            <img src="/images/hermes-pixel-icon.png" alt="Hermes AI Icon" className="h-full w-full object-contain drop-shadow-[0_4px_12px_rgba(214,157,74,0.3)]" />
+        <div className="flex flex-col items-center justify-center text-center max-w-5xl mx-auto pt-4 md:pt-10 mb-8 mt-2 relative overflow-hidden rounded-[3rem] border border-amber-100 bg-white shadow-sm transition-all duration-700 hover:shadow-xl group/hero">
+          {/* Pixel Scene Background */}
+          <div className="absolute inset-0 z-0 opacity-[0.22] group-hover/hero:opacity-[0.28] transition-opacity duration-700 pointer-events-none">
+            <Image src="/images/hermes-pixel-scene.png" alt="Hermes World" fill className="object-cover scale-110 group-hover/hero:scale-100 transition-transform duration-[20s] ease-linear" unoptimized />
+            <div className="absolute inset-0 bg-gradient-to-b from-white via-white/80 to-white" />
           </div>
-          
-          <h1 className="font-serif text-[2.5rem] md:text-[3rem] leading-[1.05] text-gray-900 tracking-[-0.03em] mb-4">
-            Turn outbound chaos into revenue.
-          </h1>
-          
-          <p className="text-[15px] md:text-[17px] font-medium leading-[1.6] text-gray-500 max-w-xl px-4">
-            Tell Hermes who to reach. It finds the companies, resolves the right person, verifies their email, and drafts a personalized pitch — automatically.
-          </p>
 
-          <div className="mt-8 text-left w-full max-w-[42rem] bg-gray-50/50 border border-gray-200 rounded-[2rem] p-6 shadow-sm ring-1 ring-gray-100/50 transition-all hover:shadow-md">
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-[hsl(var(--hermes-gold-dark))] mb-2 ml-1">Example</h3>
-            <p className="text-[13px] text-gray-500 font-medium leading-relaxed mb-4 ml-1 max-w-xl">
-              Breaking into a new regional market. You need a warm list of dental practices you&apos;ve never engaged before.
-            </p>
+          <div className="relative z-10 flex flex-col items-center py-12 px-6">
+            <div className="relative h-20 w-20 mb-8 transition-all duration-500 group-hover/hero:scale-110 group-hover/hero:rotate-2">
+              <Image src="/images/hermes-pixel-icon.png" alt="Hermes AI Icon" width={80} height={80} className="h-full w-full object-contain drop-shadow-[0_8px_16px_rgba(214,157,74,0.4)]" unoptimized />
+            </div>
             
-            <div 
-              className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm relative group cursor-pointer hover:border-[hsl(var(--hermes-gold))]/40 transition-colors"
-              onClick={() => {
-                if (setInput) setInput("Hey, I run a dental SaaS company (dentalsaas.com) and I'm trying to break into the Massachusetts market. Find me 20 private dental practices in MA with 10-50 employees that have been around for more than 5 years. I need the contact info for their founder, and please extract how many Google reviews they currently have.")
-                try { inputRef.current?.focus() } catch {}
-              }}
-            >
-              <p className="text-[14px] leading-relaxed text-gray-800 font-medium pr-8">
-                &quot;Hey, I run a dental SaaS company (<span className="text-blue-600">dentalsaas.com</span>) and I&apos;m trying to break into the Massachusetts market. Find me 20 private dental practices in MA with 10-50 employees that have been around for more than 5 years. I need the contact info for their founder, and please extract how many Google reviews they currently have.&quot;
+            <h1 className="font-serif text-[2.8rem] md:text-[3.5rem] leading-[1.02] text-gray-900 tracking-[-0.04em] mb-5 max-w-2xl balance-text">
+              Turn outbound chaos into <span className="text-[hsl(var(--hermes-gold-dark))]">revenue.</span>
+            </h1>
+            
+            <p className="text-[16px] md:text-[18px] font-medium leading-[1.6] text-gray-600 max-w-lg mb-10 px-4">
+              Tell Hermes who to reach. It maps the web, resolves decision-makers, and drafts the sequence — in seconds.
+            </p>
+
+            <div className="text-left w-full max-w-[42rem] bg-white/60 backdrop-blur-md border border-amber-100 rounded-[2.5rem] p-6 shadow-sm ring-1 ring-amber-50/50 transition-all hover:bg-white hover:shadow-md hover:border-amber-200">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-600/70 mb-2 ml-1">Live Example</h3>
+              <p className="text-[13px] text-gray-400 font-semibold leading-relaxed mb-4 ml-1">
+                Regional expansion for a Dental SaaS scale-up.
               </p>
-              <div className="absolute top-5 right-5 text-gray-300 group-hover:text-[hsl(var(--hermes-gold))] transition-all duration-300 transform group-hover:translate-x-1">
-                <ArrowUp className="w-5 h-5 rotate-45" />
+            
+              <div 
+                className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm relative group cursor-pointer hover:border-[hsl(var(--hermes-gold))]/40 transition-colors"
+                onClick={() => {
+                  if (setInput) setInput("Hey, I run a dental SaaS company (dentalsaas.com) and I'm trying to break into the Massachusetts market. Find me 20 private dental practices in MA with 10-50 employees that have been around for more than 5 years. I need the contact info for their founder, and please extract how many Google reviews they currently have.")
+                  try { inputRef.current?.focus() } catch {}
+                }}
+              >
+                <p className="text-[14px] leading-relaxed text-gray-800 font-medium pr-8">
+                  &quot;Hey, I run a dental SaaS company (<span className="text-blue-600">dentalsaas.com</span>) and I&apos;m trying to break into the Massachusetts market. Find me 20 private dental practices in MA with 10-50 employees that have been around for more than 5 years. I need the contact info for their founder, and please extract how many Google reviews they currently have.&quot;
+                </p>
+                <div className="absolute top-5 right-5 text-gray-300 group-hover:text-[hsl(var(--hermes-gold))] transition-all duration-300 transform group-hover:translate-x-1">
+                  <ArrowUp className="w-5 h-5 rotate-45" />
+                </div>
               </div>
             </div>
           </div>

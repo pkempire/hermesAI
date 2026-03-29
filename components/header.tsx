@@ -46,8 +46,8 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
             href="/"
             className="group flex items-center gap-3 transition-opacity duration-200 hover:opacity-80"
           >
-            <div className="relative h-11 w-11 overflow-hidden rounded-[10px] border border-gray-200 bg-white shadow-sm flex items-center justify-center p-1.5">
-              <Image src="/images/hermes-pixel-icon.png" alt="Hermes" width={44} height={44} className="object-contain" unoptimized />
+            <div className="relative h-11 w-11 overflow-hidden rounded-[10px] border border-amber-100 bg-white shadow-sm flex items-center justify-center p-1.5 ring-1 ring-amber-50">
+              <Image src="/images/hermes-icon.png" alt="Hermes" width={44} height={44} className="object-contain" unoptimized />
             </div>
             <div>
               <div className="text-[10px] uppercase tracking-[0.28em] text-[hsl(var(--hermes-gold-dark))] font-semibold">Campaign messenger</div>
@@ -76,11 +76,17 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
       )}
     >
       <div className="absolute inset-0 z-0 bg-white pointer-events-none">
-        <Image src="/images/socrates.jpg" alt="Header Art" fill className="object-cover object-[center_22%] opacity-[0.12] mix-blend-multiply filter pointer-events-none" priority unoptimized />
+        <Image src="/images/socrates.jpg" alt="Header Art" fill className="object-cover object-[center_30%] opacity-[0.18] mix-blend-multiply filter pointer-events-none brightness-110" priority unoptimized />
         <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-white to-transparent" />
       </div>
 
       <div className="relative z-20 flex items-center justify-between px-4 py-2 md:px-5">
+        <Link href="/" className="flex items-center gap-2 group">
+           <div className="relative h-9 w-9 overflow-hidden rounded-lg border border-amber-100 bg-white shadow-sm flex items-center justify-center p-1.5 group-hover:border-amber-200 transition-colors">
+              <Image src="/images/hermes-icon.png" alt="Hermes" width={24} height={24} className="object-contain" unoptimized />
+           </div>
+           <span className="font-serif text-xl text-gray-900 tracking-tight">Hermes</span>
+        </Link>
         <div className="flex items-center gap-3">
           {user && credits !== null && (
             <div className="hidden items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm sm:inline-flex">

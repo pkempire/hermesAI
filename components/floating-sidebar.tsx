@@ -37,12 +37,12 @@ function IconRail({
   return (
     <div className="fixed left-0 top-0 bottom-0 z-50 flex flex-col items-center gap-2 py-5 w-14 border-r border-gray-100 bg-white/95 backdrop-blur-xl shadow-[1px_0_0_0_rgba(0,0,0,0.04)]">
       {/* Logo */}
-      <Link href="/" className="mb-4 flex h-9 w-9 items-center justify-center rounded-xl border border-amber-100 bg-amber-50/80 shadow-sm hover:border-amber-200 transition-all">
+      <Link href="/" className="mb-4 flex h-9 w-9 items-center justify-center rounded-xl border border-amber-100 bg-white shadow-sm hover:border-amber-200 transition-all ring-1 ring-amber-50/50">
         <Image
-          src="/images/hermes-helmet.png"
+          src="/images/hermes-icon.png"
           alt="Hermes"
-          width={22}
-          height={22}
+          width={24}
+          height={24}
           className="object-contain"
           unoptimized
         />

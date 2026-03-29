@@ -24,6 +24,7 @@ const STEPS: Array<{
   label: string
   description: string
   tooltip: string
+  image: string
   color: string
   pill: string
   serviceUrl?: string
@@ -36,6 +37,7 @@ const STEPS: Array<{
       'Hermes visits your website and extracts your ICP, positioning, and value prop — so every search and every email is grounded in what you actually sell.',
     tooltip:
       'When you share your website URL, Hermes reads your positioning page to understand who you sell to and what makes you different. This seeds all enrichments that follow.',
+    image: '/images/hermes-helmet.png',
     color: 'from-amber-50 to-white',
     pill: 'Website scrape'
   },
@@ -46,6 +48,7 @@ const STEPS: Array<{
       'websets use neural semantic search — not keywords — to find companies that match your ICP across the live web. Custom enrichments derived from your offer ship with every search.',
     tooltip:
       "Exa doesn't rely on keywords. It reads the web by meaning, surfacing companies that fit your criteria even if they'd never self-categorize with your search terms.",
+    image: '/images/hermes-discovery.png',
     color: 'from-blue-50 to-white',
     pill: 'Exa Websets',
     serviceUrl: 'https://exa.ai',
@@ -58,6 +61,7 @@ const STEPS: Array<{
       'enriches each account — finding the exact contact for your persona, verifying their business email, and pulling fresh signals for the email draft.',
     tooltip:
       'Orangeslice resolves the right person at each company based on your target persona, then verifies their email and extracts personalized signals so your email is specific and credible.',
+    image: '/images/hermes-drafter.png',
     color: 'from-emerald-50 to-white',
     pill: 'Orangeslice',
     serviceUrl: 'https://orangeslice.ai',
@@ -85,7 +89,9 @@ function PipelineStrip() {
             </div>
           )}
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-black uppercase tracking-widest text-amber-600/60">{step.number}</span>
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-50 border border-gray-100 p-1.5 shadow-sm">
+               <img src={step.image} alt={step.pill} className="w-full h-full object-contain" />
+            </div>
             <span className="rounded-full border border-amber-200/60 bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-700">
               {step.pill}
             </span>
@@ -332,8 +338,11 @@ export function HomeCommandCenter({
     <section className="mx-auto mt-6 w-full max-w-[90rem] space-y-20 pb-24 px-4 md:px-8">
 
       {/* ── How Hermes works ─────────────────────────────────────────── */}
-      <div className="pt-8">
-        <div className="text-center mb-8">
+      <div className="pt-8 relative">
+        <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-16 h-16 pointer-events-none opacity-20">
+           <img src="/images/hermes-pixel-icon.png" alt="" className="w-full h-full object-contain filter grayscale brightness-0 opacity-40" />
+        </div>
+        <div className="text-center mb-8 relative z-10">
           <h2 className="font-serif text-[2.2rem] tracking-tight text-gray-900">How Hermes works</h2>
           <p className="text-gray-500 font-medium text-[15px] mt-2">
             Three systems, fully automated. Zero manual research.

@@ -30,7 +30,7 @@ const steps = [
     id: 'scrape',
     number: '01',
     phase: 'Offer Intelligence',
-    icon: Globe,
+    image: '/images/hermes-helmet.png',
     iconBg: 'bg-amber-50',
     iconColor: 'text-amber-600',
     accent: 'amber',
@@ -55,7 +55,7 @@ const steps = [
     id: 'exa',
     number: '02',
     phase: 'Company Discovery',
-    icon: Zap,
+    image: '/images/hermes-discovery.png',
     iconBg: 'bg-blue-50',
     iconColor: 'text-blue-600',
     accent: 'blue',
@@ -80,7 +80,7 @@ const steps = [
     id: 'orangeslice',
     number: '03',
     phase: 'Person Enrichment',
-    icon: Users,
+    image: '/images/hermes-drafter.png',
     iconBg: 'bg-orange-50',
     iconColor: 'text-orange-600',
     accent: 'orange',
@@ -179,7 +179,6 @@ export function PipelineWalkthrough() {
           {steps.map((step, idx) => {
             const accent = accentClasses[step.accent]
             const isActive = activeStep === step.id
-            const Icon = step.icon
 
             return (
               <div
@@ -193,9 +192,18 @@ export function PipelineWalkthrough() {
                 onMouseLeave={() => setActiveStep(null)}
               >
                 {/* Number / icon column */}
-                <div className="flex shrink-0 flex-col items-center gap-2 md:items-start">
-                  <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${step.iconBg} ring-4 ${accent.ring} shadow-sm`}>
-                    <Icon className={`h-5 w-5 ${step.iconColor}`} />
+                <div className="flex shrink-0 flex-col items-center gap-2 md:items-start relative z-10">
+                  <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${step.iconBg} ring-4 ${accent.ring} shadow-sm overflow-hidden`}>
+                    {step.image && (
+                      <Image 
+                        src={step.image} 
+                        alt={step.name} 
+                        width={32} 
+                        height={32} 
+                        className="object-contain"
+                        unoptimized
+                      />
+                    )}
                   </div>
                 </div>
 
