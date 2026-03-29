@@ -7,11 +7,11 @@ import {
   ResizablePanel,
   ResizablePanelGroup
 } from '@/components/ui/resizable'
-import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar'
 import { useMediaQuery } from '@/lib/hooks/use-media-query'
 import { cn } from '@/lib/utils'
 import React, { useEffect, useState } from 'react'
 import { useArtifact } from './artifact-context'
+
 export function ChatArtifactContainer({
   children
 }: {
@@ -20,7 +20,6 @@ export function ChatArtifactContainer({
   const { state } = useArtifact()
   const isMobile = useMediaQuery('(max-width: 767px)') // Below md breakpoint
   const [renderPanel, setRenderPanel] = useState(state.isOpen)
-  const { open, openMobile, isMobile: isMobileSidebar } = useSidebar()
 
   useEffect(() => {
     if (state.isOpen) {
@@ -31,18 +30,12 @@ export function ChatArtifactContainer({
   }, [state.isOpen])
 
   return (
-    <div className="flex-1 min-h-0 h-screen flex">
-      {/* Show floating sidebar trigger only on mobile to avoid duplicate desktop toggle */}
-      {isMobile && (
-        <div className="absolute p-4 z-50 transition-opacity duration-1000">
-          <SidebarTrigger className="animate-fade-in" />
-        </div>
-      )}
+    <div className="flex-1 min-h-0 h-screen flex relative">
       {/* Desktop: Resizable panels (Do not render on mobile) */}
       {!isMobile && (
         <ResizablePanelGroup
           direction="horizontal"
-          className="flex flex-1 min-w-0 h-full" // Responsive classes removed
+          className="flex flex-1 min-w-0 h-full"
         >
           <ResizablePanel
             defaultSize={state.isOpen ? 60 : 100}
@@ -75,10 +68,7 @@ export function ChatArtifactContainer({
       {/* Mobile: full-width chat + drawer (Do not render on desktop) */}
       {isMobile && (
         <div className="flex-1 h-full">
-          {' '}
-          {/* Responsive classes removed */}
           {children}
-          {/* ArtifactDrawer checks isMobile internally, no double check needed */}
           <InspectorDrawer />
         </div>
       )}
