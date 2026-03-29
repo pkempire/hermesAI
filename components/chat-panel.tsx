@@ -234,17 +234,17 @@ export function ChatPanel({
       className={cn('w-full group/form-container shrink-0 relative z-10', messages.length > 0 ? 'px-3 sm:px-4 pb-3 sm:pb-5' : 'px-3 sm:px-5 md:px-8 pb-6 sm:pb-10')}
     >
       {messages.length === 0 && (
-        <div className="flex flex-col items-center justify-center text-center max-w-4xl mx-auto pt-4 md:pt-12 mb-10">
-          <div className="relative h-20 w-20 overflow-hidden rounded-2xl shadow-[0_8px_30px_rgba(214,157,74,0.15)] border border-[hsl(var(--hermes-gold))]/30 mb-8 bg-black flex items-center justify-center">
-            <img src="/hermes-chat-avatar.png" alt="Hermes AI" className="h-full w-full object-cover" />
+        <div className="flex flex-col items-center justify-center text-center max-w-3xl mx-auto pt-8 md:pt-16 mb-8 mt-2">
+          <div className="relative h-14 w-14 mb-5 opacity-90 transition-transform hover:scale-105 duration-500">
+            <img src="/images/hermes-pixel-icon.png" alt="Hermes AI Icon" className="h-full w-full object-contain drop-shadow-[0_4px_12px_rgba(214,157,74,0.3)]" />
           </div>
           
-          <h1 className="font-serif text-[4rem] md:text-[6.5rem] leading-[0.95] text-gray-900 tracking-tight mb-8">
-            Hermes
+          <h1 className="font-serif text-[2.75rem] md:text-[3.5rem] leading-[1.05] text-gray-900 tracking-[-0.03em] mb-5">
+            Who are we reaching today?
           </h1>
           
-          <p className="text-[17px] md:text-[20px] font-medium leading-[1.6] text-gray-500 max-w-3xl">
-            Say goodbye to juggling twenty different sales tools. Tell Hermes what your offer is, and it will deploy neural networks across the open web to find exact-match companies, resolve decision-makers, and draft executive-grade emails instantly.
+          <p className="text-[16px] md:text-[18px] font-medium leading-[1.6] text-gray-500 max-w-2xl px-4">
+            Tell Hermes what your offer is, and it will deploy neural networks across the open web to find exact-match companies, resolve decision-makers, and draft executive-grade emails instantly.
           </p>
         </div>
       )}

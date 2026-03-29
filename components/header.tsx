@@ -49,7 +49,7 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
             className="group flex items-center gap-3 transition-opacity duration-200 hover:opacity-80"
           >
             <div className="relative h-11 w-11 overflow-hidden rounded-[10px] border border-gray-200 bg-white shadow-sm flex items-center justify-center p-1.5">
-              <Image src="/images/hermes-icon.png" alt="Hermes" width={44} height={44} className="object-contain" unoptimized />
+              <Image src="/images/hermes-pixel-icon.png" alt="Hermes" width={44} height={44} className="object-contain" unoptimized />
             </div>
             <div>
               <div className="text-[10px] uppercase tracking-[0.28em] text-[hsl(var(--hermes-gold-dark))] font-semibold">Campaign messenger</div>
@@ -57,21 +57,7 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
             </div>
           </Link>
 
-          <div className="hidden items-center gap-3 md:flex">
-            {[
-              { label: 'Find accounts', icon: Network },
-              { label: 'Resolve contact', icon: UserRound },
-              { label: 'Draft in Gmail', icon: Mail }
-            ].map(item => {
-              const Icon = item.icon
-              return (
-                <div key={item.label} className="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--hermes-gold))]/20 bg-[hsl(var(--hermes-gold))]/5 px-4 py-1.5 text-[13px] font-medium text-gray-700 shadow-sm">
-                  <Icon className="h-3.5 w-3.5 text-[hsl(var(--hermes-gold-dark))]" />
-                  {item.label}
-                </div>
-              )
-            })}
-          </div>
+
 
           <div className="flex items-center gap-3">
             <Button asChild variant="ghost" className="text-sm text-gray-600 hover:bg-gray-100/80 hover:text-gray-900 font-medium">
