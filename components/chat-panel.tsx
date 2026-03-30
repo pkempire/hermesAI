@@ -235,64 +235,41 @@ export function ChatPanel({
       className={cn('w-full group/form-container shrink-0 relative z-10', messages.length > 0 ? 'px-3 sm:px-4 pb-3 sm:pb-5' : 'px-3 sm:px-5 md:px-8 pb-6 sm:pb-10')}
     >
       {messages.length === 0 && (
-        <div className="flex flex-col items-center justify-center text-center max-w-5xl mx-auto pt-4 md:pt-12 mb-10 mt-2 relative overflow-hidden rounded-[3.5rem] border border-amber-100 bg-white shadow-2xl transition-all duration-700 hover:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] group/hero">
-          {/* Pixel Scene Background */}
-          <div className="absolute inset-0 z-0 opacity-[0.25] group-hover/hero:opacity-[0.35] transition-opacity duration-700 pointer-events-none overflow-hidden">
-            <Image 
-              src="/images/hermes-pixel-scene.png" 
-              alt="Hermes World" 
-              fill 
-              className="object-cover scale-110 group-hover/hero:scale-100 transition-transform duration-[30s] ease-out" 
-              unoptimized 
-            />
-            <div className="absolute inset-0 bg-gradient-to-b from-white via-white/70 to-white" />
+        <div className="flex flex-col items-center justify-center text-center max-w-5xl mx-auto pt-4 md:pt-16 mb-12 mt-2 relative overflow-hidden bg-white group/hero">
+          {/* Pixel Socrates Background */}
+          <div className="absolute inset-0 z-0 opacity-[0.35] group-hover/hero:opacity-[0.45] transition-opacity duration-700 pointer-events-none overflow-hidden flex items-center justify-center">
+            <div className="relative w-full h-full max-w-4xl max-h-[500px]">
+              <Image 
+                src="/images/socrates-pixel.png" 
+                alt="Hermes World" 
+                fill 
+                className="object-contain scale-125 group-hover/hero:scale-110 transition-transform duration-[40s] ease-out opacity-80" 
+                unoptimized 
+              />
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-b from-white via-white/40 to-white" />
           </div>
 
-          <div className="relative z-10 flex flex-col items-center py-16 px-8 md:px-12">
-            <div className="relative h-24 w-24 mb-10 transition-all duration-700 group-hover/hero:scale-110 group-hover/hero:rotate-2">
-              <div className="absolute inset-0 bg-amber-400/20 blur-2xl rounded-full" />
+          <div className="relative z-10 flex flex-col items-center py-20 px-8 md:px-12">
+            <div className="relative h-28 w-28 mb-12 transition-all duration-700 group-hover/hero:scale-110 group-hover/hero:rotate-2">
+              <div className="absolute inset-0 bg-amber-400/30 blur-3xl rounded-full" />
               <Image 
                 src="/images/hermes-pixel-icon.png" 
                 alt="Hermes AI Icon" 
-                width={96} 
-                height={96} 
-                className="relative h-full w-full object-contain drop-shadow-[0_12px_24px_rgba(214,157,74,0.5)]" 
+                width={112} 
+                height={112} 
+                className="relative h-full w-full object-contain drop-shadow-[0_16px_32px_rgba(214,157,74,0.6)]" 
                 unoptimized 
               />
             </div>
             
-            <h1 className="font-serif text-[3.2rem] md:text-[4.2rem] leading-[0.95] text-gray-900 tracking-[-0.03em] mb-6 max-w-3xl balance-text font-medium">
-              Outbound Discovery <br /><span className="text-gray-400">on Autopilot.</span>
+            <h1 className="font-serif text-[3.8rem] md:text-[5rem] leading-[0.9] text-[hsl(var(--hermes-gold-dark))] tracking-[-0.04em] mb-8 max-w-4xl balance-text font-bold uppercase">
+              Build a new campaign
             </h1>
             
-            <p className="text-[18px] md:text-[20px] font-medium leading-[1.6] text-gray-500/90 max-w-xl mb-12">
-              Talk to Hermes. It maps the web, resolves decision-makers, and drafts the sequence — in seconds.
+            <p className="text-[20px] md:text-[22px] font-serif font-medium leading-[1.6] text-gray-500 max-w-2xl mb-16">
+              Tell Hermes what your offer and a sales motion you want to run.
             </p>
-
-            <div className="text-left w-full max-w-[44rem] bg-white/40 backdrop-blur-xl border border-amber-100/50 rounded-[2.5rem] p-8 shadow-sm ring-1 ring-amber-50/50 transition-all hover:bg-white/80 hover:shadow-xl hover:border-amber-200 group/example">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-600/80">Premium Playbook Example</h3>
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
-              </div>
-              <p className="text-[14px] text-gray-400 font-bold leading-relaxed mb-6 italic">
-                &quot;Regional expansion for a Dental SaaS scale-up...&quot;
-              </p>
-            
-              <div 
-                className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm relative group cursor-pointer hover:border-amber-400/50 transition-all active:scale-[0.99]"
-                onClick={() => {
-                  if (setInput) setInput("Hey, I run a dental SaaS company (dentalsaas.com) and I'm trying to break into the Massachusetts market. Find me 20 private dental practices in MA with 10-50 employees that have been around for more than 5 years. I need the contact info for their founder, and please extract how many Google reviews they currently have.")
-                  try { inputRef.current?.focus() } catch {}
-                }}
-              >
-                <p className="text-[15px] leading-relaxed text-gray-800 font-medium pr-10">
-                  &quot;Hey, I run a dental SaaS company (<span className="text-blue-600 font-bold">dentalsaas.com</span>) and I&apos;m trying to break into the Massachusetts market. Find me 20 private dental practices in MA with 10-50 employees that have been around for more than 5 years. I need the contact info for their founder, and please extract how many Google reviews they currently have.&quot;
-                </p>
-                <div className="absolute top-6 right-6 text-gray-300 group-hover:text-amber-500 transition-all duration-300 transform group-hover:translate-x-1 group-hover:-translate-y-1">
-                  <ArrowUp className="w-6 h-6 rotate-45" />
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       )}

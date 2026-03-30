@@ -37,8 +37,15 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
     return (
       <header className="sticky top-0 right-0 left-0 z-30 border-b border-gray-200 shadow-sm relative overflow-hidden">
         <div className="absolute inset-0 z-0 bg-white">
-          <Image src="/images/socrates.jpg" alt="Header Art" fill className="object-cover object-[center_22%] opacity-[0.15] mix-blend-multiply filter grayscale-[30%]" priority unoptimized />
-          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-white to-transparent" />
+          <Image 
+            src="/images/socrates.jpg" 
+            alt="Header Art" 
+            fill 
+            className="object-cover object-[center_28%] opacity-[0.22] mix-blend-multiply filter grayscale-[10%]" 
+            priority 
+            unoptimized 
+          />
+          <div className="absolute inset-x-0 bottom-0 h-[70%] bg-gradient-to-t from-white via-white/80 to-transparent" />
         </div>
         
         <div className="relative z-20 mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-4 md:px-10">
@@ -76,8 +83,15 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
       )}
     >
       <div className="absolute inset-0 z-0 bg-white pointer-events-none">
-        <Image src="/images/socrates.jpg" alt="Header Art" fill className="object-cover object-[center_30%] opacity-[0.18] mix-blend-multiply filter pointer-events-none brightness-110" priority unoptimized />
-        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-white to-transparent" />
+        <Image 
+          src="/images/socrates.jpg" 
+          alt="Header Art" 
+          fill 
+          className="object-cover object-[center_35%] opacity-[0.25] mix-blend-multiply filter pointer-events-none brightness-110" 
+          priority 
+          unoptimized 
+        />
+        <div className="absolute inset-x-0 bottom-0 h-[80%] bg-gradient-to-t from-white via-white/80 to-transparent" />
       </div>
 
       <div className="relative z-20 flex items-center justify-between px-4 py-2 md:px-5">

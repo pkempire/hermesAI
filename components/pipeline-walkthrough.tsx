@@ -163,9 +163,6 @@ export function PipelineWalkthrough() {
             unoptimized
           />
         </div>
-        <div className="text-[11px] font-black uppercase tracking-[0.3em] text-amber-600/70 mb-4 px-3 py-1 bg-amber-50 rounded-full border border-amber-100/50">
-          The Hermes Lineage
-        </div>
         <h2 className="font-serif text-[3.2rem] md:text-[3.8rem] leading-[1] tracking-tight text-gray-900 mb-6">
           Autonomous Outreach. <br /><span className="text-gray-400">Zero manual effort.</span>
         </h2>
