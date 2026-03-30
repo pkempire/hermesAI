@@ -28,48 +28,68 @@ export function createScrapeSiteTool() {
       const exa = new Exa(apiKey)
 
       const fullUrl = url.startsWith('http') ? url : `https://${url}`
-      const host = new URL(fullUrl).hostname
-      const includeDomains = [host]
+      const urlObj = new URL(fullUrl)
+      const host = urlObj.hostname
 
       let summary = ''
       const refs: Array<{ title: string; url: string }> = []
 
-      // Prefer Exa contents first for a cleaner, more stable offer snapshot.
       try {
-        const exaPromise = exa.searchAndContents(`site:${host}`, {
-          numResults: 6,
-          includeDomains,
-          livecrawl: 'always'
+        logger.info(`[scrape_site] Direct extraction for: ${fullUrl}`)
+        
+        // 1. Direct fetch of primary URL content (Homepage)
+        const directPromise = exa.getContents([fullUrl], { 
+          text: true, 
+          livecrawl: 'always' 
         } as any)
-        
-        // 45s timeout for Exa livecrawl
-        const res = await Promise.race([
-          exaPromise,
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Exa timeout')), 45000))
-        ]) as any
-        
-        const texts = (res.results || []).map((r: any) => `${r.title}\n${r.text || r.highlight || ''}`)
-        const joined = texts.join('\n\n').slice(0, 30000)
-        summary = joined.slice(0, 4000)
-        refs.push(...(res.results || []).slice(0, 6).map((r: any) => ({ title: r.title, url: r.url })))
-      } catch (e) {
-        logger.warn('[scrape_site] Exa failed or timed out:', e)
-      }
 
-      if (!summary) {
+        // 2. Parallel discovery of key pages (About, Products, Pricing)
+        const discoveryPromise = exa.search(`site:${host} (About OR Products OR Pricing OR Solutions)`, {
+          numResults: 5,
+          useAutoprompt: false
+        })
+
+        const [directRes, discoveryRes] = await Promise.race([
+          Promise.all([directPromise, discoveryPromise]),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Exa operation timeout')), 45000))
+        ]) as [any, any]
+
+        const mainContent = directRes.results?.[0]
+        if (mainContent) {
+          summary += `HOMEPAGE:\n${mainContent.text || mainContent.highlight || ''}\n\n`
+          refs.push({ title: mainContent.title || 'Homepage', url: mainContent.url })
+        }
+
+        // Add context from key pages found
+        const discoveryItems = discoveryRes.results || []
+        if (discoveryItems.length > 0) {
+          summary += `ADDITIONAL CONTEXT (from subpages):\n`
+          discoveryItems.forEach((r: any) => {
+            summary += `- ${r.title}: ${r.url}\n`
+            refs.push({ title: r.title, url: r.url })
+          })
+        }
+
+        summary = summary.slice(0, 10000) // Cap for LLM
+      } catch (e) {
+        logger.warn('[scrape_site] Exa direct extraction failed, falling back to basic fetch:', e)
+        // Basic fallback
         try {
-          const resp = await fetch(url, { headers: { 'User-Agent': 'HermesAI/1.0' } })
+          const resp = await fetch(fullUrl, { headers: { 'User-Agent': 'HermesAI/1.0' } })
           const html = await resp.text()
           const dom = new JSDOM(html)
           const doc = dom.window.document
           const title = doc.querySelector('title')?.textContent || host
           const metas = Array.from(doc.querySelectorAll('meta[name="description"], meta[property="og:description"], h1, h2, p'))
-            .slice(0, 60)
+            .slice(0, 50)
             .map(el => el.textContent?.trim() || '')
             .filter(Boolean)
-          summary = ([title, ...metas].join('\n')).slice(0, 4000)
-          refs.push({ title, url })
-        } catch {}
+          
+          summary = `DIRECT FETCH FALLBACK:\n${[title, ...metas].join('\n')}`.slice(0, 4000)
+          refs.push({ title, url: fullUrl })
+        } catch (fetchErr) {
+          logger.error('[scrape_site] All fetch methods failed:', fetchErr)
+        }
       }
 
       let snapshot: z.infer<typeof snapshotSchema> = {}
@@ -78,42 +98,37 @@ export function createScrapeSiteTool() {
           const extractionPromise = generateObject({
             model: getToolCallModel(),
             schema: snapshotSchema,
-            system: `Extract a compact offer snapshot from a company website.
+            system: `Extract a prestige B2B offer snapshot. NO GENERIC MARKETING SLOP.
   
-  Rules:
-  - Keep every field concise.
-  - Focus on what helps Hermes understand the actual offer before prospecting.
-  - Prefer the real offer and audience over generic marketing fluff.
-  - "offer" should be the clearest one-sentence description of what the company actually sells or delivers.
-  - "targetAudience" should be the specific personas they sell to.
-  - "whyItMatters" should explain in one sentence why that offer matters for prospecting or partnerships.
-  - proofPoints should be short, distinct bullets if present.`,
-            prompt: summary.slice(0, 5000)
+  Focus on:
+  - WHAT they actually do (technical/functional)
+  - WHO they sell to (ICP/Persona)
+  - COMPETITIVE EDGE (Why they win)
+  
+  Format concisely.`,
+            prompt: summary
           })
 
-          // 30s timeout for LLM extraction
           const extraction = await Promise.race([
             extractionPromise,
-            new Promise((_, reject) => setTimeout(() => reject(new Error('LLM extraction timeout')), 30000))
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Extraction timeout')), 25000))
           ]) as any
           
           snapshot = extraction.object
         }
       } catch (e) {
-        console.error('[scrape_site] Failed to generate offer snapshot:', e)
+        logger.error('[scrape_site] LLM extraction failed:', e)
       }
 
-      const companyName = snapshot.companyName || host.replace(/^www\./, '')
       return {
         site: fullUrl,
-        summary,
-        companyName,
-        offer: snapshot.offer,
-        targetAudience: snapshot.targetAudience,
-        whyItMatters: snapshot.whyItMatters,
+        companyName: snapshot.companyName || host.replace(/^www\./, ''),
+        offer: snapshot.offer || 'Consulting/B2B Services',
+        targetAudience: snapshot.targetAudience || 'B2B Companies',
+        whyItMatters: snapshot.whyItMatters || 'General business interest',
         referralHook: snapshot.referralHook,
         proofPoints: snapshot.proofPoints || [],
-        references: refs.slice(0, 10)
+        references: refs.slice(0, 8)
       }
     }
   })
