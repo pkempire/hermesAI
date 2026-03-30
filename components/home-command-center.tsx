@@ -14,112 +14,13 @@ import {
   Search,
   DollarSign,
   Briefcase,
-  Target
+  Target,
+  Quote
 } from 'lucide-react'
+import { PipelineWalkthrough } from './pipeline-walkthrough'
+import Image from 'next/image'
 
-// ─── Pipeline strip (3-step, shown below chatbox) ────────────────────────────
-
-const STEPS: Array<{
-  number: string
-  label: string
-  description: string
-  tooltip: string
-  image: string
-  color: string
-  pill: string
-  serviceUrl?: string
-  serviceName?: string
-}> = [
-  {
-    number: '01',
-    label: 'Understand your offer',
-    description:
-      'Hermes visits your website and extracts your ICP, positioning, and value prop — so every search and every email is grounded in what you actually sell.',
-    tooltip:
-      'When you share your website URL, Hermes reads your positioning page to understand who you sell to and what makes you different. This seeds all enrichments that follow.',
-    image: '/images/hermes-helmet.png',
-    color: 'from-amber-50 to-white',
-    pill: 'Website scrape'
-  },
-  {
-    number: '02',
-    label: 'Find target businesses',
-    description:
-      'websets use neural semantic search — not keywords — to find companies that match your ICP across the live web. Custom enrichments derived from your offer ship with every search.',
-    tooltip:
-      "Exa doesn't rely on keywords. It reads the web by meaning, surfacing companies that fit your criteria even if they'd never self-categorize with your search terms.",
-    image: '/images/hermes-discovery.png',
-    color: 'from-blue-50 to-white',
-    pill: 'Exa Websets',
-    serviceUrl: 'https://exa.ai',
-    serviceName: 'Exa.ai'
-  },
-  {
-    number: '03',
-    label: 'Resolve the decision-maker',
-    description:
-      'enriches each account — finding the exact contact for your persona, verifying their business email, and pulling fresh signals for the email draft.',
-    tooltip:
-      'Orangeslice resolves the right person at each company based on your target persona, then verifies their email and extracts personalized signals so your email is specific and credible.',
-    image: '/images/hermes-drafter.png',
-    color: 'from-emerald-50 to-white',
-    pill: 'Orangeslice',
-    serviceUrl: 'https://orangeslice.ai',
-    serviceName: 'Orangeslice.ai'
-  }
-]
-
-function PipelineStrip() {
-  const [hovered, setHovered] = useState<number | null>(null)
-
-  return (
-    <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-3">
-      {STEPS.map((step, i) => (
-        <div
-          key={i}
-          className="relative rounded-2xl border border-gray-200 bg-white p-5 transition-all duration-200 hover:border-amber-200 hover:shadow-md cursor-default group"
-          onMouseEnter={() => setHovered(i)}
-          onMouseLeave={() => setHovered(null)}
-        >
-          {/* tooltip */}
-          {hovered === i && (
-            <div className="absolute -top-28 left-1/2 -translate-x-1/2 z-30 w-64 rounded-xl border border-gray-200 bg-gray-900 px-4 py-3 text-[12px] leading-relaxed text-gray-100 shadow-2xl">
-              {step.tooltip}
-              <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 h-3 w-3 rotate-45 border-b border-r border-gray-700 bg-gray-900" />
-            </div>
-          )}
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-50 border border-gray-100 p-1.5 shadow-sm">
-               <img src={step.image} alt={step.pill} className="w-full h-full object-contain" />
-            </div>
-            <span className="rounded-full border border-amber-200/60 bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-700">
-              {step.pill}
-            </span>
-          </div>
-          <div className="font-bold text-[14px] text-gray-900 mb-2">{step.label}</div>
-          <div className="text-[13px] text-gray-500 leading-relaxed">
-            {step.serviceUrl ? (
-              <>
-                <a
-                  href={step.serviceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-semibold text-gray-700 underline decoration-dotted underline-offset-2 hover:text-amber-800 inline-flex items-center gap-0.5 mr-0.5"
-                >
-                  {step.serviceName} <ExternalLink className="w-2.5 h-2.5" />
-                </a>{' '}
-              </>
-            ) : null}
-            {step.description}
-          </div>
-          {i < STEPS.length - 1 && (
-            <ChevronRight className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 hidden md:block w-4 h-4 text-gray-300" />
-          )}
-        </div>
-      ))}
-    </div>
-  )
-}
+// PipelineStrip removed in favor of PipelineWalkthrough
 
 // ─── Interactive Mad Libs playbook ────────────────────────────────────────────
 
@@ -220,10 +121,10 @@ const PLAYBOOKS: Playbook[] = [
 ]
 
 const CATEGORY_COLORS: Record<string, string> = {
-  'New Market Entry': 'bg-indigo-50 text-indigo-700 border-indigo-100',
-  'Signal-Based': 'bg-amber-50 text-amber-700 border-amber-100',
-  'Competitive': 'bg-rose-50 text-rose-700 border-rose-100',
-  'Partnerships': 'bg-emerald-50 text-emerald-700 border-emerald-100'
+  'New Market Entry': 'bg-indigo-50/50 text-indigo-700 border-indigo-100/50',
+  'Signal-Based': 'bg-amber-50/50 text-amber-700 border-amber-100/50',
+  'Competitive': 'bg-rose-50/50 text-rose-700 border-rose-100/50',
+  'Partnerships': 'bg-emerald-50/50 text-emerald-700 border-emerald-100/50'
 }
 
 function assemblePrompt(template: string, values: Record<string, string>): string {
@@ -296,29 +197,39 @@ function PlaybookCard({
   const categoryColor = CATEGORY_COLORS[playbook.category] || 'bg-gray-50 text-gray-600 border-gray-100'
 
   return (
-    <div className="flex flex-col rounded-3xl border border-gray-200 bg-white p-6 hover:border-amber-200/70 hover:shadow-xl transition-all duration-300 group relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-40 h-40 bg-amber-50/60 rounded-full blur-[60px] -mr-20 -mt-20 opacity-0 group-hover:opacity-100 transition-all pointer-events-none" />
-      <div className="flex items-center gap-2 mb-4">
-        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest ${categoryColor}`}>
+    <div className="flex flex-col rounded-[2rem] border border-gray-100 bg-white p-8 hover:border-amber-200/50 hover:shadow-[0_20px_50px_rgba(0,0,0,0.04)] transition-all duration-500 group relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-64 h-64 bg-amber-50/40 rounded-full blur-[80px] -mr-32 -mt-32 opacity-0 group-hover:opacity-100 transition-all duration-700 pointer-events-none" />
+      
+      <div className="flex items-center justify-between mb-6">
+        <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.15em] ${categoryColor}`}>
           {playbook.categoryIcon}
           {playbook.category}
         </span>
+        <div className="h-2 w-2 rounded-full bg-gray-100 group-hover:bg-amber-400 transition-colors" />
       </div>
-      <h3 className="text-[17px] font-bold text-gray-900 mb-1">{playbook.title}</h3>
-      <p className="text-[13px] text-gray-500 mb-5 leading-relaxed">{playbook.pain}</p>
+
+      <h3 className="font-serif text-[1.4rem] font-medium text-gray-900 mb-2 tracking-tight">
+        {playbook.title}
+      </h3>
+      <p className="text-[14px] leading-relaxed text-gray-500 mb-8 font-medium">
+        {playbook.pain}
+      </p>
 
       {/* Interactive Mad Libs template */}
-      <div className="flex-1 rounded-2xl border border-gray-100 bg-gray-50/60 px-4 py-4 text-[13px] leading-[2] text-gray-600 mb-5 relative z-10">
-        <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Click any field to edit →</div>
-        <div className="leading-loose">{renderTemplate()}</div>
+      <div className="flex-1 rounded-2xl border border-gray-50 bg-gray-50/40 px-5 py-6 text-[14px] leading-[2.2] text-gray-600 mb-8 relative z-10 backdrop-blur-sm">
+        <div className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-4 flex items-center gap-2">
+          <Quote className="w-3 h-3" />
+          The Strategy
+        </div>
+        <div className="font-medium text-gray-700">{renderTemplate()}</div>
       </div>
 
       <button
         onClick={() => onRun(assemblePrompt(playbook.template, values))}
-        className="relative z-10 flex w-full items-center justify-center gap-2 rounded-full bg-gray-900 px-5 py-3 text-[13px] font-bold text-white shadow-md hover:bg-amber-700 transition-all duration-200 group/btn"
+        className="relative z-10 flex w-full items-center justify-center gap-2 rounded-2xl bg-gray-900 px-6 py-4 text-[14px] font-bold text-white shadow-lg hover:bg-amber-600 hover:shadow-amber-200/40 transition-all duration-300 group/btn"
       >
-        Run this →
-        <ArrowRight className="w-3.5 h-3.5 transform group-hover/btn:translate-x-1 transition-transform" />
+        Execute Playbook
+        <ArrowRight className="w-4 h-4 transform group-hover/btn:translate-x-1 transition-transform" />
       </button>
     </div>
   )
@@ -335,40 +246,53 @@ export function HomeCommandCenter({
   const categories = Array.from(new Set(PLAYBOOKS.map(p => p.category)))
 
   return (
-    <section className="mx-auto mt-6 w-full max-w-[90rem] space-y-20 pb-24 px-4 md:px-8">
+    <section className="relative mx-auto mt-6 w-full max-w-[90rem] space-y-32 pb-48 px-4 md:px-8 overflow-visible">
+      
+      {/* ── Background Elements ─────────────────────────────────────────── */}
+      <div className="absolute inset-0 -z-10 pointer-events-none overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[1000px] opacity-[0.03]">
+          <Image 
+            src="/images/hermes-pixel.png" 
+            alt="" 
+            fill 
+            className="object-cover object-top filter grayscale"
+            priority
+          />
+        </div>
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-200/40 to-transparent" />
+      </div>
 
       {/* ── How Hermes works ─────────────────────────────────────────── */}
-      <div className="pt-8 relative">
-        <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-16 h-16 pointer-events-none opacity-20">
-           <img src="/images/hermes-pixel-icon.png" alt="" className="w-full h-full object-contain filter grayscale brightness-0 opacity-40" />
-        </div>
-        <div className="text-center mb-8 relative z-10">
-          <h2 className="font-serif text-[2.2rem] tracking-tight text-gray-900">How Hermes works</h2>
-          <p className="text-gray-500 font-medium text-[15px] mt-2">
-            Three systems, fully automated. Zero manual research.
-          </p>
-        </div>
-        <PipelineStrip />
+      <div className="pt-20">
+        <PipelineWalkthrough />
       </div>
 
       {/* ── SDR Playbooks ─────────────────────────────────────────────── */}
-      <div>
-        <div className="text-center mb-10">
-          <h2 className="font-serif text-[2.2rem] tracking-tight text-gray-900">SDR Playbooks</h2>
-          <p className="text-gray-500 font-medium text-[15px] mt-2">
-            Click any bracket to make it yours. Then hit Run.
+      <div className="relative">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-amber-50/30 rounded-full blur-[120px] -z-10" />
+        
+        <div className="text-center mb-16 relative z-10">
+          <div className="text-[11px] font-black uppercase tracking-[0.3em] text-amber-600/70 mb-4">The Playbooks</div>
+          <h2 className="font-serif text-[3.2rem] md:text-[3.8rem] leading-[1] tracking-tight text-gray-900 mb-6">
+            Elite Outreach <br /><span className="text-gray-400">Tactics on Autopilot.</span>
+          </h2>
+          <p className="max-w-2xl mx-auto text-[18px] leading-[1.6] font-medium text-gray-500/80">
+            Choose a battle-tested strategy. Refine the variables. <br className="hidden md:block" /> Launch your autonomous campaign in one click.
           </p>
         </div>
 
-        <div className="space-y-12">
+        <div className="space-y-24">
           {categories.map(cat => (
-            <div key={cat}>
-              <h3 className="mb-5 flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.22em] text-gray-400">
-                <span className={`h-px flex-1 bg-gray-200`} />
-                {cat}
-                <span className="h-px flex-1 bg-gray-200" />
-              </h3>
-              <div className="grid gap-5 md:grid-cols-2">
+            <div key={cat} className="relative">
+              <div className="sticky top-24 z-20 mb-8 backdrop-blur-sm">
+                <h3 className="flex items-center gap-4 text-[11px] font-black uppercase tracking-[0.3em] text-gray-400/80">
+                  <span className="h-px w-8 bg-amber-200/50" />
+                  {cat}
+                  <span className="h-px flex-1 bg-gray-100" />
+                </h3>
+              </div>
+              
+              <div className="grid gap-8 md:grid-cols-2 relative z-10">
                 {PLAYBOOKS.filter(p => p.category === cat).map((pb, i) => (
                   <PlaybookCard
                     key={i}

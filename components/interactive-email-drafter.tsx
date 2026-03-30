@@ -16,10 +16,13 @@ import {
   Paperclip,
   Send,
   User,
-  Wand2
+  Wand2,
+  Sparkles,
+  Inbox
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Prospect } from './prospect-grid'
+import Image from 'next/image'
 
 interface EmailTemplate {
   id: string
@@ -267,19 +270,19 @@ export function InteractiveEmailDrafter({
   const Avatar = ({ url, initials, isCompany }: { url?: string, initials: string, isCompany?: boolean }) => {
     if (url) {
       return (
-        <img 
-          src={url} 
-          alt={initials} 
-          className={cn("h-full w-full object-cover", isCompany ? "rounded-xl" : "rounded-full")} 
-          onError={(e) => {
-            (e.target as HTMLImageElement).style.display = 'none';
-            (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
-          }}
-        />
+        <div className={cn("relative h-full w-full", isCompany ? "rounded-xl" : "rounded-full", "overflow-hidden")}>
+          <Image 
+            src={url} 
+            alt={initials} 
+            fill
+            className="object-cover"
+            unoptimized
+          />
+        </div>
       )
     }
     return (
-      <div className={cn("flex h-full w-full items-center justify-center bg-gray-50 text-[13px] font-semibold text-gray-500", isCompany ? "rounded-xl" : "rounded-full")}>
+      <div className={cn("flex h-full w-full items-center justify-center bg-gray-50 text-[11px] font-bold text-gray-400", isCompany ? "rounded-xl" : "rounded-full")}>
         {initials}
       </div>
     )
@@ -300,14 +303,14 @@ export function InteractiveEmailDrafter({
       <div className="bg-white border border-gray-200 shadow-sm rounded-3xl p-6 md:p-8">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="text-[11px] uppercase tracking-[0.3em] font-semibold text-gray-400">
-              Step {step} of {totalSteps}
+            <div className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-600/70 mb-4 px-3 py-1 bg-amber-50 self-start rounded-full border border-amber-100/50">
+              Personalization Engine
             </div>
-            <h2 className="mt-3 font-serif text-4xl leading-none text-gray-900 md:text-[3.2rem]">
-              Email Draft Studio
+            <h2 className="mt-3 font-serif text-4xl leading-tight text-gray-900 md:text-[3.5rem] tracking-tight">
+              Campaign Draft Studio
             </h2>
-            <p className="mt-3 max-w-3xl text-sm leading-7 text-gray-500 md:text-[15px]">
-              Review the queue, generate a draft with GPT-5, then tighten the copy before Hermes prepares the Gmail send.
+            <p className="mt-4 max-w-2xl text-[16px] leading-[1.6] font-medium text-gray-500/80">
+              Refine your autonomous sequence. Tighten the hook, adjust the tone, and verify the signals before Hermes initiates the Gmail send.
             </p>
           </div>
 
@@ -328,10 +331,11 @@ export function InteractiveEmailDrafter({
       <div className="grid gap-0 lg:grid-cols-[280px_1fr] xl:grid-cols-[320px_1fr] border border-gray-200 rounded-3xl overflow-hidden bg-white shadow-sm h-[750px]">
         {/* Left Column: Inbox List */}
         <div className="flex flex-col border-r border-gray-200 bg-[#FAFAFA]">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-white">
-            <div className="flex space-x-4 text-[13px] font-medium text-gray-500">
-              <span className="text-gray-900 border-b-2 border-gray-900 pb-1 -mb-[17px]">Inbox</span>
-              <span className="hover:text-gray-900 cursor-pointer transition-colors">Flows</span>
+          <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 bg-white">
+            <div className="flex space-x-6 text-[12px] font-black uppercase tracking-[0.2em] text-gray-400">
+              <span className="text-gray-900 border-b-2 border-gray-900 pb-5 -mb-[21px] flex items-center gap-2">
+                <Inbox className="w-3.5 h-3.5" /> Discovery List
+              </span>
             </div>
           </div>
           <div className="flex-1 overflow-y-auto w-full">
@@ -351,25 +355,23 @@ export function InteractiveEmailDrafter({
                       type="button"
                       onClick={() => setSelectedProspectIndex(index)}
                       className={cn(
-                        'flex flex-col w-full items-start px-5 py-4 text-left border-b border-gray-100 last:border-0 transition-colors',
+                        'flex flex-col w-full items-start px-6 py-5 text-left border-b border-gray-100 last:border-0 transition-all duration-300',
                         active
-                          ? 'bg-white shadow-[inset_3px_0_0_hsl(var(--hermes-gold))]'
-                          : 'bg-transparent hover:bg-gray-50/50'
+                          ? 'bg-white shadow-[inset_4px_0_0_#926e2e]'
+                          : 'bg-transparent hover:bg-gray-50/80'
                       )}
                     >
-                      <div className="flex items-center justify-between w-full mb-1">
-                        <div className="flex items-center gap-2">
-                          <div className={cn("flex h-6 w-6 shrink-0 border", prospect.companyLogoUrl ? "border-transparent" : "border-gray-200", "rounded-md overflow-hidden")}>
+                      <div className="flex items-center justify-between w-full mb-2">
+                        <div className="flex items-center gap-3">
+                          <div className={cn("flex h-8 w-8 shrink-0 rounded-lg overflow-hidden border border-gray-100 shadow-sm bg-white")}>
                             <Avatar url={prospect.companyLogoUrl} initials={initials(company)} isCompany />
                           </div>
-                          <span className="truncate text-[13px] font-semibold text-gray-900">{company}</span>
+                          <span className="truncate text-[14px] font-bold text-gray-900 tracking-tight">{company}</span>
                         </div>
-                        <span className="shrink-0 text-[11px] font-medium text-gray-400">
-                          {new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                        </span>
+                        <div className="flex h-1.5 w-1.5 rounded-full bg-amber-400" />
                       </div>
-                      <div className="w-full flex items-center justify-between mt-0.5 pl-8">
-                        <span className={cn("truncate text-[13px]", active ? "text-gray-900 font-medium" : "text-gray-500")}>
+                      <div className="w-full pl-11">
+                        <span className={cn("block truncate text-[13px] font-medium leading-none", active ? "text-gray-700" : "text-gray-400")}>
                           Draft for {person}
                         </span>
                       </div>
@@ -398,54 +400,51 @@ export function InteractiveEmailDrafter({
           </div>
 
           {/* Email Canvas inside a scrollable area */}
-          <div className="flex-1 overflow-y-auto bg-[#FAFAFA] md:p-8 p-4">
-            <div className="mx-auto max-w-2xl bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
+          <div className="flex-1 overflow-y-auto bg-gray-50/30 md:p-10 p-4">
+            <div className="mx-auto max-w-2xl bg-white rounded-[2rem] border border-gray-100 shadow-[0_20px_60px_rgba(0,0,0,0.03)] overflow-hidden flex flex-col min-h-[500px]">
               
-              <div className="border-b border-gray-100 p-5 space-y-4">
-                <div className="flex items-center border-b border-gray-50 pb-3">
-                  <Label className="w-16 text-[13px] text-gray-400 font-medium shrink-0">To</Label>
+              <div className="border-b border-gray-100 p-8 space-y-5">
+                <div className="flex items-center border-b border-gray-50 pb-4">
+                  <Label className="w-20 text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 my-auto shrink-0">Recipient</Label>
                   <div className="flex items-center flex-1 min-w-0">
-                    <div className="flex items-center space-x-2 bg-gray-50 border border-gray-100 rounded-md px-2 py-1 overflow-hidden">
-                      <div className="h-4 w-4 rounded-full overflow-hidden shrink-0 border border-gray-200">
+                    <div className="flex items-center space-x-3 bg-gray-50/50 border border-gray-100 rounded-full px-4 py-2 overflow-hidden shadow-sm">
+                      <div className="h-6 w-6 rounded-full overflow-hidden shrink-0 border border-gray-200">
                         <Avatar url={activeProspect?.avatarUrl} initials={initials(activeProspect?.fullName)} />
                       </div>
-                      <span className="text-[13px] font-medium text-gray-700 truncate">{activeProspect?.email || activeProspect?.fullName}</span>
+                      <span className="text-[14px] font-bold text-gray-700 truncate">{activeProspect?.email || activeProspect?.fullName}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center border-b border-gray-50 pb-3">
-                  <Label className="w-16 text-[13px] text-gray-400 font-medium my-auto shrink-0">Subject</Label>
+                <div className="flex items-center">
+                  <Label className="w-20 text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 my-auto shrink-0">Subject</Label>
                   <Input
                     value={activeTemplate?.subject || ''}
                     onChange={(e) => updateTemplate(selectedTemplate, { subject: e.target.value })}
-                    className="flex-1 border-0 shadow-none px-0 py-0 h-auto text-[14px] font-semibold text-gray-900 focus-visible:ring-0 placeholder:text-gray-300"
+                    className="flex-1 border-0 shadow-none px-0 py-0 h-auto text-[15px] font-bold text-gray-900 focus-visible:ring-0 placeholder:text-gray-300"
                     placeholder="Enter subject line..."
                   />
                 </div>
               </div>
 
               {/* Body */}
-              <div className="flex-1 p-5 min-h-[300px]">
+              <div className="flex-1 p-8">
                 <Textarea
                   value={activeTemplate?.body || ''}
                   onChange={(e) => updateTemplate(selectedTemplate, { body: e.target.value })}
-                  className="w-full h-full min-h-[300px] resize-none border-0 bg-transparent p-0 text-[14px] leading-[1.6] text-gray-800 focus-visible:ring-0 placeholder:text-gray-300 format-email-body"
-                  placeholder="Type your response..."
+                  className="w-full h-full min-h-[350px] resize-none border-0 bg-transparent p-0 text-[16px] leading-[1.8] text-gray-700 focus-visible:ring-0 placeholder:text-gray-300 font-medium"
+                  placeholder="Draft content will appear here..."
                 />
               </div>
 
               {/* Draft Composer Footer */}
-              <div className="px-5 py-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-50/50">
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-700 hover:bg-white rounded-full">
-                    <Paperclip className="h-4 w-4" />
-                  </Button>
+              <div className="px-8 py-6 border-t border-gray-50 flex flex-col sm:flex-row items-center justify-between gap-6 bg-white shrink-0">
+                <div className="flex items-center gap-4 w-full sm:w-auto">
                   <Select
                     value={activeTemplate?.tone || 'professional'}
                     onValueChange={(value: 'professional' | 'casual' | 'friendly') => updateTemplate(selectedTemplate, { tone: value })}
                   >
-                    <SelectTrigger className="h-8 border-transparent bg-transparent text-gray-500 hover:text-gray-900 focus:ring-0 shadow-none w-[110px] px-2 text-[12px] font-medium rounded-full">
+                    <SelectTrigger className="h-10 border-gray-100 bg-gray-50/50 text-gray-600 hover:text-gray-900 focus:ring-0 shadow-none w-[130px] px-4 text-[13px] font-bold rounded-xl transition-all">
                       <SelectValue placeholder="Tone" />
                     </SelectTrigger>
                     <SelectContent>
@@ -456,22 +455,22 @@ export function InteractiveEmailDrafter({
                   </Select>
                 </div>
                 
-                <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="flex items-center gap-3 w-full sm:w-auto">
                   <Button
                     onClick={generateEmailContent}
                     disabled={isGenerating || !getInitialObjective().trim()}
                     variant="outline"
-                    className="h-8 border-gray-200 bg-white text-gray-600 hover:text-gray-900 text-[12px] font-medium rounded-full shadow-sm"
+                    className="h-11 border-gray-100 bg-white text-gray-600 hover:text-gray-900 text-[13px] font-bold rounded-2xl shadow-sm px-6 transition-all hover:border-amber-200"
                   >
-                    <Wand2 className="mr-1.5 h-3.5 w-3.5 text-[hsl(var(--hermes-gold))]" />
+                    <Sparkles className="mr-2 h-4 w-4 text-amber-500" />
                     {isGenerating ? 'Drafting...' : 'Autodraft'}
                   </Button>
                   <Button
                     onClick={handleGenerate}
                     disabled={isGenerating || emailTemplates[0]?.body.length === 0}
-                    className="h-8 rounded-full shadow-sm bg-[hsl(var(--hermes-gold))] px-4 text-[12px] font-bold tracking-wide text-white hover:bg-[hsl(var(--hermes-gold-dark))]"
+                    className="h-11 rounded-2xl shadow-lg bg-gray-900 px-8 text-[13px] font-bold tracking-wide text-white hover:bg-amber-600 transition-all active:scale-95"
                   >
-                    Send Email <Send className="ml-1.5 h-3 w-3" />
+                    Initiate Gmail Send <Send className="ml-2 h-3.5 w-3.5" />
                   </Button>
                 </div>
               </div>

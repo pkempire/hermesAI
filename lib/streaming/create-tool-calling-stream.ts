@@ -190,7 +190,14 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
     },
     onError: error => {
       logger.error('Stream error:', error)
-      return error instanceof Error ? error.message : String(error)
+      const message = error instanceof Error ? error.message : String(error)
+      
+      // Map cryptic Exa/Item-not-found errors to user-friendly messages
+      if (message.includes('rs_') || message.includes('not found') || message.includes('websetId')) {
+        return 'The research session for this campaign has expired. Please start a new brief.'
+      }
+      
+      return message
     }
     })
   })

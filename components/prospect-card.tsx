@@ -21,6 +21,7 @@ import {
 import { Prospect, ProspectSearchContext } from './prospect-grid'
 import { campaignStore } from '@/lib/store/campaign-store'
 import { toast } from 'sonner'
+import Image from 'next/image'
 
 export function ProspectCard({
   prospect,
@@ -61,11 +62,17 @@ export function ProspectCard({
               </div>
             )}
             <div className="flex gap-5">
-              <div className="h-[4.5rem] w-[4.5rem] rounded-2xl bg-gray-50 border border-gray-200 shadow-sm flex items-center justify-center shrink-0 overflow-hidden">
+              <div className="h-[4.5rem] w-[4.5rem] rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center justify-center shrink-0 overflow-hidden relative">
                 {prospect.companyLogoUrl ? (
-                  <img src={prospect.companyLogoUrl} alt={company} className="w-full h-full object-cover" />
+                  <Image 
+                    src={prospect.companyLogoUrl} 
+                    alt={company} 
+                    fill 
+                    className="object-contain p-2"
+                    unoptimized
+                  />
                 ) : (
-                  <Building className="w-8 h-8 text-gray-400" />
+                  <Building className="w-8 h-8 text-gray-400/50" />
                 )}
               </div>
               <div className="space-y-1">
@@ -99,13 +106,13 @@ export function ProspectCard({
           </div>
           
           <div className="flex items-center space-x-2">
-            <div className="flex items-center space-x-2 bg-white border border-gray-200 shadow-[0_4px_10px_rgba(0,0,0,0.03)] rounded-[1.5rem] px-5 py-3">
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[hsl(var(--hermes-gold))]/10">
-                <CheckCircle2 className="w-4 h-4 text-[hsl(var(--hermes-gold-dark))]" />
+            <div className="flex items-center space-x-3 bg-white border border-gray-100 shadow-[0_8px_20px_rgba(0,0,0,0.03)] rounded-2xl px-5 py-3">
+              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-50">
+                <Sparkles className="w-4 h-4 text-amber-600" />
               </div>
-              <div className="flex flex-col ml-1">
-                <span className="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest leading-none">Fit Score</span>
-                <span className="text-[20px] font-bold text-gray-900 leading-none mt-1">{fitScore > 0 ? fitScore : 92}</span>
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] leading-none">Fit Score</span>
+                <span className="text-[20px] font-serif font-bold text-gray-900 leading-none mt-1.5">{fitScore > 0 ? fitScore : 92}%</span>
               </div>
             </div>
           </div>
@@ -114,10 +121,19 @@ export function ProspectCard({
       
       <CardContent className="space-y-8 px-6 py-6 md:px-8 md:py-8">
         {/* Hermes Take prominently featured */}
-        <div className="rounded-2xl border border-[hsl(var(--hermes-gold))]/20 bg-[hsl(var(--hermes-gold))]/5 p-6 shadow-sm">
-          <div className="mb-4 flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.2em] text-[hsl(var(--hermes-gold-dark))]">
-            <img src="/images/hermes-pixel.png" alt="Hermes" className="w-[22px] h-[22px] rounded-full ring-2 ring-[hsl(var(--hermes-gold))]/30 object-cover shadow-sm" />
-            Hermes take
+        <div className="rounded-3xl border border-amber-100 bg-amber-50/30 p-8 shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-amber-100/20 rounded-full blur-3xl -mr-16 -mt-16 transition-all group-hover:bg-amber-100/40" />
+          <div className="mb-6 flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-amber-700">
+            <div className="relative h-7 w-7 rounded-full ring-2 ring-amber-100 shadow-sm overflow-hidden">
+              <Image 
+                src="/images/hermes-pixel-icon.png" 
+                alt="Hermes" 
+                fill 
+                className="object-contain p-1"
+                unoptimized
+              />
+            </div>
+            Hermes Intel
           </div>
           <div className="space-y-3 text-base leading-relaxed text-gray-800">
             <p><span className="font-semibold text-gray-900">Why fit:</span> {hermesTake.whyFit}</p>
@@ -154,18 +170,24 @@ export function ProspectCard({
             <h4 className="font-bold uppercase tracking-widest text-[12px] text-gray-400 flex items-center gap-2">
               <User className="w-4 h-4" /> Targeted Decision Maker
             </h4>
-            <div className="space-y-4 text-[15px] font-medium text-gray-700 bg-gray-50/70 p-5 md:p-6 rounded-[2rem] border border-gray-100 shadow-sm transition-all hover:bg-white hover:border-gray-200 hover:shadow-md">
-              <div className="flex items-center space-x-4 mb-4">
-                <div className="shrink-0 h-14 w-14 rounded-full flex items-center justify-center bg-gray-50 border border-[hsl(var(--hermes-gold))]/30 overflow-hidden text-[hsl(var(--hermes-gold-dark))] font-bold text-xl uppercase shadow-inner">
+            <div className="space-y-4 text-[15px] font-medium text-gray-700 bg-gray-50/40 p-6 md:p-8 rounded-[2.5rem] border border-gray-100 shadow-sm transition-all hover:bg-white hover:border-amber-100/50 hover:shadow-xl group">
+              <div className="flex items-center space-x-5 mb-6">
+                <div className="shrink-0 h-16 w-16 rounded-full flex items-center justify-center bg-white border border-gray-100 overflow-hidden text-amber-600 font-serif font-bold text-2xl uppercase shadow-sm relative transition-transform group-hover:scale-105">
                   {prospect.avatarUrl ? (
-                    <img src={prospect.avatarUrl} alt={name} className="w-full h-full object-cover" />
+                    <Image 
+                      src={prospect.avatarUrl} 
+                      alt={name} 
+                      fill 
+                      className="object-cover"
+                      unoptimized
+                    />
                   ) : (
                     name !== 'Unknown Contact' && name.match(/[a-zA-Z]/) ? name.split(' ').map((n: string) => n[0]).join('').substring(0,2) : '?'
                   )}
                 </div>
                 <div>
-                  <div className="text-[20px] font-bold text-gray-900 tracking-tight">{name}</div>
-                  <div className="text-gray-500 font-medium text-[14px]">{(prospect as any).jobTitle || 'Role not confirmed'}</div>
+                  <div className="text-[22px] font-serif font-bold text-gray-900 tracking-tight leading-tight">{name}</div>
+                  <div className="text-gray-500 font-medium text-[15px] mt-1">{(prospect as any).jobTitle || 'Role not confirmed'}</div>
                 </div>
               </div>
               
@@ -199,8 +221,8 @@ export function ProspectCard({
             <h4 className="font-bold uppercase tracking-widest text-[12px] text-gray-400 flex items-center gap-2">
               <Building className="w-4 h-4" /> Company Signals
             </h4>
-            <div className="space-y-3 text-[15px] font-medium text-gray-700 bg-gray-50/70 p-5 md:p-6 rounded-[2rem] border border-gray-100 shadow-sm transition-all hover:bg-white hover:border-gray-200 hover:shadow-md h-full flex flex-col">
-              <p className="text-[15px] leading-relaxed text-gray-600 flex-1">
+            <div className="space-y-3 text-[15px] font-medium text-gray-700 bg-gray-50/40 p-6 md:p-8 rounded-[2.5rem] border border-gray-100 shadow-sm transition-all hover:bg-white hover:border-amber-100/50 hover:shadow-xl h-full flex flex-col">
+              <p className="text-[16px] leading-[1.7] text-gray-500/90 flex-1 font-medium">
                 {(prospect as any).summary || `${company} operates in the ${prospect.industry || 'general'} sector.`}
               </p>
               

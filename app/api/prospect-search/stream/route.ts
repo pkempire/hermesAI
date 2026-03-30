@@ -277,15 +277,21 @@ export async function GET(req: NextRequest) {
             })
             cleanup()
           }
-        } catch (error) {
+        } catch (error: any) {
           logger.error('Error while polling prospect stream:', error)
           if (!isClosed) {
+            const message = error instanceof Error ? error.message : String(error)
+            const displayMessage = 
+              (message.includes('rs_') || message.includes('not found') || message.includes('websetId'))
+                ? 'The research session for this campaign has expired. Please start a new brief.'
+                : message
+
             send({
               type: 'prospect_search_error',
               event: 'error',
               websetId,
               status: 'failed',
-              message: error instanceof Error ? error.message : 'Unknown stream error'
+              message: displayMessage
             })
             cleanup()
           }

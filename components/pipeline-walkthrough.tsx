@@ -27,78 +27,99 @@ function AnimatedLog({ lines }: { lines: { text: string; color?: string }[] }) {
 
 const steps = [
   {
+    id: 'query',
+    number: '00',
+    phase: 'The Command',
+    image: '/images/hermes-pixel-icon.png',
+    iconBg: 'bg-indigo-50',
+    iconColor: 'text-indigo-600',
+    accent: 'indigo',
+    name: 'Your Natural Language Brief',
+    description: 'You don\'t build lists; you talk to Hermes. A single prompt like "Find 25 Series A CTOs in NY" triggers the entire autonomous research chain.',
+    facts: [
+      'Accepts raw, unstructured natural language',
+      'Understands intent, filters, and persona',
+      'Automatically triggers website analysis',
+    ],
+    logTitle: 'hermes-input.log',
+    logLines: [
+      { text: 'USER > "Find 25 B2B SaaS Founders in NY..."', color: 'text-white' },
+      { text: 'Analyzing intent...', color: 'text-gray-400' },
+      { text: 'Entity: "Founder", Geo: "New York", Type: "B2B SaaS"', color: 'text-indigo-300' },
+      { text: 'Intent verified. Pipeline initialized.', color: 'text-emerald-400' },
+    ],
+  },
+  {
     id: 'scrape',
     number: '01',
     phase: 'Offer Intelligence',
-    image: '/images/hermes-helmet.png',
+    image: '/images/hermes-pixel.png',
     iconBg: 'bg-amber-50',
     iconColor: 'text-amber-600',
     accent: 'amber',
-    name: 'Read your offer',
+    name: 'Understand your Edge',
     description:
-      'Hermes visits your website first. It extracts your positioning, who you sell to, and what makes you different. This seeds every search and every email that follows.',
+      'Hermes visits your website to extract your ICP, positioning, and value prop. Every subsequent search is grounded in what you actually sell.',
     facts: [
-      'Visits dentalsaas.com to extract offer context',
-      'Identifies ICP: Regional private dental practices',
-      'Detects value prop: Scaling patient acquisition in MA',
+      'Crawls your website for positioning cues',
+      'Identifies ICP and unique value propositions',
+      'Custom signals seeded for the outreach angle',
     ],
     logTitle: 'hermes-scrape.log',
     logLines: [
-      { text: 'GET https://dentalsaas.com → 200 OK', color: 'text-emerald-400' },
-      { text: 'Parsing offer context...' },
-      { text: 'ICP: "Private Dental Practices, 10-50 emp"', color: 'text-amber-300' },
-      { text: 'Offer: "Scaling patient acquisition with SaaS"', color: 'text-amber-300' },
-      { text: 'Custom signals seeded for MA market ✓', color: 'text-emerald-400' },
+      { text: 'GET https://your-site.com → 200 OK', color: 'text-emerald-400' },
+      { text: 'Parsing offer context...', color: 'text-gray-400' },
+      { text: 'ICP: "B2B SaaS, 50-200 emp"', color: 'text-amber-300' },
+      { text: 'Offer: "AI-native GTM infrastructure"', color: 'text-amber-300' },
+      { text: 'Brand voice: Professional/Technical ✓', color: 'text-emerald-400' },
     ],
   },
   {
     id: 'exa',
     number: '02',
-    phase: 'Company Discovery',
+    phase: 'Semantic Discovery',
     image: '/images/hermes-discovery.png',
     iconBg: 'bg-blue-50',
     iconColor: 'text-blue-600',
     accent: 'blue',
-    name: 'Map the market with Exa',
-    description: null, // JSX below
+    name: 'Map the Market with Exa',
+    description: 'Exa uses neural semantic search—not keywords—to find companies that match your brief across the live web. It finds companies by their actual meaning.',
     facts: [
-      'Neural semantic search finds 20 practices in MA',
-      'Filter: "between 10-50 employees"',
-      'Signal: "active for more than 5 years"',
+      'Neural search surfaces meaningful matches',
+      'Bypasses keyword limitations',
+      '20+ verified practices found in seconds',
     ],
     logTitle: 'exa-webset.log',
     logLines: [
-      { text: 'POST /websets/ → dental_ma_set created', color: 'text-emerald-400' },
-      { text: 'query: "private dental practices in MA, 10-50 emp..."' },
-      { text: 'filter: "presence_on_web > 5 years"' },
-      { text: 'enrichments: "LinkedIn URL of Founder"' },
-      { text: 'status: running → idle (20 results)', color: 'text-blue-400' },
-      { text: '20 verified against criteria ✓', color: 'text-emerald-400' },
+      { text: 'POST /websets/ → nyt_founders_set created', color: 'text-emerald-400' },
+      { text: 'query: "B2B SaaS founders in NYC..."', color: 'text-gray-400' },
+      { text: 'Status: streaming (25 results)', color: 'text-blue-400' },
+      { text: 'Filtering by headcount & recent funding...', color: 'text-gray-400' },
+      { text: 'Verified 25 high-fit prospects ✓', color: 'text-emerald-400' },
     ],
   },
   {
     id: 'orangeslice',
     number: '03',
-    phase: 'Person Enrichment',
+    phase: 'Decision-Maker Resolution',
     image: '/images/hermes-drafter.png',
-    iconBg: 'bg-orange-50',
-    iconColor: 'text-orange-600',
-    accent: 'orange',
-    name: 'Resolve the Decision-Maker',
-    description: null, // JSX below
+    iconBg: 'bg-emerald-50',
+    iconColor: 'text-emerald-600',
+    accent: 'emerald',
+    name: 'Enrich & Draft with Orangeslice',
+    description: 'Orangeslice enriches each account to find the specific contact, verify their email, and pull "Signals" to build a hyper-personalized pitch.',
     facts: [
-      'Resolves exact contact: "Founder"',
-      'Extracts requested signal: "Google Reviews count"',
-      'Verifies email with waterfall fallback',
+      'Resolves exact "Decision-Maker" contact',
+      'Verifies business email with high precision',
+      'Drafts personalized emails in your brand voice',
     ],
-    logTitle: 'orangeslice.log',
+    logTitle: 'orangeslice-enrich.log',
     logLines: [
-      { text: 'company.linkedin.enrich → "Beacon Dental, MA"', color: 'text-emerald-400' },
-      { text: 'person.resolve → "Dr. Marcus Chen, Founder"', color: 'text-emerald-400' },
-      { text: 'person.contact.get → m.chen@beacondental.com', color: 'text-amber-300' },
-      { text: 'signal.extract → "Google Reviews: 156"', color: 'text-emerald-400' },
-      { text: 'hermes_take: "Scaling since 2018, 150+ reviews..."' },
-      { text: 'email_draft → ready for review ✓', color: 'text-emerald-400' },
+      { text: 'person.resolve → "Jane Doe, Founder"', color: 'text-emerald-400' },
+      { text: 'person.contact.get → jane@doe-hq.com', color: 'text-amber-300' },
+      { text: 'signal.extract → "Recently expanded to EU"', color: 'text-emerald-400' },
+      { text: 'email_draft → "Re: European scaling..." ✓', color: 'text-emerald-400' },
+      { text: 'Sequence ready for Draft Studio', color: 'text-emerald-400' },
     ],
   },
 ]
@@ -117,9 +138,10 @@ const descriptionJSX: Record<string, React.ReactNode> = {
 }
 
 const accentClasses: Record<string, { dot: string; ring: string; num: string }> = {
+  indigo: { dot: 'bg-indigo-400', ring: 'ring-indigo-100', num: 'text-indigo-600' },
   amber: { dot: 'bg-amber-400', ring: 'ring-amber-100', num: 'text-amber-600' },
   blue: { dot: 'bg-blue-400', ring: 'ring-blue-100', num: 'text-blue-600' },
-  orange: { dot: 'bg-orange-400', ring: 'ring-orange-100', num: 'text-orange-600' },
+  emerald: { dot: 'bg-emerald-400', ring: 'ring-emerald-100', num: 'text-emerald-600' },
 }
 
 // ─── PipelineWalkthrough ──────────────────────────────────────────────────────
@@ -130,23 +152,25 @@ export function PipelineWalkthrough() {
   return (
     <div className="w-full">
       {/* Section header */}
-      <div className="mb-14 flex flex-col items-center text-center">
-        <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-100 bg-amber-50 shadow-sm">
+      <div className="mb-20 flex flex-col items-center text-center">
+        <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-3xl border border-amber-100 bg-amber-50 shadow-xl overflow-hidden group">
           <Image
-            src="/images/hermes-helmet.png"
+            src="/images/hermes-pixel-icon.png"
             alt="Hermes"
-            width={28}
-            height={28}
-            className="object-contain"
+            width={48}
+            height={48}
+            className="object-contain transform group-hover:scale-110 transition-transform duration-500"
             unoptimized
           />
         </div>
-        <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-600/70 mb-3">How it works</div>
-        <h2 className="font-serif text-[2.8rem] leading-[1.05] tracking-tight text-gray-900 mb-4">
-          Three steps. Zero guesswork.
+        <div className="text-[11px] font-black uppercase tracking-[0.3em] text-amber-600/70 mb-4 px-3 py-1 bg-amber-50 rounded-full border border-amber-100/50">
+          The Hermes Lineage
+        </div>
+        <h2 className="font-serif text-[3.2rem] md:text-[3.8rem] leading-[1] tracking-tight text-gray-900 mb-6">
+          Autonomous Outreach. <br /><span className="text-gray-400">Zero manual effort.</span>
         </h2>
-        <p className="max-w-xl text-[16px] leading-[1.7] font-medium text-gray-500">
-          From your website URL to a ready-to-send, hyper-personalized email sequence — automated end to end.
+        <p className="max-w-2xl text-[18px] leading-[1.6] font-medium text-gray-500/80">
+          Hermes transforms your natural language brief into a full-scale outbound engine — discovering your market, resolving decision-makers, and drafting individual pitches.
         </p>
       </div>
 
