@@ -102,7 +102,7 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <CommandOrbit user={user} />
-          <div className="flex flex-col flex-1 min-h-0">
+          <div className="flex flex-col flex-1 min-h-0 min-h-screen">
             <Header user={user} />
             <main className={cn('relative flex flex-1 min-h-0 pt-0', user ? 'overflow-hidden' : 'overflow-x-hidden overflow-y-auto')}>
               <ArtifactRoot>{children}</ArtifactRoot>

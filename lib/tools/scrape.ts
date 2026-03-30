@@ -3,6 +3,7 @@ import Exa from 'exa-js'
 import { JSDOM } from 'jsdom'
 import { z } from 'zod'
 import { getToolCallModel } from '../utils/registry'
+import { logger } from '../utils/logger'
 
 const scrapeSchema = z.object({
   url: z.string().url().describe('Root URL to analyze (e.g., https://yourcompany.com)')
@@ -35,16 +36,25 @@ export function createScrapeSiteTool() {
 
       // Prefer Exa contents first for a cleaner, more stable offer snapshot.
       try {
-        const res = await exa.searchAndContents(`site:${host}`, {
+        const exaPromise = exa.searchAndContents(`site:${host}`, {
           numResults: 6,
           includeDomains,
           livecrawl: 'always'
         } as any)
+        
+        // 45s timeout for Exa livecrawl
+        const res = await Promise.race([
+          exaPromise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Exa timeout')), 45000))
+        ]) as any
+        
         const texts = (res.results || []).map((r: any) => `${r.title}\n${r.text || r.highlight || ''}`)
         const joined = texts.join('\n\n').slice(0, 30000)
         summary = joined.slice(0, 4000)
         refs.push(...(res.results || []).slice(0, 6).map((r: any) => ({ title: r.title, url: r.url })))
-      } catch {}
+      } catch (e) {
+        logger.warn('[scrape_site] Exa failed or timed out:', e)
+      }
 
       if (!summary) {
         try {
@@ -64,25 +74,33 @@ export function createScrapeSiteTool() {
 
       let snapshot: z.infer<typeof snapshotSchema> = {}
       try {
-        const extraction = await generateObject({
-          model: getToolCallModel(),
-          schema: snapshotSchema,
-          system: `Extract a compact offer snapshot from a company website.
+        if (summary) {
+          const extractionPromise = generateObject({
+            model: getToolCallModel(),
+            schema: snapshotSchema,
+            system: `Extract a compact offer snapshot from a company website.
+  
+  Rules:
+  - Keep every field concise.
+  - Focus on what helps Hermes understand the actual offer before prospecting.
+  - Prefer the real offer and audience over generic marketing fluff.
+  - "offer" should be the clearest one-sentence description of what the company actually sells or delivers.
+  - "targetAudience" should be the specific personas they sell to.
+  - "whyItMatters" should explain in one sentence why that offer matters for prospecting or partnerships.
+  - proofPoints should be short, distinct bullets if present.`,
+            prompt: summary.slice(0, 5000)
+          })
 
-Rules:
-- Keep every field concise.
-- Focus on what helps Hermes understand the actual offer before prospecting.
-- Prefer the real offer and audience over generic marketing fluff.
-- "offer" should be the clearest one-sentence description of what the company actually sells or delivers.
-- "whyItMatters" should explain in one sentence why that offer matters for prospecting or partnerships.
-- proofPoints should be short, distinct bullets if present.`,
-          prompt: summary.slice(0, 5000)
-        })
-        snapshot = extraction.object
-      } catch (e) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.error('[scrape_site] Failed to generate offer snapshot:', e)
+          // 30s timeout for LLM extraction
+          const extraction = await Promise.race([
+            extractionPromise,
+            new Promise((_, reject) => setTimeout(() => reject(new Error('LLM extraction timeout')), 30000))
+          ]) as any
+          
+          snapshot = extraction.object
         }
+      } catch (e) {
+        console.error('[scrape_site] Failed to generate offer snapshot:', e)
       }
 
       const companyName = snapshot.companyName || host.replace(/^www\./, '')

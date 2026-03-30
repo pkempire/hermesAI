@@ -16,6 +16,15 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ user }) => {
   const [credits, setCredits] = useState<number | null>(null)
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20)
+    }
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -35,7 +44,12 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
   
   if (!user) {
     return (
-      <header className="sticky top-0 right-0 left-0 z-30 border-b border-gray-200 shadow-sm relative overflow-hidden">
+      <header
+        className={cn(
+          'sticky top-0 right-0 left-0 z-[100] border-b border-gray-100 bg-white/95 backdrop-blur-md transition-all duration-300',
+          scrolled ? 'py-2 shadow-md' : 'py-3'
+        )}
+      >
         <div className="absolute inset-0 z-0 bg-white">
           <Image 
             src="/images/socrates.jpg" 
