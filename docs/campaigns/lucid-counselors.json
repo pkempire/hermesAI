@@ -1,0 +1,63 @@
+{
+  "name": "Lucid x Bay Area Private College Counselors",
+  "brief": "Find founder/owner-level college counselors running Bay Area private practices that serve STEM-heavy 'try-hard' high schoolers targeting Ivy/MIT/Stanford. We want to refer those students to Lucid Academy's AI/ML research program. Skip big-box franchises and junior analysts — we want the person whose name is on the door, who personally advises families and decides which outside programs to recommend.",
+  "offer": {
+    "company": "Lucid Academy",
+    "website": "https://lucid-education.com",
+    "summary": "Project-based AI/ML coaching for high schoolers — 1:1 mentorship from ISEF/Regeneron alumni, original research projects, and competition + internship placement.",
+    "proof": [
+      "125+ students shipped from basic programming to original AI projects and national competition awards",
+      "Mentors are ISEF, Regeneron STS, and top-lab researchers who guide students 1:1 through publishable work",
+      "Students place at university research labs and win at ISEF, Regeneron, JSHS, and AI fairs"
+    ],
+    "icp_for_referral": "Driven STEM-track high schoolers (sophomores/juniors) at competitive Bay Area schools who already code and want a real research project, competition result, or lab internship for Ivy/MIT/Stanford applications."
+  },
+  "search": {
+    "entity_type": "company",
+    "query": "Independent boutique college counseling and admissions consulting firms in the San Francisco Bay Area founded and led by their owner, serving STEM-focused students applying to Ivy League, MIT, Stanford, and Caltech.",
+    "criteria": [
+      "Independent / boutique college counseling practice (not Crimson, IvyWise, C2, Princeton Review, or other large franchises)",
+      "Headquartered or primarily operating in the San Francisco Bay Area (SF, Peninsula, South Bay, East Bay)",
+      "Founder, owner, or principal counselor is the public face of the firm and personally takes clients",
+      "Explicitly serves high-achieving STEM students or markets Ivy / MIT / Stanford / Caltech / CMU outcomes",
+      "Recommends or curates outside enrichment, research, or summer programs for students",
+      "Has a working website and at least one direct contact channel (email or contact form)"
+    ],
+    "target_count": 25,
+    "target_persona": "Founder / Owner / Principal College Counselor"
+  },
+  "enrichments": [
+    {"label": "founder_name", "description": "Full name of the firm's founder, owner, or principal counselor."},
+    {"label": "founder_email", "description": "Direct work email of the founder; fall back to firm's primary contact email."},
+    {"label": "stem_focus_evidence", "description": "Quote or sentence from the site showing STEM / Ivy / MIT / Stanford specialization."},
+    {"label": "outcomes_or_admits", "description": "Specific admissions outcomes or schools listed (e.g. 'MIT 2024, Stanford 2023')."},
+    {"label": "service_area_city", "description": "Primary Bay Area city or region the firm serves (e.g. Palo Alto, Cupertino, SF)."}
+  ],
+  "email_angles": [
+    {
+      "angle": "Plug a hole in the STEM applicant package",
+      "hook": "The hardest part of the Bay Area STEM applicant isn't the GPA — it's giving them something real to point at.",
+      "body_outline": "- Note their STEM/Ivy positioning and that their students usually have the grades + scores already\n- Lucid pairs those students 1:1 with ISEF/Regeneron-caliber mentors to ship an original AI project and target a real competition or lab placement\n- Offer to send a 1-page referral sheet they can hand to families, plus a partner code so we can track who comes from them",
+      "cta": "Worth a 15-min intro call this week or next so you can vet us before recommending?"
+    },
+    {
+      "angle": "Built for the kid who already codes",
+      "hook": "Most enrichment programs are too soft for the Gunn/Harker/Mission San Jose kid who's been coding since 8th grade.",
+      "body_outline": "- Acknowledge they likely turn down a lot of summer-program pitches because their students have outgrown intro classes\n- Lucid is the opposite problem: structured 1:1 research with mentors who've actually won ISEF/Regeneron, output is a real project + paper, not a certificate\n- 125+ students through, concrete examples of competition wins and lab internships we can share",
+      "cta": "Open to a quick call so I can walk you through two recent student outcomes and you can decide if it's a fit?"
+    },
+    {
+      "angle": "Founder-to-founder, no analyst middleman",
+      "hook": "Reaching out to you directly because you're the one who actually decides which outside programs your families hear about.",
+      "body_outline": "- Skip the BD pitch — explain Lucid in two sentences and what kind of student it's right for\n- Be explicit: we don't want to be on a generic resource list, we want a real referral relationship with counselors whose judgment we trust\n- Offer a no-cost diagnostic call for one of their current juniors so they can see the program quality firsthand",
+      "cta": "Can I send over our mentor roster and one sample student deliverable so you can take a look on your own time?"
+    }
+  ],
+  "qa_checklist": [
+    "Counselor replies asking for the referral sheet, mentor roster, or sample deliverable",
+    "Counselor books an intro/vetting call",
+    "Counselor names a specific current student who might be a fit",
+    "Founder responds personally (not assistant/analyst), confirming we hit the right level",
+    "Zero replies from large franchises like Crimson/IvyWise/C2 — means our filtering worked"
+  ]
+}

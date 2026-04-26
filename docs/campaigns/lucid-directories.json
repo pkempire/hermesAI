@@ -1,0 +1,63 @@
+{
+  "name": "Lucid x Greater Boston STEM Summer Program Directories",
+  "brief": "Find Massachusetts / Greater Boston online directories, parent guides, and editorial roundups that list student STEM summer programs, camps, and enrichment opportunities. Goal is to get Lucid Academy added to those listings. Need to reach the editor, list manager, or partnerships contact — the human who actually adds entries — not generic info@ inboxes.",
+  "offer": {
+    "company": "Lucid Academy",
+    "website": "https://lucid-education.com",
+    "summary": "1:1 AI/ML research mentorship for high schoolers — students build original AI projects with ISEF/Regeneron mentors and place at competitions and university labs.",
+    "proof": [
+      "125+ high school alumni with shipped AI projects and national competition awards",
+      "Runs year-round and summer cohorts — clean fit for any 'summer STEM programs' listing",
+      "Remote-friendly so it serves Greater Boston families regardless of which town the directory targets"
+    ],
+    "icp_for_referral": "Parents of MA high schoolers searching directories for a substantive summer STEM / AI / research program that goes beyond intro coding camp."
+  },
+  "search": {
+    "entity_type": "company",
+    "query": "Massachusetts and Greater Boston parenting websites, local family magazines, school resource hubs, and enrichment directories that publish curated lists of summer STEM, coding, AI, or research programs for middle and high school students.",
+    "criteria": [
+      "Website is a directory, guide, blog, or local publication — not a single program's marketing site",
+      "Audience is parents in Massachusetts, especially Greater Boston, MetroWest, Cambridge, or North Shore",
+      "Has at least one existing list/article of STEM, coding, AI, or summer programs for students",
+      "Accepts new listings, submissions, sponsored placements, or has an editor/partnerships contact",
+      "Actively maintained — at least one piece of content published in the last 12 months",
+      "Not a national aggregator with no MA-specific curation (e.g. skip generic Niche/CampPage-style mega-sites)"
+    ],
+    "target_count": 25,
+    "target_persona": "Editor, List Manager, Partnerships Lead, or Founder"
+  },
+  "enrichments": [
+    {"label": "editor_or_partnerships_contact", "description": "Name + email of the editor, list manager, or partnerships lead; not a generic info@."},
+    {"label": "existing_stem_list_url", "description": "URL of their existing STEM / summer / coding programs list, if any."},
+    {"label": "submission_process", "description": "How new listings get added: form, email pitch, paid sponsorship, or editorial only."},
+    {"label": "geo_focus", "description": "Specific MA region the publication centers on (e.g. Boston, MetroWest, Cambridge)."},
+    {"label": "last_updated", "description": "Approximate date of most recent post or list update on the site."}
+  ],
+  "email_angles": [
+    {
+      "angle": "Fill a gap in your existing list",
+      "hook": "Saw your [year] roundup of Boston-area summer STEM programs — it's one of the few that actually curates instead of dumping every camp in the state.",
+      "body_outline": "- Reference their specific list by name and note what's missing (1:1 AI research mentorship vs. group coding camps)\n- Introduce Lucid in two lines: 125+ students, original AI projects, ISEF/Regeneron mentors, runs in summer\n- Offer a ready-to-paste blurb + logo + one parent-facing testimonial so adding us is zero work",
+      "cta": "Want me to send the listing copy in the format you usually use?"
+    },
+    {
+      "angle": "Useful for your readers, not a sponsorship pitch",
+      "hook": "Quick note from the team at Lucid Academy — not a sponsorship pitch, just want to be useful to your readers.",
+      "body_outline": "- Acknowledge they get pitched constantly and most are intro-level coding camps\n- Lucid serves the higher end of the parent audience — kids who are past intro and want real research output\n- Happy to write a short guest piece on 'how to evaluate a high school AI research program' if that's more useful than a listing",
+      "cta": "Listing, guest piece, or both — what's easiest on your side?"
+    },
+    {
+      "angle": "Partnerships, fast",
+      "hook": "Reaching out about getting Lucid Academy added to your STEM programs directory.",
+      "body_outline": "- Be direct: we're a 1:1 AI research mentorship program for high schoolers, remote, runs summer + year-round\n- List proof in one line: 125+ alumni, ISEF/Regeneron mentor roster, competition and lab placements\n- Mention we can do a referral / affiliate arrangement if their directory works that way, or just a free listing if it doesn't",
+      "cta": "What's the fastest path to getting added — a form, a paid slot, or just replying with our info?"
+    }
+  ],
+  "qa_checklist": [
+    "Editor replies asking for listing copy, logo, or a blurb",
+    "Lucid actually appears on their directory or roundup post within 2-4 weeks",
+    "Reply comes from a named human editor, not an info@ autoresponder",
+    "At least one publication offers a guest post or feature beyond a basic listing",
+    "Referral traffic shows up from MA-based directory domains in analytics"
+  ]
+}
