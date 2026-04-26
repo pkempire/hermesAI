@@ -6,33 +6,11 @@ import type { UIMessage as Message } from 'ai'
 import { ArrowUp, ChevronDown, LoaderCircle, Mic, Paperclip, Square } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
-import Image from 'next/image'
 import Textarea from 'react-textarea-autosize'
 import { useArtifact } from './artifact/artifact-context'
-import { HomeCommandCenter } from './home-command-center'
-import { RotatingText } from './rotating-text'
+import { Hero } from './marketing/hero'
+import { BelowFold } from './marketing/below-fold'
 import { Button } from './ui/button'
-
-function RotatingHeroText() {
-  const useCases = [
-    'partner list',
-    'contact path',
-    'directory listing',
-    'founder campaign',
-    'outreach draft'
-  ]
-
-  return (
-    <>
-      Run Hermes for your{' '}
-      <RotatingText
-        words={useCases}
-        className="inline-block text-[hsl(var(--hermes-gold-light))]"
-        interval={2500}
-      />
-    </>
-  )
-}
 
 interface ChatPanelProps {
   input: string
@@ -235,43 +213,12 @@ export function ChatPanel({
       className={cn('w-full group/form-container shrink-0 relative z-10', messages.length > 0 ? 'px-3 sm:px-4 pb-3 sm:pb-5' : 'px-3 sm:px-5 md:px-8 pb-6 sm:pb-10')}
     >
       {messages.length === 0 && (
-        <div className="flex flex-col items-center justify-center text-center max-w-5xl mx-auto pt-4 md:pt-16 mb-12 mt-2 relative overflow-hidden bg-white group/hero">
-          {/* Pixel Socrates Background */}
-          <div className="absolute inset-0 z-0 opacity-[0.35] group-hover/hero:opacity-[0.45] transition-opacity duration-700 pointer-events-none overflow-hidden flex items-center justify-center">
-            <div className="relative w-full h-full max-w-4xl max-h-[500px]">
-              <Image 
-                src="/images/socrates-pixel.png" 
-                alt="Hermes World" 
-                fill 
-                className="object-contain scale-125 group-hover/hero:scale-110 transition-transform duration-[40s] ease-out opacity-80" 
-                unoptimized 
-              />
-            </div>
-            <div className="absolute inset-0 bg-gradient-to-b from-white via-white/40 to-white" />
-          </div>
-
-          <div className="relative z-10 flex flex-col items-center py-20 px-8 md:px-12">
-            <div className="relative h-28 w-28 mb-12 transition-all duration-700 group-hover/hero:scale-110 group-hover/hero:rotate-2">
-              <div className="absolute inset-0 bg-amber-400/30 blur-3xl rounded-full" />
-              <Image 
-                src="/images/hermes-pixel-icon.png" 
-                alt="Hermes AI Icon" 
-                width={112} 
-                height={112} 
-                className="relative h-full w-full object-contain drop-shadow-[0_16px_32px_rgba(214,157,74,0.6)]" 
-                unoptimized 
-              />
-            </div>
-            
-            <h1 className="font-serif text-[3.8rem] md:text-[5rem] leading-[0.9] text-[hsl(var(--hermes-gold-dark))] tracking-[-0.04em] mb-8 max-w-4xl balance-text font-bold uppercase">
-              Build a new campaign
-            </h1>
-            
-            <p className="text-[20px] md:text-[22px] font-serif font-medium leading-[1.6] text-gray-500 max-w-2xl mb-16">
-              Tell Hermes what your offer and a sales motion you want to run.
-            </p>
-          </div>
-        </div>
+        <Hero
+          onSelectPrompt={(p) => {
+            if (setInput) setInput(p)
+            try { inputRef.current?.focus() } catch {}
+          }}
+        />
       )}
       
       {/* The form sits here immediately, all visual splash/empty states are deferred to HomeCommandCenter */}
@@ -396,15 +343,10 @@ export function ChatPanel({
       </form>
 
       {messages.length === 0 && (
-        <HomeCommandCenter
-          onPromptSelect={(prompt) => {
-            // Only set input and allow user to edit, NO auto-submit!
-            if (setInput) {
-              setInput(prompt)
-            }
-            try {
-              inputRef.current?.focus()
-            } catch {}
+        <BelowFold
+          onSelectPrompt={(prompt) => {
+            if (setInput) setInput(prompt)
+            try { inputRef.current?.focus() } catch {}
           }}
         />
       )}
