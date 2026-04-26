@@ -1,189 +1,219 @@
-# HermesAI: Prospecting & Outreach Engine
+# Hermes — AI Outbound Operator
 
-Current source of truth for launch work:
+> Describe your ICP in one line. Hermes finds the right companies, resolves the
+> decision-maker, drafts pitches grounded in real evidence, and sends through
+> your Gmail. One operator instead of Apollo + Clay + Instantly + glue.
 
-- `LAUNCH_TODO.md`
-- `docs/PRODUCT_VISION.md`
-- `docs/INTEGRATION_STRATEGY.md`
-- `docs/DEPLOYMENT_SETUP.md`
-- `docs/DB_RECOVERY_PLAN.md`
+Hermes is an open-source, chat-first agent for B2B outbound. Tell it what you
+want; it runs the workflow. Built on Next.js 15, the Vercel AI SDK v5, Exa
+Websets for discovery, Orangeslice for enrichment, and Gmail for sending.
 
-The phased implementation plan below is historical context and parts of it are outdated relative to the current `main` branch.
+```
+You: Find 25 Bay Area private college counselors who specialize in STEM/Ivy
+     applications. I want to refer their students to my AI/research program
+     for high schoolers (lucid-education.com).
 
-This document outlines the step-by-step plan to transform the existing AI chat boilerplate into a powerful, automated sales prospecting and outreach tool. We will build this iteratively, with clear verification steps to ensure each component is working correctly before moving to the next.
+Hermes:
+  → reads lucid-education.com to understand the offer
+  → builds a Webset on Exa (boutique counseling firms, founder-led, Bay Area,
+    STEM/Ivy specialty)
+  → resolves the founder + verified email per firm via Orangeslice
+  → enriches with: firm size, outcomes posted, service area, STEM evidence
+  → drafts a personal pitch per prospect that cites real evidence
+  → opens a Gmail draft you approve, then sends
+```
+
+[Live demo](https://hermes-app.vercel.app) · [Architecture](./docs/SYSTEM_ARCHITECTURE.md) ·
+[Research log](./docs/RESEARCH_2026.md) · [Discord](https://discord.gg/hermes)
 
 ---
 
-## Phase 1: Core Prospecting Engine
+## Table of contents
 
-**Goal:** Implement the backend logic and UI to find prospects using Exa Websets and display them in a real-time grid.
-
-### Step 1.1: Database Schema for Campaigns
-
-**Objective:** Create the necessary database tables to store campaign data.
-
-**Files to Create:**
-*   `supabase/migrations/YYYYMMDDHHMMSS_create_campaign_schema.sql`
-
-**Implementation:**
-*   Write a SQL migration to create three tables:
-    *   `campaigns`: To store high-level campaign details (`id`, `user_id`, `created_at`, `prompt`, `status`).
-    *   `prospects`: To store found prospects (`id`, `campaign_id`, `exa_item_id`, `properties` (jsonb), `enrichments` (jsonb)).
-    *   `draft_emails`: To store generated emails (`id`, `prospect_id`, `subject`, `body`, `status`).
-
-**Verification:**
-1.  Run `supabase db reset` locally to apply the migration.
-2.  Use the Supabase Studio (Table Editor) to confirm the `campaigns`, `prospects`, and `draft_emails` tables exist with the correct columns.
-3.  Manually insert a row into each table to ensure there are no constraint violations.
-
-### Step 1.2: Implement the Campaign Builder UI
-
-**Objective:** Create the user-facing form to define and launch a new prospecting campaign.
-
-**Files to Create/Modify:**
-*   Create `components/campaign-builder.tsx`
-*   Modify `app/page.tsx`
-
-**Implementation:**
-1.  Create the `CampaignBuilder` component exactly as you designed it, with state management for all inputs (query, entity type, enrichments, filters, count).
-2.  Replace the content of `app/page.tsx` to render the `CampaignBuilder` component as the main feature of the home page.
-3.  The `onCreateCampaign` prop will trigger the `startProspectSearch` action.
-
-**Verification:**
-1.  Run the app and navigate to the homepage.
-2.  Verify the `CampaignBuilder` UI renders correctly with all toggles, inputs, and sliders.
-3.  Interact with all form elements and check that their state updates correctly (e.g., using React DevTools).
-4.  Clicking the "Start Search" button should trigger a console log or a placeholder action for now.
-
-### Step 1.3: Enhance Exa to support Websets & Create the Agent
-
-**Objective:** Create a new agent that uses an enhanced Exa tool to initiate a Webset search and stream UI updates.
-
-**Files to Create/Modify:**
-*   Create `lib/agents/prospect-researcher.ts`
-*   Create `components/prospect-grid.tsx`
-*   Modify `lib/actions/chat.ts` (or wherever the `createAI` actions are defined).
-
-**Implementation:**
-1.  Create the `prospect-researcher.ts` file. Implement the `prospectResearcher` function as you outlined. This will involve:
-    *   Accepting structured `searchParams`.
-    *   Calling `exa.websets.create(...)` with the structured query, criteria, and enrichments.
-    *   Streaming initial status updates to the UI (`createStreamableUI`).
-    *   Initiating the polling mechanism (`streamWebsetResults`) to check for results.
-2.  Create the `ProspectGrid.tsx` component. This component will receive the list of `prospects` and render them in a grid using the `ProspectCard` sub-component. It must handle the `isComplete` state to show/hide the loading indicators.
-3.  In `lib/actions/chat.ts`, define the `startProspectSearch` server action. This action will:
-    *   Receive the `searchParams` from the `CampaignBuilder` UI.
-    *   Initialize a `createStreamableUI` instance.
-    *   Call the `prospectResearcher` agent function.
-    *   Return the `streamableUI.value` as part of the AI message.
-
-**Verification:**
-1.  Fill out the `CampaignBuilder` form and click "Start Search".
-2.  Check the browser's network tab to confirm the `startProspectSearch` action is called.
-3.  In your terminal logs, confirm that the `prospect-researcher` is called and that it makes an API request to Exa's Webset endpoint.
-4.  The UI should update in real-time, first showing "Creating intelligent search agents...", then "Finding prospects...", and finally rendering the `ProspectGrid` component.
-5.  As the polling runs, new prospect cards should appear in the grid one by one, animated with `framer-motion`.
+- [What it does](#what-it-does)
+- [Repo layout](#repo-layout)
+- [Local development](#local-development)
+- [Required services](#required-services)
+- [Architecture](#architecture)
+- [Engineering principles](#engineering-principles)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
-## Phase 2: Email Integration and Sending
+## What it does
 
-**Goal:** Allow users to connect their Gmail account and send the generated emails.
+| Capability | Powered by | File |
+|---|---|---|
+| Semantic discovery (companies + people) | Exa Websets | `lib/clients/exa-websets.ts` |
+| Decision-maker resolution + verified email | Orangeslice | `lib/clients/orangeslice.ts` |
+| Site analysis (your offer / their offer) | Exa getContents | `lib/tools/scrape.ts` |
+| Web research per prospect | Tavily / SearXNG / Exa | `lib/tools/search/providers/` |
+| Personalised email drafts grounded in evidence | OpenAI / Anthropic via AI SDK v5 | `lib/tools/email-drafter.ts` |
+| Gmail draft + send (with refresh token rotation) | Google APIs | `lib/clients/gmail.ts` |
+| Quotas + billing | Stripe + Supabase | `lib/utils/quota.ts`, `app/api/stripe/` |
 
-### Step 2.1: Update Supabase Auth to Include Gmail Scopes
+Optional fallbacks: Apollo, Hunter (`lib/clients/`).
 
-**Objective:** Modify the existing Google OAuth flow to request permissions for sending emails.
+## Repo layout
 
-**Files to Modify:**
-*   `lib/auth/get-current-user.ts` or wherever `signInWithOAuth` is called.
-*   We'll also need a new table/column for the refresh token.
-
-**Implementation:**
-1.  Locate the `supabase.auth.signInWithOAuth` call for the 'google' provider.
-2.  Add the `scopes` and `queryParams` to the options object as you defined:
-    ```javascript
-    options: {
-      scopes: 'openid email profile https://www.googleapis.com/auth/gmail.send',
-      queryParams: {
-        access_type: 'offline',
-        prompt: 'consent',
-      },
-    }
-    ```
-3.  **Crucially**, we must also store the `provider_refresh_token`. Modify the `users` table in Supabase (or create a new `user_tokens` table) to store an encrypted version of the refresh token. After a user logs in, we'll need a server-side function to grab this token from the session and save it to our database.
-
-**Verification:**
-1.  Log out of the application.
-2.  Log back in using the Google provider.
-3.  You should be prompted by Google's consent screen to grant permission for "Send email on your behalf."
-4.  After logging in, inspect the user's session data (e.g., via `supabase.auth.getSession()`) and confirm that `provider_token` and `provider_refresh_token` are present.
-5.  Check your database to ensure the refresh token was saved correctly.
-
-### Step 2.2: Create the "Generate Emails" and "Send Emails" Logic
-
-**Objective:** Implement the functionality to draft and send emails for a completed campaign.
-
-**Files to Create/Modify:**
-*   Modify `lib/agents/prospect-researcher.ts`
-*   Create `app/api/send-emails/route.ts`
-*   Modify `components/prospect-grid.tsx`
-
-**Implementation:**
-1.  Add a "Generate Emails" button to the `ProspectGrid` component, which appears when `isComplete` is true.
-2.  When clicked, this button will call a new server action (e.g., `generateEmailsForCampaign`).
-3.  The `generateEmailsForCampaign` action will:
-    *   Fetch all prospects for the campaign from the DB.
-    *   For each prospect, call the LLM with their enriched data and the original pitch to generate a personalized subject and body.
-    *   Save these drafts to the `draft_emails` table.
-4.  Create the `/api/send-emails/route.ts` API route as you specified. This route will:
-    *   Fetch the user's `access_token` (using the `refresh_token` to get a new one if necessary).
-    *   Use the `googleapis` library to send the emails.
-    *   Update the status of each email in the `draft_emails` table.
-
-**Verification:**
-1.  After a prospect search is complete, click the "Generate Emails" button.
-2.  Check the database to confirm that the `draft_emails` table is populated with personalized content.
-3.  Implement a "Send" button. When clicked, it should call the `/api/send-emails` endpoint.
-4.  Confirm in your own Gmail "Sent" folder that the emails were actually sent.
-5.  Check the `draft_emails` table to see their status updated to 'sent'.
-
-## Launch Readiness (Checklist)
-
-- Landing page: product promise, screenshots, pricing, CTA (waitlist or signup)
-- Auth: Supabase or email OTP (sign up, login, forgot password)
-- Usage limits: env flags + simple rate limit (Upstash Redis)
-- Observability: basic server logs in Vercel + error boundaries
-- Billing (optional for v1): Stripe Checkout link or manual onboarding
-- Data: .env variables set (OpenAI/Anthropic, EXA_API_KEY)
-- CI: GitHub Actions (Node 20) lint + build
-- Hosting: Vercel (Next 15) on Node >= 18.18
-
-## GitHub Setup
-
-1. Create a new repo on GitHub.
-2. In this project, run:
-
-```bash
-git init
-git remote add origin <your-repo-url>
-git checkout -b dev
-git add -A
-git commit -m "feat: streaming prospect search + Hermes prompt + UI improvements"
-git push -u origin dev
+```
+hermesAI/
+├── app/                    # Next.js 15 App Router
+│   ├── api/                # Route handlers (chat, prospect search, gmail, stripe, ...)
+│   ├── auth/               # Sign-in / sign-up / OAuth callbacks
+│   ├── search/             # Per-search detail page
+│   ├── share/              # Public share view
+│   └── layout.tsx          # Root layout, fonts, metadata
+├── components/
+│   ├── marketing/          # Landing-page sections (hero, below-fold)
+│   ├── artifact/           # Inline tool-result panels (search, retrieve, ...)
+│   ├── inspector/          # Side-panel inspector
+│   ├── sidebar/            # Chat history sidebar
+│   ├── ui/                 # shadcn primitives
+│   ├── chat.tsx            # useChat root, stream lifecycle
+│   ├── chat-panel.tsx      # Empty-state hero + chat input
+│   ├── prospect-*.tsx      # Prospect builder, table, grid, preview cards
+│   └── interactive-email-drafter.tsx
+├── lib/
+│   ├── agents/             # System prompts + tool wiring (researcher, manual-researcher)
+│   ├── tools/              # Tool definitions (prospect_search, email_drafter, scrape, search, retrieve, question)
+│   ├── clients/            # External-service clients
+│   ├── streaming/          # AI SDK stream + manual stream + tool-result handling
+│   ├── auth/               # Supabase auth helpers
+│   ├── supabase/           # Browser + server Supabase clients
+│   ├── redis/              # Upstash + local Redis config
+│   └── utils/              # Quota, rate-limit, registry, logger
+├── supabase/migrations/    # Postgres schema (campaigns, prospects, draft_emails, gmail_credentials, subscriptions, ...)
+├── docs/
+│   ├── SYSTEM_ARCHITECTURE.md
+│   ├── PRODUCT_VISION.md
+│   ├── INTEGRATION_STRATEGY.md
+│   ├── PRODUCT_SPEC.md
+│   ├── PROSPECT_SEARCH_ARCHITECTURE.md
+│   ├── RESEARCH_2026.md          # 2026 best-practices reference
+│   ├── DEPLOYMENT_SETUP.md
+│   ├── DB_RECOVERY_PLAN.md
+│   ├── USE_CASE_TEMPLATES.md
+│   ├── design/                   # Design mocks
+│   └── campaigns/                # Real production campaign briefs (JSON)
+└── archive/                # Legacy + deprecated code, gitignored for new contributions
 ```
 
-3. Open a PR to `main`. CI will run via `.github/workflows/ci.yml`.
-4. Add repository secrets (Settings → Secrets → Actions):
-   - `OPENAI_API_KEY`
-   - `ANTHROPIC_API_KEY` (if used)
-   - `EXA_API_KEY`
-   - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (if using auth)
+## Local development
 
-## Running Locally
+Prerequisites:
+
+- Node.js >= 20 (Next.js 15 requires it)
+- [Bun](https://bun.sh) 1.2+ (or `pnpm` / `npm` work)
+- A Supabase project (auth + Postgres)
+- An Upstash Redis instance (or local Redis on `:6379`)
+- API keys for at least: OpenAI, Exa, and one of Tavily/SearXNG
+
+Quick start:
 
 ```bash
-# Node >= 18.18 required for Next.js 15
-nvm use 20
-npm i
-npm run dev
+git clone https://github.com/pkempire/hermesAI.git
+cd hermesAI
+
+# 1. Configure
+cp .env.example .env.local
+$EDITOR .env.local                     # fill in keys (see comments)
+
+# 2. Install
+bun install                            # or `pnpm install`
+
+# 3. Migrate
+bunx supabase db push                  # applies supabase/migrations/
+
+# 4. Run
+bun run dev                            # http://localhost:3000
 ```
+
+Common pitfall: `bun run dev` against Node 18 fails. Use `nvm use 20` (or
+`fnm use 20`) before running. The package's `engines` block pins Bun 1.2.12 but
+the underlying Node must be 20+.
+
+## Required services
+
+| Service | Purpose | Free tier? |
+|---|---|---|
+| OpenAI / Anthropic | LLM calls | API key |
+| Exa | Webset discovery + content scrape | Free monthly credits |
+| Orangeslice | Person/company enrichment + verified contact | Paid (contact for keys) |
+| Supabase | Auth, Postgres, Storage | Generous free tier |
+| Upstash Redis | Cache, rate-limit, resumable stream store | Free tier |
+| Stripe | Billing | Test mode is free |
+| Google OAuth + Gmail API | User sign-in + outbound sending | Free |
+
+Optional: Tavily (web search), SearXNG (self-hosted search), Apollo, Hunter.
+
+See `.env.example` for the full list and inline notes per variable.
+
+## Architecture
+
+```
+                       ┌────────────────────────────────────┐
+                       │            Browser                 │
+                       │  Next.js 15 App Router             │
+                       │  React 19 + AI SDK v5 useChat      │
+                       └───────────────┬────────────────────┘
+                                       │  SSE (text/event-stream)
+                                       ▼
+            ┌──────────────────────────────────────────┐
+            │  /api/chat  (Edge or Node runtime)       │
+            │  ─ verifies user, rate-limit, model      │
+            │  ─ streamText({ tools, smoothStream })   │
+            └─────────────┬───────────────┬────────────┘
+                          │               │
+                          ▼               ▼
+              ┌─────────────────┐ ┌──────────────────┐
+              │  Tool registry  │ │  Memory (Redis + │
+              │  prospect_search│ │  Postgres)       │
+              │  email_drafter  │ └──────────────────┘
+              │  scrape_site    │
+              │  search,retrieve│
+              │  ask_question   │
+              └────────┬────────┘
+                       │
+        ┌──────────────┼─────────────────┐
+        ▼              ▼                 ▼
+   ┌────────┐    ┌─────────────┐   ┌─────────────┐
+   │  Exa   │    │ Orangeslice │   │   Gmail     │
+   │Websets │    │ enrichment  │   │  drafts +   │
+   └────────┘    └─────────────┘   │   send      │
+                                   └─────────────┘
+```
+
+Detailed: [docs/SYSTEM_ARCHITECTURE.md](./docs/SYSTEM_ARCHITECTURE.md).
+
+## Engineering principles
+
+1. **Tools, not flows.** Every workflow primitive is a single `tool({…})`
+   definition. The agent decides composition. No orchestration DAGs.
+2. **Streaming is non-negotiable.** Every long-running operation (Webset
+   creation, enrichment, drafting) streams via SSE through the AI SDK; no UI
+   polling.
+3. **Evidence first.** No tool returns generic data. Every prospect gets
+   citation-grade extractions; every email cites them.
+4. **Owner data.** Users must be able to export prospects, drafts, and
+   campaign histories at any time, in JSON or CSV.
+5. **No vendor lock-in in the UI.** Customers don't need to know we use Exa or
+   Orangeslice. They see Hermes.
+
+## Contributing
+
+We accept PRs. Read [CONTRIBUTING.md](./CONTRIBUTING.md) and the
+[code of conduct](./CODE_OF_CONDUCT.md).
+
+Style:
+
+- TypeScript strict, no `any` outside compatibility shims.
+- Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`, `refactor:`).
+- New features must include a brief in `docs/` and a happy-path test.
+- New tools must be defined in `lib/tools/`, registered in
+  `lib/agents/researcher.ts`, and surfaced in `components/tool-section.tsx`.
+
+## License
+
+Apache 2.0 — see [LICENSE](./LICENSE).
