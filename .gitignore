@@ -48,6 +48,8 @@ brain/
 
 # remotion (ignore entire folder)
 remotion/
+# archived legacy code — kept locally for reference, not shipped or tracked
+/archive/
 # Loose screenshots and local images
 Screenshot*.png
 image*.png
