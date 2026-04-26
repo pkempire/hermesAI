@@ -2,8 +2,6 @@
 
 import { cn } from '@/lib/utils'
 import { User } from '@supabase/supabase-js'
-import { ArrowUpRight, Mail, Network, UserRound } from 'lucide-react'
-import Image from 'next/image'
 import Link from 'next/link'
 import React, { useEffect, useState } from 'react'
 import { Button } from './ui/button'
@@ -14,14 +12,18 @@ interface HeaderProps {
   user: User | null
 }
 
+/**
+ * Header — minimal, editorial, white-background.
+ *
+ * Logged-out: wordmark + sign-in. No background art, no busy ornaments.
+ * Logged-in: wordmark + credit pill + user menu.
+ */
 export const Header: React.FC<HeaderProps> = ({ user }) => {
   const [credits, setCredits] = useState<number | null>(null)
   const [scrolled, setScrolled] = useState(false)
 
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20)
-    }
+    const handleScroll = () => setScrolled(window.scrollY > 12)
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
@@ -30,100 +32,75 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
     let mounted = true
     async function load() {
       try {
-        if (!user) { setCredits(null); return }
+        if (!user) {
+          setCredits(null)
+          return
+        }
         const res = await fetch('/api/subscription', { cache: 'no-store' })
         const data = await res.json()
-        if (mounted) setCredits(typeof data?.remaining === 'number' ? data.remaining : null)
+        if (mounted) {
+          setCredits(typeof data?.remaining === 'number' ? data.remaining : null)
+        }
       } catch {
         if (mounted) setCredits(null)
       }
     }
     load()
-    return () => { mounted = false }
+    return () => {
+      mounted = false
+    }
   }, [user])
-  
-  if (!user) {
-    return (
-      <header
-        className={cn(
-          'sticky top-0 right-0 left-0 z-[100] border-b border-gray-100 bg-white/95 backdrop-blur-md transition-all duration-300',
-          scrolled ? 'py-2 shadow-md' : 'py-3'
-        )}
-      >
-        <div className="absolute inset-0 z-0 bg-white">
-          <Image 
-            src="/images/socrates.jpg" 
-            alt="Header Art" 
-            fill 
-            className="object-cover object-[center_28%] opacity-[0.22] mix-blend-multiply filter grayscale-[10%]" 
-            priority 
-            unoptimized 
-          />
-          <div className="absolute inset-x-0 bottom-0 h-[70%] bg-gradient-to-t from-white via-white/80 to-transparent" />
-        </div>
-        
-        <div className="relative z-20 mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-4 md:px-10">
-          <Link
-            href="/"
-            className="group flex items-center gap-3 transition-opacity duration-200 hover:opacity-80"
-          >
-            <div className="relative h-11 w-11 overflow-hidden rounded-[10px] border border-amber-100 bg-white shadow-sm flex items-center justify-center p-1.5 ring-1 ring-amber-50">
-              <Image src="/images/hermes-icon.png" alt="Hermes" width={44} height={44} className="object-contain" unoptimized />
-            </div>
-            <div>
-              <div className="text-[10px] uppercase tracking-[0.28em] text-[hsl(var(--hermes-gold-dark))] font-semibold">Campaign messenger</div>
-              <span className="font-serif text-2xl text-gray-900 leading-none tracking-tight">Hermes</span>
-            </div>
-          </Link>
-
-
-
-          <div className="flex items-center gap-3">
-            <Button asChild variant="ghost" className="text-sm text-gray-600 hover:bg-gray-100/80 hover:text-gray-900 font-medium">
-              <Link href="/auth/login">Sign in</Link>
-            </Button>
-            <GuestMenu />
-          </div>
-        </div>
-      </header>
-    )
-  }
 
   return (
     <header
       className={cn(
-        'sticky top-0 right-0 left-0 z-30 transition-all duration-200 relative overflow-hidden',
-        'border-b border-gray-200 bg-white/90 backdrop-blur-md shadow-sm'
+        'sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md transition-all',
+        scrolled ? 'border-b border-gray-200 shadow-[0_1px_0_rgba(0,0,0,0.02)]' : 'border-b border-transparent'
       )}
     >
-      <div className="absolute inset-0 z-0 bg-white pointer-events-none">
-        <Image 
-          src="/images/socrates.jpg" 
-          alt="Header Art" 
-          fill 
-          className="object-cover object-[center_35%] opacity-[0.25] mix-blend-multiply filter pointer-events-none brightness-110" 
-          priority 
-          unoptimized 
-        />
-        <div className="absolute inset-x-0 bottom-0 h-[80%] bg-gradient-to-t from-white via-white/80 to-transparent" />
-      </div>
-
-      <div className="relative z-20 flex items-center justify-between px-4 py-2 md:px-5">
-        <Link href="/" className="flex items-center gap-2 group">
-           <div className="relative h-9 w-9 overflow-hidden rounded-lg border border-amber-100 bg-white shadow-sm flex items-center justify-center p-1.5 group-hover:border-amber-200 transition-colors">
-              <Image src="/images/hermes-icon.png" alt="Hermes" width={24} height={24} className="object-contain" unoptimized />
-           </div>
-           <span className="font-serif text-xl text-gray-900 tracking-tight">Hermes</span>
+      <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between px-5 md:px-8">
+        {/* Wordmark */}
+        <Link
+          href="/"
+          className="flex items-baseline gap-2 transition-opacity hover:opacity-70"
+        >
+          <span className="font-serif text-[22px] tracking-[-0.01em] text-gray-900">
+            Hermes
+          </span>
+          <span className="hidden sm:inline text-[10px] uppercase tracking-[0.22em] text-gray-400">
+            outbound operator
+          </span>
         </Link>
-        <div className="flex items-center gap-3">
+
+        {/* Right cluster */}
+        <div className="flex items-center gap-2">
           {user && credits !== null && (
-            <div className="hidden items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm sm:inline-flex">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]" />
-              <span className="font-semibold text-gray-900">{credits}</span>
+            <div className="hidden items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1 text-[13px] sm:inline-flex">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              <span className="font-medium text-gray-900">{credits}</span>
               <span className="text-gray-500">credits</span>
             </div>
           )}
-          {user ? <UserMenu user={user} /> : <GuestMenu />}
+          {user ? (
+            <UserMenu user={user} />
+          ) : (
+            <>
+              <Button
+                asChild
+                variant="ghost"
+                className="text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+              >
+                <Link href="/auth/login">Sign in</Link>
+              </Button>
+              <Button
+                asChild
+                className="rounded-full bg-gray-900 text-sm text-white hover:bg-gray-800"
+              >
+                <Link href="/auth/sign-up">Get started</Link>
+              </Button>
+              <GuestMenu />
+            </>
+          )}
         </div>
       </div>
     </header>

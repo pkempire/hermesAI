@@ -23,8 +23,8 @@ const cormorant = Cormorant_Garamond({
   variable: '--font-serif'
 })
 
-const title = 'HermesAI - AI Messenger for Outbound'
-const description = 'Tell Hermes who you want to reach and what you are selling. Hermes researches the market, enriches the list, drafts the outreach, and moves the workflow forward from one clean surface.'
+const title = 'Hermes — AI Outbound Operator'
+const description = 'Describe your ICP in one line. Hermes finds the right companies, resolves the decision-maker, drafts a pitch grounded in real evidence, and sends through your Gmail. Replace Apollo, Clay, and Instantly with one operator.'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://hermesai.com'),
