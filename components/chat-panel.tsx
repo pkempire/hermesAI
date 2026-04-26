@@ -243,10 +243,10 @@ export function ChatPanel({
           </Button>
         )}
 
-        <div className="relative mx-auto w-full max-w-3xl">
+        <div className="relative mx-auto w-full max-w-3xl" id="hermes-input">
           <div className={cn(
-            'relative z-[5] flex w-full flex-col rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-200',
-            'focus-within:border-[hsl(var(--hermes-gold))] focus-within:shadow-[0_8px_30px_rgba(214,157,74,0.12)]'
+            'relative z-[5] flex w-full flex-col rounded-2xl border border-[hsl(var(--hermes-mist))] bg-white shadow-sm transition-all duration-200',
+            'focus-within:border-[hsl(var(--hermes-ink))] focus-within:shadow-[0_8px_30px_-10px_rgba(10,24,53,0.18)]'
           )}>
             <Textarea
               ref={inputRef}
@@ -256,7 +256,7 @@ export function ChatPanel({
               tabIndex={0}
               onCompositionStart={handleCompositionStart}
               onCompositionEnd={handleCompositionEnd}
-              placeholder="Find 20 Fintech CTOs in New York — pitch them my developer tool"
+              placeholder="Find 25 Bay Area private college counselors who specialize in STEM/Ivy applications"
               spellCheck={false}
               value={input}
               disabled={isLoading || isToolInvocationInProgress()}
@@ -318,8 +318,12 @@ export function ChatPanel({
                 size="icon"
                 className={cn(
                   'h-8 w-8 rounded-full transition-all duration-200',
-                  isLoading ? 'bg-[hsl(var(--hermes-gold))] text-white shadow-md' : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-700',
-                  input?.trim() && !isLoading ? 'bg-gray-900 text-white hover:bg-gray-800 shadow-md' : '',
+                  isLoading
+                    ? 'bg-[hsl(var(--hermes-ink))] text-[hsl(var(--hermes-cream))] shadow-md'
+                    : 'bg-[hsl(var(--hermes-cream))] text-[hsl(var(--hermes-steel))] hover:bg-[hsl(var(--hermes-mist))] hover:text-[hsl(var(--hermes-ink))]',
+                  input?.trim() && !isLoading
+                    ? 'bg-[hsl(var(--hermes-ink))] text-[hsl(var(--hermes-cream))] hover:opacity-90 shadow-md'
+                    : '',
                   (!input || input.trim().length === 0) && !isLoading && 'scale-95 opacity-80'
                 )}
                 disabled={

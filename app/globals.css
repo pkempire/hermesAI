@@ -4,86 +4,99 @@
 
 @layer base {
   :root {
-    /* Pristine Executive Light Theme */
-    --background: 0 0% 100%;
-    --foreground: 24 10% 10%;
+    /* Hermes 2026 — warm-cream + ink palette (from design mocks)
+     * Off-white #F8F8F7 page bg, deep navy ink #0A1835 for type and accents,
+     * a subtle warm parchment for cards, and a single muted gold accent for
+     * eyebrows/links. Tailwind tokens are kept HSL so shadcn primitives keep
+     * working without refactor.
+     */
+    --background: 40 16% 97%;          /* #F8F8F7 — warm off-white */
+    --foreground: 222 71% 12%;         /* #0A1835 — deep navy ink */
     --card: 0 0% 100%;
-    --card-foreground: 24 10% 10%;
+    --card-foreground: 222 71% 12%;
     --popover: 0 0% 100%;
-    --popover-foreground: 24 10% 10%;
-    
-    /* Elegant Gold Accents */
-    --primary: 43 74% 49%;
-    --primary-foreground: 0 0% 100%;
-    
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 24 10% 10%;
-    
-    --muted: 0 0% 96%;
-    --muted-foreground: 24 5% 45%;
-    
-    --accent: 43 74% 96%;
-    --accent-foreground: 43 74% 30%;
-    
-    --destructive: 0 84.2% 60.2%;
+    --popover-foreground: 222 71% 12%;
+
+    /* Primary = ink */
+    --primary: 222 71% 12%;
+    --primary-foreground: 40 16% 97%;
+
+    --secondary: 40 12% 94%;
+    --secondary-foreground: 222 71% 12%;
+
+    --muted: 40 12% 94%;
+    --muted-foreground: 222 18% 38%;   /* steel grey #4D5569 */
+
+    --accent: 35 35% 92%;              /* warm parchment */
+    --accent-foreground: 222 71% 12%;
+
+    --destructive: 0 72% 50%;
     --destructive-foreground: 0 0% 100%;
-    
-    --border: 0 0% 92%;
-    --input: 0 0% 92%;
-    --ring: 43 74% 49%;
-    
+
+    --border: 40 10% 88%;
+    --input: 40 10% 88%;
+    --ring: 222 71% 12%;
+
     --radius: 0.75rem;
 
-    /* Sidebar Variables */
-    --sidebar-background: 0 0% 98.5%;
-    --sidebar-foreground: 24 10% 15%;
-    --sidebar-primary: 43 74% 49%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 94%;
-    --sidebar-accent-foreground: 24 10% 10%;
-    --sidebar-border: 0 0% 92%;
-    --sidebar-ring: 43 74% 49%;
+    /* Sidebar */
+    --sidebar-background: 40 16% 97%;
+    --sidebar-foreground: 222 71% 18%;
+    --sidebar-primary: 222 71% 12%;
+    --sidebar-primary-foreground: 40 16% 97%;
+    --sidebar-accent: 40 12% 92%;
+    --sidebar-accent-foreground: 222 71% 12%;
+    --sidebar-border: 40 10% 88%;
+    --sidebar-ring: 222 71% 12%;
 
-    /* Hermes Specifc Gold & Roman Accents */
-    --hermes-gold: 43 74% 49%;
-    --hermes-gold-dark: 43 85% 35%;
-    --hermes-gold-light: 43 74% 90%;
-    
-    /* Elegant soft shadows for the Roman aesthetic */
-    --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.04);
-    --elevation-2: 0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.02);
-    --elevation-3: 0 12px 32px rgba(0, 0, 0, 0.06), 0 4px 8px rgba(0, 0, 0, 0.03);
+    /* Hermes brand tokens */
+    --hermes-ink: 222 71% 12%;          /* #0A1835 */
+    --hermes-ink-soft: 222 33% 28%;     /* #36425B */
+    --hermes-cream: 40 16% 97%;         /* #F8F8F7 */
+    --hermes-parchment: 35 35% 92%;     /* warm card bg */
+    --hermes-steel: 222 12% 50%;        /* #71788C body grey */
+    --hermes-mist: 222 22% 86%;         /* #B3BAD1 subtle borders */
+    --hermes-gold: 36 50% 48%;          /* muted antique gold for accents */
+
+    /* Backwards-compat aliases — old code references these. New code should
+       prefer --hermes-ink. Kept temporarily to avoid mass-rewrite. */
+    --hermes-gold-dark: 36 60% 32%;
+    --hermes-gold-light: 35 35% 92%;
+
+    --elevation-1: 0 1px 2px rgba(10, 24, 53, 0.04);
+    --elevation-2: 0 4px 14px rgba(10, 24, 53, 0.06), 0 1px 2px rgba(10, 24, 53, 0.03);
+    --elevation-3: 0 18px 40px rgba(10, 24, 53, 0.08), 0 6px 12px rgba(10, 24, 53, 0.04);
   }
 
-  /* Force light mode by stripping out the inverse definitions */
+  /* Force light — the product is a light editorial app, not a dark IDE clone. */
   .dark {
-    --background: 0 0% 100%;
-    --foreground: 24 10% 10%;
+    --background: 40 16% 97%;
+    --foreground: 222 71% 12%;
     --card: 0 0% 100%;
-    --card-foreground: 24 10% 10%;
+    --card-foreground: 222 71% 12%;
     --popover: 0 0% 100%;
-    --popover-foreground: 24 10% 10%;
-    --primary: 43 74% 49%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 24 10% 10%;
-    --muted: 0 0% 96%;
-    --muted-foreground: 24 5% 45%;
-    --accent: 43 74% 96%;
-    --accent-foreground: 43 74% 30%;
-    --destructive: 0 84.2% 60.2%;
+    --popover-foreground: 222 71% 12%;
+    --primary: 222 71% 12%;
+    --primary-foreground: 40 16% 97%;
+    --secondary: 40 12% 94%;
+    --secondary-foreground: 222 71% 12%;
+    --muted: 40 12% 94%;
+    --muted-foreground: 222 18% 38%;
+    --accent: 35 35% 92%;
+    --accent-foreground: 222 71% 12%;
+    --destructive: 0 72% 50%;
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 92%;
-    --input: 0 0% 92%;
-    --ring: 43 74% 49%;
-    --sidebar-background: 0 0% 98.5%;
-    --sidebar-foreground: 24 10% 15%;
-    --sidebar-primary: 43 74% 49%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 94%;
-    --sidebar-accent-foreground: 24 10% 10%;
-    --sidebar-border: 0 0% 92%;
-    --sidebar-ring: 43 74% 49%;
+    --border: 40 10% 88%;
+    --input: 40 10% 88%;
+    --ring: 222 71% 12%;
+    --sidebar-background: 40 16% 97%;
+    --sidebar-foreground: 222 71% 18%;
+    --sidebar-primary: 222 71% 12%;
+    --sidebar-primary-foreground: 40 16% 97%;
+    --sidebar-accent: 40 12% 92%;
+    --sidebar-accent-foreground: 222 71% 12%;
+    --sidebar-border: 40 10% 88%;
+    --sidebar-ring: 222 71% 12%;
   }
 }
 

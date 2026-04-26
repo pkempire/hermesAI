@@ -88,7 +88,7 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body
         className={cn(
-          'min-h-screen flex flex-col font-sans antialiased bg-white text-gray-900',
+          'min-h-screen flex flex-col font-sans antialiased bg-[hsl(var(--hermes-cream))] text-[hsl(var(--hermes-ink))]',
           inter.variable,
           cormorant.variable
         )}
