@@ -3,7 +3,6 @@
 import { ProspectSearchSection } from './prospect-search-section'
 import RetrieveSection from './retrieve-section'
 import { SearchSection } from './search-section'
-import { VideoSearchSection } from './video-search-section'
 import { ErrorBoundary } from './error-boundary'
 
 interface ToolSectionProps {
@@ -87,14 +86,6 @@ export function ToolSection({
     case 'search':
       return (
         <SearchSection
-          tool={tool}
-          isOpen={isOpen}
-          onOpenChange={onOpenChange}
-        />
-      )
-    case 'videoSearch':
-      return (
-        <VideoSearchSection
           tool={tool}
           isOpen={isOpen}
           onOpenChange={onOpenChange}
