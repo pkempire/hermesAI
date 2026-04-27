@@ -8,38 +8,62 @@ import { DEFAULT_PROVIDER, SearchProviderType, createSearchProvider } from './se
 /**
  * Creates a search tool with the appropriate schema for the given model.
  */
-// Track search calls to prevent loops (in-memory, per-process)
-const searchCallHistory: Map<string, number> = new Map()
-const MAX_SEARCH_CALLS_PER_CONVERSATION = 3
+// Track search calls to prevent loops. Keyed off the process; reset between
+// dev restarts. We cap on TOTAL calls — not per-query — because the model
+// often varies the wording on each retry, and the prior per-query key let
+// it loop forever.
+let totalSearchCallsThisProcess = 0
+const searchCallsByQuery: Map<string, number> = new Map()
+const MAX_SEARCH_CALLS_HARD_LIMIT = 10
+const MAX_SAME_QUERY = 2
 
 export function createSearchTool(fullModel: string) {
   const schema = getSearchSchemaForModel(fullModel) || z.object({})
   return tool({
-    description: 'Search the web for information. IMPORTANT: Do not call this tool repeatedly. Maximum 2-3 searches per conversation. If you already searched for something, use that information.',
+    description:
+      'Search the web for information. Use sparingly: prefer prospect_search for finding entities, scrape_site for analysing a known site. ' +
+      'Hard limits: max 10 search calls per server lifetime, max 2 of any specific query. ' +
+      'Always cite specific results back to the user; do not call again with a slight rewording.',
     inputSchema: schema ?? ({} as any),
     execute: async ({
       query,
       max_results = 20,
-      search_depth = 'basic', // Default for standard schema
+      search_depth = 'basic',
       include_domains = [],
       exclude_domains = []
     }) => {
-      // Prevent search loops by tracking calls
-      const queryKey = query.toLowerCase().trim()
-      const callCount = searchCallHistory.get(queryKey) || 0
-      
-      if (callCount >= MAX_SEARCH_CALLS_PER_CONVERSATION) {
-        console.warn(`[Search] Blocked repeated search for: ${query} (${callCount} calls)`)
+      const queryKey = (query || '').toLowerCase().trim()
+      if (!queryKey) {
         return {
           results: [],
-          query: query,
+          query: query || '',
           images: [],
           number_of_results: 0,
-          error: 'Search limit reached. Please use previous search results.'
+          error: 'Empty query — refine and call prospect_search instead.'
         }
       }
-      
-      searchCallHistory.set(queryKey, callCount + 1)
+
+      const sameCount = searchCallsByQuery.get(queryKey) || 0
+      if (sameCount >= MAX_SAME_QUERY) {
+        return {
+          results: [],
+          query,
+          images: [],
+          number_of_results: 0,
+          error: `You already searched "${query}" ${sameCount} times. Use those results.`
+        }
+      }
+      if (totalSearchCallsThisProcess >= MAX_SEARCH_CALLS_HARD_LIMIT) {
+        return {
+          results: [],
+          query,
+          images: [],
+          number_of_results: 0,
+          error: 'Hit hard search-call ceiling for this process. Use what you have, or hand off to prospect_search for entity discovery.'
+        }
+      }
+      searchCallsByQuery.set(queryKey, sameCount + 1)
+      totalSearchCallsThisProcess += 1
       // Ensure max_results is at least 10
       const minResults = 10
       const effectiveMaxResults = Math.max(

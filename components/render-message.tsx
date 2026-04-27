@@ -128,13 +128,15 @@ export function RenderMessage({
                   state: 'result',
                   toolCallId: part.toolCallId,
                   toolName,
-                  result: part.output
+                  result: part.output,
+                  args: part.input // carry args through so headers like "search: <query>" stay non-undefined
                 }
               : part.state === 'output-error'
               ? {
                   state: 'result',
                   toolCallId: part.toolCallId,
                   toolName,
+                  args: part.input,
                   result: {
                     type: 'prospect_search_error',
                     message: part.errorText || 'Tool execution failed'

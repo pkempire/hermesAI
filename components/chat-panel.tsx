@@ -8,8 +8,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import Textarea from 'react-textarea-autosize'
 import { useArtifact } from './artifact/artifact-context'
-import { Hero } from './marketing/hero'
-import { BelowFold } from './marketing/below-fold'
+import { WorkspaceHome } from './workspace-home'
 import { Button } from './ui/button'
 
 interface ChatPanelProps {
@@ -213,7 +212,7 @@ export function ChatPanel({
       className={cn('w-full group/form-container shrink-0 relative z-10', messages.length > 0 ? 'px-3 sm:px-4 pb-3 sm:pb-5' : 'px-3 sm:px-5 md:px-8 pb-6 sm:pb-10')}
     >
       {messages.length === 0 && (
-        <Hero
+        <WorkspaceHome
           onSelectPrompt={(p) => {
             if (setInput) setInput(p)
             try { inputRef.current?.focus() } catch {}
@@ -345,15 +344,6 @@ export function ChatPanel({
         </div>
 
       </form>
-
-      {messages.length === 0 && (
-        <BelowFold
-          onSelectPrompt={(prompt) => {
-            if (setInput) setInput(prompt)
-            try { inputRef.current?.focus() } catch {}
-          }}
-        />
-      )}
 
       {/* Hidden file input */}
       <input

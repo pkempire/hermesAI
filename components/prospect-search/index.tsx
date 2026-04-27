@@ -132,8 +132,37 @@ export function ProspectSearchSection({
   const [searchContext, setSearchContext] = useState<ProspectSearchContext | undefined>(undefined)
   const appliedResultKeyRef = useRef<string | null>(null)
 
-  const currentSearchCriteria = useMemo(() => parseToolArgs(tool), [tool])
-  const toolResult = useMemo(() => parseToolResult(tool), [tool])
+  // The `tool` object identity changes every render (re-built in
+  // render-message), so memoize derived state by content fingerprint
+  // instead of reference. This prevents the "Maximum update depth
+  // exceeded" loop where a new derived object every frame re-fires the
+  // result-handling effect.
+  const toolFingerprint = useMemo(
+    () =>
+      JSON.stringify({
+        state: tool?.state ?? null,
+        toolCallId: tool?.toolCallId ?? null,
+        result:
+          typeof tool?.result === 'string'
+            ? tool.result
+            : tool?.result
+            ? JSON.stringify(tool.result)
+            : null,
+        args: tool?.args ?? tool?.input ?? null
+      }),
+    [tool]
+  )
+
+  const currentSearchCriteria = useMemo(
+    () => parseToolArgs(tool),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [toolFingerprint]
+  )
+  const toolResult = useMemo(
+    () => parseToolResult(tool),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [toolFingerprint]
+  )
 
   // ── SSE stream subscription (replaces 200ms polling) ────────────────────
   const stream = useProspectStream<Prospect>({
