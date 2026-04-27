@@ -6,7 +6,7 @@
  * hand-craft a cheaper price.
  *
  * Trial behaviour:
- *  - First-time subscribers get TRIAL_DAYS days free (default 30).
+ *  - First-time subscribers get TRIAL_DAYS days free (default 7, no card).
  *  - Returning subscribers (have a stored Stripe customer id with a prior
  *    paid subscription) skip the trial — Stripe enforces this when we omit
  *    `trial_period_days` and the customer already has an active subscription.
@@ -20,7 +20,7 @@ import Stripe from 'stripe'
 
 export const dynamic = 'force-dynamic'
 
-const TRIAL_DAYS = Number(process.env.STRIPE_TRIAL_DAYS ?? 30)
+const TRIAL_DAYS = Number(process.env.STRIPE_TRIAL_DAYS ?? 7)
 const PRICE_ID = process.env.STRIPE_PRICE_ID
 
 function getOrigin(req: NextRequest): string {

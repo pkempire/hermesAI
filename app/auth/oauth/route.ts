@@ -30,11 +30,12 @@ export async function GET(request: Request) {
             .eq('user_id', userId)
             .maybeSingle()
           if (!sub) {
-            // First sign-in: provision the 30-day trial automatically so the
-            // user can immediately use the product without going through
-            // Stripe checkout. Webhook will overwrite this row with `starter`
-            // + stripe_customer_id once they actually enter checkout.
-            const trialDays = Number(process.env.STRIPE_TRIAL_DAYS ?? 30)
+            // First sign-in: provision the 7-day no-card trial automatically
+            // so the user can use the product immediately. Webhook will
+            // overwrite this row with `starter` + stripe_customer_id once
+            // they actually enter checkout. Override via STRIPE_TRIAL_DAYS
+            // env if you ever need to extend it for a cohort.
+            const trialDays = Number(process.env.STRIPE_TRIAL_DAYS ?? 7)
             const monthlyQuota = Number(process.env.STRIPE_MONTHLY_QUOTA ?? 1500)
             const trialEnd = new Date(
               Date.now() + trialDays * 24 * 60 * 60 * 1000
