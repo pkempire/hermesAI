@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next'
 import { Cormorant_Garamond, Inter } from 'next/font/google'
 
 import { CommandOrbit } from '@/components/command-orbit'
+import { CommandPaletteProvider } from '@/components/command-palette-provider'
 import ArtifactRoot from '@/components/artifact/artifact-root'
 import { Header } from '@/components/header'
 import { ThemeProvider } from '@/components/theme-provider'
@@ -102,6 +103,7 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <CommandOrbit user={user} />
+          <CommandPaletteProvider />
           <div className="flex flex-col flex-1 min-h-0 min-h-screen">
             <Header user={user} />
             <main className={cn('relative flex flex-1 min-h-0 pt-0', user ? 'overflow-hidden' : 'overflow-x-hidden overflow-y-auto')}>

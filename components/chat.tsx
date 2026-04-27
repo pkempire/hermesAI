@@ -287,6 +287,18 @@ export function Chat({
     } catch {}
   }, [inputValue])
 
+  // Listen for global command-palette prefill events
+  useEffect(() => {
+    const onCommand = (e: Event) => {
+      const detail = (e as CustomEvent).detail || {}
+      if (detail?.id === 'prefill' && typeof detail?.payload?.text === 'string') {
+        setInputValue(detail.payload.text)
+      }
+    }
+    window.addEventListener('hermes:command', onCommand as EventListener)
+    return () => window.removeEventListener('hermes:command', onCommand as EventListener)
+  }, [])
+
   const onQuerySelect = (query: string) => {
     // Gate to sign-up if not authed
     fetch('/api/auth/me', { cache: 'no-store' })
