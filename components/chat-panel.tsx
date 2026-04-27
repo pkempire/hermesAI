@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from 'react'
 import Textarea from 'react-textarea-autosize'
 import { useArtifact } from './artifact/artifact-context'
 import { WorkspaceHome, PipelineSection } from './workspace-home'
+import { TemplateGallery } from './template-gallery'
 import { Button } from './ui/button'
 import { createClient } from '@/lib/supabase/client'
 
@@ -407,6 +408,18 @@ export function ChatPanel({
         </div>
 
       </form>
+      )}
+
+      {signedIn && messages.length === 0 && (
+        <div className="mt-6 -mx-3 sm:-mx-4 md:-mx-8">
+          <TemplateGallery
+            onSelect={(p) => {
+              if (setInput) setInput(p)
+              try { inputRef.current?.focus() } catch {}
+              try { window.scrollTo({ top: 0, behavior: 'smooth' }) } catch {}
+            }}
+          />
+        </div>
       )}
 
       {/* Hidden file input */}

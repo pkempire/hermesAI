@@ -212,6 +212,20 @@ body {
   background-color: hsl(var(--hermes-cream));
 }
 
+/* Template gallery (dark cinematic carousel) marquee animations */
+@keyframes tg-marquee-left {
+  from { transform: translate3d(0,0,0); }
+  to   { transform: translate3d(-50%,0,0); }
+}
+@keyframes tg-marquee-right {
+  from { transform: translate3d(-50%,0,0); }
+  to   { transform: translate3d(0,0,0); }
+}
+.animate-tg-marquee-left  { animation: tg-marquee-left  55s linear infinite; }
+.animate-tg-marquee-right { animation: tg-marquee-right 65s linear infinite; }
+.animate-tg-marquee-left:hover,
+.animate-tg-marquee-right:hover { animation-play-state: paused; }
+
 /* ─── Hermes editorial flair ──────────────────────────────────────────── */
 
 /* Subtle paper grain on hero / large surfaces — uses inline SVG so no PNG req. */
