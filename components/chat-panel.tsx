@@ -8,8 +8,9 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import Textarea from 'react-textarea-autosize'
 import { useArtifact } from './artifact/artifact-context'
-import { WorkspaceHome } from './workspace-home'
+import { WorkspaceHome, PipelineSection } from './workspace-home'
 import { Button } from './ui/button'
+import { createClient } from '@/lib/supabase/client'
 
 interface ChatPanelProps {
   input: string
@@ -29,6 +30,8 @@ interface ChatPanelProps {
   scrollContainerRef: React.RefObject<HTMLDivElement>
   /** Function to submit template messages directly */
   submitTemplateMessage?: (message: string) => void
+  /** When false, render a Continue-with-Google CTA instead of an interactive textbox. */
+  signedIn?: boolean
 }
 
 export function ChatPanel({
@@ -45,7 +48,8 @@ export function ChatPanel({
   models,
   showScrollToBottomButton,
   scrollContainerRef,
-  submitTemplateMessage
+  submitTemplateMessage,
+  signedIn = true
 }: ChatPanelProps) {
   const [showEmptyScreen, setShowEmptyScreen] = useState(false)
   const router = useRouter()
@@ -58,6 +62,35 @@ export function ChatPanel({
   const [isListening, setIsListening] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { close: closeArtifact } = useArtifact()
+  const [signupLoading, setSignupLoading] = useState(false)
+  const [signupError, setSignupError] = useState<string | null>(null)
+
+  async function continueWithGoogle() {
+    if (signupLoading) return
+    setSignupLoading(true)
+    setSignupError(null)
+    try {
+      const supabase = createClient()
+      const origin =
+        typeof window !== 'undefined' ? window.location.origin : ''
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${origin}/auth/oauth?next=/`,
+          scopes:
+            'https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.send',
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'select_account consent'
+          }
+        }
+      })
+      if (error) throw error
+    } catch (err) {
+      setSignupError(err instanceof Error ? err.message : 'Sign-in failed')
+      setSignupLoading(false)
+    }
+  }
 
   const handleCompositionStart = () => setIsComposing(true)
 
@@ -219,8 +252,38 @@ export function ChatPanel({
           }}
         />
       )}
-      
-      {/* The form sits here immediately, all visual splash/empty states are deferred to HomeCommandCenter */}
+
+      {!signedIn && messages.length === 0 ? (
+        <div className="max-w-4xl w-full mx-auto mb-6">
+          <div className="rounded-2xl border border-[hsl(var(--hermes-ink)/0.12)] bg-white px-6 py-7 sm:px-8 sm:py-8 shadow-[0_1px_0_rgba(11,23,50,0.04),0_24px_48px_-32px_rgba(11,23,50,0.18)]">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1.5">
+                <p className="text-[11px] uppercase tracking-[0.22em] text-[hsl(var(--hermes-ink)/0.55)]">Start free</p>
+                <h2 className="font-serif text-[1.55rem] leading-tight text-[hsl(var(--hermes-ink))]">
+                  7 days on the house. $40/mo after.
+                </h2>
+                <p className="text-sm text-[hsl(var(--hermes-ink)/0.7)]">
+                  No credit card. Connect Gmail, describe your ICP, send your first sequence today.
+                </p>
+              </div>
+              <div className="flex flex-col items-stretch sm:items-end gap-2">
+                <Button
+                  type="button"
+                  onClick={continueWithGoogle}
+                  disabled={signupLoading}
+                  className="h-12 px-6 rounded-full bg-[hsl(var(--hermes-ink))] text-[hsl(var(--hermes-cream))] hover:bg-[hsl(var(--hermes-ink)/0.9)] text-[0.95rem] font-medium tracking-[-0.005em]"
+                >
+                  {signupLoading ? 'Redirecting…' : 'Continue with Google'}
+                </Button>
+                {signupError && (
+                  <span className="text-xs text-red-700">{signupError}</span>
+                )}
+              </div>
+            </div>
+          </div>
+          <PipelineSection />
+        </div>
+      ) : (
       <form
         ref={formRef}
         onSubmit={async (e) => {
@@ -344,6 +407,7 @@ export function ChatPanel({
         </div>
 
       </form>
+      )}
 
       {/* Hidden file input */}
       <input

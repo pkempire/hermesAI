@@ -1,18 +1,13 @@
 /**
- * Root page.
+ * Root page — same workspace for everyone.
  *
- * Server-renders the right surface based on auth:
- *   - Signed out → <SignedOutLanding />: marketing-only landing with a
- *     single Google CTA. No chat input, no internal product surface.
- *   - Signed in → <HermesApp />: the working chat workspace.
- *
- * This split was the source of the "is this a landing page or an app?"
- * confusion — fixing it forces a clean onboarding flow and lets us tune
- * each surface independently.
+ * If signed out, the chat input renders as a single "Start 7-day trial —
+ * Continue with Google" CTA. After auth we land back on `/` with a real
+ * trial row in `subscriptions` (provisioned by app/auth/oauth/route.ts) and
+ * the chat input becomes interactive. Same layout shift-free experience.
  */
 
 import { HermesApp } from '@/components/hermes-app'
-import { SignedOutLanding } from '@/components/marketing/signed-out-landing'
 import { getModels } from '@/lib/config/models'
 import { createClient } from '@/lib/supabase/server'
 
@@ -21,11 +16,6 @@ export default async function Page() {
   const {
     data: { user }
   } = await supabase.auth.getUser()
-
-  if (!user) {
-    return <SignedOutLanding />
-  }
-
   const models = await getModels()
-  return <HermesApp models={models} />
+  return <HermesApp models={models} signedIn={!!user} />
 }

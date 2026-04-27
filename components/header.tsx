@@ -12,14 +12,24 @@ interface HeaderProps {
   user: User | null
 }
 
+interface SubscriptionSnapshot {
+  remaining: number | null
+  status: 'trialing' | 'active' | 'expired' | 'none'
+  trial_days_remaining: number | null
+}
+
 /**
  * Header — minimal, editorial, white-background.
  *
  * Logged-out: wordmark + sign-in. No background art, no busy ornaments.
- * Logged-in: wordmark + credit pill + user menu.
+ * Logged-in: wordmark + credit pill + trial chip + user menu.
  */
 export const Header: React.FC<HeaderProps> = ({ user }) => {
-  const [credits, setCredits] = useState<number | null>(null)
+  const [snapshot, setSnapshot] = useState<SubscriptionSnapshot>({
+    remaining: null,
+    status: 'none',
+    trial_days_remaining: null
+  })
   const [scrolled, setScrolled] = useState(false)
 
   useEffect(() => {
@@ -33,16 +43,24 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
     async function load() {
       try {
         if (!user) {
-          setCredits(null)
+          setSnapshot({ remaining: null, status: 'none', trial_days_remaining: null })
           return
         }
         const res = await fetch('/api/subscription', { cache: 'no-store' })
         const data = await res.json()
-        if (mounted) {
-          setCredits(typeof data?.remaining === 'number' ? data.remaining : null)
-        }
+        if (!mounted) return
+        setSnapshot({
+          remaining: typeof data?.remaining === 'number' ? data.remaining : null,
+          status: data?.status || 'none',
+          trial_days_remaining:
+            typeof data?.trial_days_remaining === 'number'
+              ? data.trial_days_remaining
+              : null
+        })
       } catch {
-        if (mounted) setCredits(null)
+        if (mounted) {
+          setSnapshot({ remaining: null, status: 'none', trial_days_remaining: null })
+        }
       }
     }
     load()
@@ -50,6 +68,23 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
       mounted = false
     }
   }, [user])
+
+  const credits = snapshot.remaining
+  const trialDays = snapshot.trial_days_remaining
+
+  async function startCheckout() {
+    try {
+      const res = await fetch('/api/stripe/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ successPath: '/', cancelPath: '/' })
+      })
+      const data = await res.json().catch(() => ({}))
+      if (data?.url) window.location.href = data.url
+    } catch {
+      /* swallow — UI shows error in /campaigns or settings */
+    }
+  }
 
   return (
     <header
@@ -76,6 +111,28 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
 
         {/* Right cluster */}
         <div className="flex items-center gap-2">
+          {user && snapshot.status === 'trialing' && trialDays !== null && (
+            <button
+              type="button"
+              onClick={startCheckout}
+              className="hidden items-center gap-2 rounded-full border border-[hsl(var(--hermes-ink))] bg-[hsl(var(--hermes-ink))] px-3 py-1 text-[12px] font-medium text-[hsl(var(--hermes-cream))] hover:opacity-90 sm:inline-flex"
+              title="Add a payment method to keep Hermes after the trial"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--hermes-gold))]" />
+              {trialDays > 0
+                ? `Trial · ${trialDays}d left`
+                : 'Trial ended — upgrade'}
+            </button>
+          )}
+          {user && snapshot.status === 'expired' && (
+            <button
+              type="button"
+              onClick={startCheckout}
+              className="hidden items-center gap-2 rounded-full bg-red-600 px-3 py-1 text-[12px] font-medium text-white hover:bg-red-700 sm:inline-flex"
+            >
+              Trial ended — upgrade
+            </button>
+          )}
           {user && credits !== null && (
             <div className="hidden items-center gap-2 rounded-full border border-[hsl(var(--hermes-mist))] bg-white px-3 py-1 text-[13px] sm:inline-flex">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />

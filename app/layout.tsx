@@ -28,7 +28,10 @@ const title = 'Hermes — AI Outbound Operator'
 const description = 'Describe your ICP in one line. Hermes finds the right companies, resolves the decision-maker, drafts a pitch grounded in real evidence, and sends through your Gmail. Replace Apollo, Clay, and Instantly with one operator.'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://hermesai.com'),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_BASE_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+  ),
   title,
   description,
   icons: {

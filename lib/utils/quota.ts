@@ -1,3 +1,4 @@
+import { logger } from '@/lib/utils/logger'
 import { createClient } from '@/lib/supabase/server'
 
 export interface QuotaCheckOptions {
@@ -7,33 +8,75 @@ export interface QuotaCheckOptions {
   idempotencyKey?: string
 }
 
-export async function requireQuota({ userId, cost, kind, idempotencyKey }: QuotaCheckOptions): Promise<{ ok: true } | { ok: false; reason: string }> {
-  // Development bypass: skip quota checks in development
+export type QuotaResult =
+  | { ok: true }
+  | { ok: false; reason: string; code: 'no_subscription' | 'trial_expired' | 'quota_exceeded' | 'reservation_failed' }
+
+/**
+ * Atomic-ish quota check + usage reservation.
+ *
+ * Order of decisions:
+ *  1. Dev bypass (NODE_ENV=development OR SKIP_QUOTA_CHECK=true)
+ *  2. No subscription row → deny with `no_subscription` (caller should kick to checkout)
+ *  3. Trial row past trial_expires_at AND not paid → `trial_expired`
+ *  4. used + cost > quota → `quota_exceeded`
+ *  5. Reserve via usage_events (idempotent) and bump used_this_month.
+ */
+export async function requireQuota({
+  userId,
+  cost,
+  kind,
+  idempotencyKey
+}: QuotaCheckOptions): Promise<QuotaResult> {
   if (process.env.NODE_ENV === 'development' || process.env.SKIP_QUOTA_CHECK === 'true') {
-    console.log('⚠️ [Quota] Bypassing quota check (development mode)')
     return { ok: true }
   }
-  
-  const supabase = await createClient()
 
-  // Fetch subscription
+  const supabase = await createClient()
   const { data: sub } = await supabase
     .from('subscriptions')
-    .select('*')
+    .select('plan, quota_monthly, used_this_month, trial_expires_at, metadata')
     .eq('user_id', userId)
     .maybeSingle()
 
-  const quota = sub?.quota_monthly ?? 0
-  const used = sub?.used_this_month ?? 0
+  if (!sub) {
+    return {
+      ok: false,
+      reason: 'No active subscription. Start your free 30-day trial.',
+      code: 'no_subscription'
+    }
+  }
 
+  const hasPaid = !!(sub.metadata && (sub.metadata as any).has_paid)
+  const trialEnd = sub.trial_expires_at ? new Date(sub.trial_expires_at).getTime() : null
+  const now = Date.now()
+
+  if (!hasPaid && trialEnd && now > trialEnd) {
+    return {
+      ok: false,
+      reason: 'Your free trial has ended. Upgrade to keep running campaigns.',
+      code: 'trial_expired'
+    }
+  }
+
+  const quota = sub.quota_monthly ?? 0
+  const used = sub.used_this_month ?? 0
   if (quota <= 0) {
-    return { ok: false, reason: 'No credits remaining. Please upgrade your plan.' }
+    return {
+      ok: false,
+      reason: 'No credits remaining on your plan.',
+      code: 'quota_exceeded'
+    }
   }
   if (used + cost > quota) {
-    return { ok: false, reason: 'Monthly quota exceeded.' }
+    return {
+      ok: false,
+      reason: 'Monthly credit quota exceeded.',
+      code: 'quota_exceeded'
+    }
   }
 
-  // Record usage event idempotently
+  // Idempotency check — if we've already recorded this key, skip the increment
   if (idempotencyKey) {
     const { data: existing } = await supabase
       .from('usage_events')
@@ -43,19 +86,22 @@ export async function requireQuota({ userId, cost, kind, idempotencyKey }: Quota
     if (existing) return { ok: true }
   }
 
-  // Insert usage event and update running tally
-  const { error: ue } = await supabase
+  const { error: ueErr } = await supabase
     .from('usage_events')
     .insert({ user_id: userId, amount: cost, kind, idempotency_key: idempotencyKey })
-  if (ue) return { ok: false, reason: 'Failed to reserve quota' }
+  if (ueErr) {
+    logger.warn('requireQuota: usage_events insert failed', ueErr.message)
+    return { ok: false, reason: 'Failed to reserve quota', code: 'reservation_failed' }
+  }
 
-  const { error: up } = await supabase
+  const { error: upErr } = await supabase
     .from('subscriptions')
     .update({ used_this_month: used + cost })
     .eq('user_id', userId)
-  if (up) return { ok: false, reason: 'Failed to update subscription usage' }
+  if (upErr) {
+    logger.warn('requireQuota: subscriptions update failed', upErr.message)
+    return { ok: false, reason: 'Failed to update subscription usage', code: 'reservation_failed' }
+  }
 
   return { ok: true }
 }
-
-

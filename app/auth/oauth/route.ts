@@ -30,9 +30,28 @@ export async function GET(request: Request) {
             .eq('user_id', userId)
             .maybeSingle()
           if (!sub) {
+            // First sign-in: provision the 30-day trial automatically so the
+            // user can immediately use the product without going through
+            // Stripe checkout. Webhook will overwrite this row with `starter`
+            // + stripe_customer_id once they actually enter checkout.
+            const trialDays = Number(process.env.STRIPE_TRIAL_DAYS ?? 30)
+            const monthlyQuota = Number(process.env.STRIPE_MONTHLY_QUOTA ?? 1500)
+            const trialEnd = new Date(
+              Date.now() + trialDays * 24 * 60 * 60 * 1000
+            ).toISOString()
             await supabase
               .from('subscriptions')
-              .insert({ user_id: userId, plan: 'free', quota_monthly: 100, used_this_month: 0, metadata: { source: 'seeded_on_login' } })
+              .insert({
+                user_id: userId,
+                plan: 'starter',
+                quota_monthly: monthlyQuota,
+                used_this_month: 0,
+                trial_expires_at: trialEnd,
+                metadata: {
+                  source: 'auto_trial_on_signup',
+                  trial_started_at: new Date().toISOString()
+                }
+              })
           }
           try {
             const { data: sessionData } = await supabase.auth.getSession()

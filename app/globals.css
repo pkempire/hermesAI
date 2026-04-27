@@ -25,7 +25,7 @@
     --secondary-foreground: 222 71% 12%;
 
     --muted: 40 12% 94%;
-    --muted-foreground: 222 18% 38%;   /* steel grey #4D5569 */
+    --muted-foreground: 222 30% 22%;   /* darker steel for legible body */
 
     --accent: 35 35% 92%;              /* warm parchment */
     --accent-foreground: 222 71% 12%;
@@ -50,13 +50,13 @@
     --sidebar-ring: 222 71% 12%;
 
     /* Hermes brand tokens */
-    --hermes-ink: 222 71% 12%;          /* #0A1835 */
-    --hermes-ink-soft: 222 33% 28%;     /* #36425B */
+    --hermes-ink: 222 71% 12%;          /* #0A1832 */
+    --hermes-ink-soft: 222 33% 22%;     /* #243151 — was 28% (#36425B), darker for stronger contrast */
     --hermes-cream: 40 16% 97%;         /* #F8F8F7 */
     --hermes-parchment: 35 35% 92%;     /* warm card bg */
-    --hermes-steel: 222 12% 50%;        /* #71788C body grey */
-    --hermes-mist: 222 22% 86%;         /* #B3BAD1 subtle borders */
-    --hermes-gold: 36 50% 48%;          /* muted antique gold for accents */
+    --hermes-steel: 222 30% 28%;        /* #324061 — was 50% (#71788C), much darker body grey */
+    --hermes-mist: 222 22% 78%;         /* #B6BCD0 — was 86%, slightly bolder borders */
+    --hermes-gold: 36 60% 42%;          /* deeper antique gold for accents */
 
     /* Backwards-compat aliases — old code references these. New code should
        prefer --hermes-ink. Kept temporarily to avoid mass-rewrite. */
@@ -207,8 +207,143 @@ select {
   to   { opacity: 1; }
 }
 
-/* Body page background — clean, solid white for executive consistency */
+/* Body page background — warm cream from Hermes design system */
 body {
-  background-color: #ffffff;
+  background-color: hsl(var(--hermes-cream));
+}
+
+/* ─── Hermes editorial flair ──────────────────────────────────────────── */
+
+/* Subtle paper grain on hero / large surfaces — uses inline SVG so no PNG req. */
+.hermes-grain {
+  background-image:
+    radial-gradient(rgba(11, 23, 50, 0.06) 1px, transparent 1px),
+    radial-gradient(rgba(11, 23, 50, 0.04) 1px, transparent 1px);
+  background-size: 22px 22px, 13px 13px;
+  background-position: 0 0, 7px 11px;
+}
+
+/* Editorial vertical rule with section roman numeral */
+.hermes-rail {
+  border-left: 1px solid hsl(var(--hermes-mist));
+  padding-left: 1.25rem;
+}
+
+/* Marquee — one line of capability claims slowly drifting */
+.hermes-marquee {
+  --marquee-speed: 38s;
+  display: flex;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 8%,
+    black 92%,
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 8%,
+    black 92%,
+    transparent
+  );
+}
+.hermes-marquee__track {
+  display: flex;
+  flex-shrink: 0;
+  gap: 3rem;
+  padding-right: 3rem;
+  animation: hermes-marquee var(--marquee-speed) linear infinite;
+}
+.hermes-marquee:hover .hermes-marquee__track {
+  animation-play-state: paused;
+}
+@keyframes hermes-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-100%); }
+}
+
+/* Wax seal — circular stamp used on hero badges + footer */
+.hermes-seal {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 9999px;
+  background: hsl(var(--hermes-ink));
+  color: hsl(var(--hermes-cream));
+  font-family: var(--font-serif);
+  font-style: italic;
+  letter-spacing: -0.02em;
+  font-size: 28px;
+  box-shadow:
+    0 0 0 4px hsl(var(--hermes-cream)),
+    0 0 0 5px hsl(var(--hermes-ink) / 0.18);
+}
+.hermes-seal::before,
+.hermes-seal::after {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  border-radius: inherit;
+  border: 1px dashed hsl(var(--hermes-ink) / 0.25);
+  pointer-events: none;
+}
+.hermes-seal::after {
+  inset: -16px;
+  border-style: dotted;
+  opacity: 0.4;
+}
+
+/* Editorial number tag — uppercase Roman number for sectional rhythm */
+.hermes-section-num {
+  font-family: var(--font-serif);
+  font-size: 0.75rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: hsl(var(--hermes-gold));
+}
+
+/* Animated send-arrow utility — arrow nudges right on hover */
+.hermes-arrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: gap 220ms ease-out;
+}
+.group:hover .hermes-arrow,
+.hermes-arrow:hover {
+  gap: 0.85rem;
+}
+.hermes-arrow svg {
+  transition: transform 220ms ease-out;
+}
+.group:hover .hermes-arrow svg,
+.hermes-arrow:hover svg {
+  transform: translateX(2px);
+}
+
+/* Hairline divider with center diamond (used between sections) */
+.hermes-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: hsl(var(--hermes-mist));
+}
+.hermes-divider::before,
+.hermes-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: currentColor;
+}
+.hermes-divider__diamond {
+  width: 6px;
+  height: 6px;
+  background: hsl(var(--hermes-gold));
+  transform: rotate(45deg);
 }
 

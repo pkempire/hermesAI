@@ -20,12 +20,14 @@ export function Chat({
   id,
   savedMessages = [],
   query,
-  models
+  models,
+  signedIn = true
 }: {
   id: string
   savedMessages?: Message[]
   query?: string
   models?: Model[]
+  signedIn?: boolean
 }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [isAtBottom, setIsAtBottom] = useState(true)
@@ -449,6 +451,7 @@ export function Chat({
               showScrollToBottomButton={!isAtBottom}
               scrollContainerRef={scrollContainerRef}
               submitTemplateMessage={submitTemplateMessage}
+              signedIn={signedIn}
             />
           </div>
         </div>
@@ -488,6 +491,7 @@ export function Chat({
               showScrollToBottomButton={!isAtBottom}
               scrollContainerRef={scrollContainerRef}
               submitTemplateMessage={submitTemplateMessage}
+              signedIn={signedIn}
             />
           </div>
         </div>
