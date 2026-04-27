@@ -220,7 +220,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     [chats, fireCommand, go]
   )
 
-  const useTemplate = React.useCallback(
+  const applyTemplate = React.useCallback(
     (tpl: Template) => {
       const text =
         tpl.message ||
@@ -333,7 +333,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                     <CommandItem
                       key={t.id || `${t.name}-${i}`}
                       value={`template ${t.name} ${t.description || ''}`}
-                      onSelect={() => useTemplate(t)}
+                      onSelect={() => applyTemplate(t)}
                     >
                       <Sparkles className="h-4 w-4 text-[hsl(var(--hermes-ink))]/60" />
                       <div className="flex min-w-0 flex-col">
