@@ -1,0 +1,35 @@
+#!/usr/bin/env bun
+/**
+ * hermes-mcp — stdio transport entrypoint for the Hermes MCP server.
+ *
+ * Used by local desktop MCP clients (Claude Desktop, Cursor, Windsurf,
+ * MCP Inspector). API keys are read from the surrounding environment.
+ *
+ * Usage:
+ *   hermes-mcp                           # starts the stdio loop
+ *   HERMES_MCP_MODEL=openai:gpt-4o ./bin/hermes-mcp
+ *
+ * SDK: @modelcontextprotocol/sdk@1.29.0
+ */
+
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+
+import { createHermesMcpServer, HERMES_MCP_INFO } from '../lib/mcp/server'
+
+async function main() {
+  const server = createHermesMcpServer()
+  const transport = new StdioServerTransport()
+  await server.connect(transport)
+
+  // stderr is the only safe channel — stdout is the JSON-RPC stream.
+  process.stderr.write(
+    `[${HERMES_MCP_INFO.name}@${HERMES_MCP_INFO.version}] stdio MCP server ready\n`
+  )
+}
+
+main().catch(err => {
+  process.stderr.write(
+    `[hermes-mcp] fatal: ${err instanceof Error ? err.stack ?? err.message : String(err)}\n`
+  )
+  process.exit(1)
+})

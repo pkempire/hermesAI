@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "license": "Apache-2.0",
+  "bin": {
+    "hermes-mcp": "./bin/hermes-mcp"
+  },
   "scripts": {
     "dev": "next dev --turbo",
     "build": "next build",
@@ -13,6 +16,7 @@
     "@ai-sdk/anthropic": "^2.0.0",
     "@ai-sdk/openai": "^2.0.0",
     "@ai-sdk/react": "^2.0.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@radix-ui/react-alert-dialog": "^1.0.5",
     "@radix-ui/react-avatar": "^1.1.9",
     "@radix-ui/react-checkbox": "^1.0.4",
@@ -49,6 +53,7 @@
     "jsdom": "^22.1.0",
     "katex": "^0.16.10",
     "lucide-react": "^0.507.0",
+    "mcp-handler": "^1.1.0",
     "next": "15.2.8",
     "next-themes": "^0.3.0",
     "node-html-parser": "^6.1.13",
