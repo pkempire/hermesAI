@@ -100,7 +100,8 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
         let researcherConfig = await researcher({
           messages: modelMessages,
           model: modelId,
-          searchMode
+          searchMode,
+          userId
         })
 
         logger.debug('Calling streamText with tools:', Object.keys(researcherConfig.tools || {}))

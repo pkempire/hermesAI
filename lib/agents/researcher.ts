@@ -1,5 +1,9 @@
 import { CoreMessage, streamText } from 'ai'
 import { createEmailDrafterTool } from '../tools/email-drafter'
+import {
+  createRecallMemoryTool,
+  createRememberFactTool
+} from '../tools/memory'
 import { createProspectSearchTool } from '../tools/prospect-search'
 import { createQuestionTool } from '../tools/question'
 import { createScrapeSiteTool } from '../tools/scrape'
@@ -44,6 +48,18 @@ Execution Protocol
    - Summarize matches in 1 short line.
    - Automatically call email_drafter WITHOUT asking for permission.
 
+4. Memory (when remember_fact / recall_memory tools are available):
+   - At the start of any new campaign, call recall_memory with the user's
+     brief or offer to surface their saved offer, ICPs, voice, and prior
+     campaign learnings before configuring tools. Limit to top 4-6 hits.
+   - When the user states something durable about themselves (their offer,
+     a canonical ICP, a tone preference, the outcome of a past campaign),
+     call remember_fact in the background with the right kind. Do not
+     announce it. Importance 5 only when the user uses words like
+     "remember this" or "always" / "never".
+   - Do not store one-off task state, search filters for a single run, or
+     transient prospect lists in memory.
+
 Response Style & User Experience
 - Lead the conversation. Write in complete, fluid, articulate sentences. 
 - You are a trusted founding engineer helping a CEO. Speak intelligently.
@@ -53,36 +69,49 @@ Response Style & User Experience
 export function researcher({
   messages,
   model,
-  searchMode
+  searchMode,
+  userId
 }: {
   messages: CoreMessage[]
   model: string
   searchMode: boolean
+  userId?: string
 }): ResearcherReturn {
   try {
     logger.debug('[researcher] Initializing with model:', model, 'searchMode:', searchMode)
     logger.debug('[researcher] Messages count:', messages.length)
-    
+
     const currentDate = new Date().toLocaleString()
 
     // Create model-specific tools
     logger.tool('search', 'Creating search tool...')
     const searchTool = createSearchTool(model)
-    
+
     logger.tool('ask_question', 'Creating ask question tool...')
     const askQuestionTool = createQuestionTool(model)
-    
+
     logger.tool('prospect_search', 'Creating prospect search tool...')
     const prospectSearchTool = createProspectSearchTool(model)
 
     logger.tool('scrape_site', 'Creating scrape site tool...')
     const scrapeSiteTool = createScrapeSiteTool()
-    
+
     logger.tool('email_drafter', 'Creating email drafter tool...')
     const emailDrafterTool = createEmailDrafterTool()
-    
-    logger.debug('[researcher] All tools created successfully')
-    
+
+    // Memory tools — only registered when we know who the user is.
+    // Anonymous chats (rare; auth is enforced upstream) skip memory entirely.
+    const memoryTools = userId
+      ? {
+          remember_fact: createRememberFactTool(userId),
+          recall_memory: createRecallMemoryTool(userId)
+        }
+      : {}
+
+    logger.debug('[researcher] All tools created successfully', {
+      memoryEnabled: Boolean(userId)
+    })
+
     return {
       model: getModel(model),
       system: `${SYSTEM_PROMPT}\n\nCurrent date and time: ${currentDate}`,
@@ -92,7 +121,8 @@ export function researcher({
         ask_question: askQuestionTool,
         prospect_search: prospectSearchTool,
         scrape_site: scrapeSiteTool,
-        email_drafter: emailDrafterTool
+        email_drafter: emailDrafterTool,
+        ...memoryTools
       }
     }
   } catch (error) {
