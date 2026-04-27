@@ -99,14 +99,17 @@ export function researcher({
     logger.tool('email_drafter', 'Creating email drafter tool...')
     const emailDrafterTool = createEmailDrafterTool()
 
-    // Memory tools — only registered when we know who the user is.
-    // Anonymous chats (rare; auth is enforced upstream) skip memory entirely.
-    const memoryTools = userId
-      ? {
-          remember_fact: createRememberFactTool(userId),
-          recall_memory: createRecallMemoryTool(userId)
-        }
-      : {}
+    const baseTools: Record<string, any> = {
+      search: searchTool,
+      ask_question: askQuestionTool,
+      prospect_search: prospectSearchTool,
+      scrape_site: scrapeSiteTool,
+      email_drafter: emailDrafterTool
+    }
+    if (userId) {
+      baseTools.remember_fact = createRememberFactTool(userId)
+      baseTools.recall_memory = createRecallMemoryTool(userId)
+    }
 
     logger.debug('[researcher] All tools created successfully', {
       memoryEnabled: Boolean(userId)
@@ -116,14 +119,7 @@ export function researcher({
       model: getModel(model),
       system: `${SYSTEM_PROMPT}\n\nCurrent date and time: ${currentDate}`,
       messages,
-      tools: {
-        search: searchTool,
-        ask_question: askQuestionTool,
-        prospect_search: prospectSearchTool,
-        scrape_site: scrapeSiteTool,
-        email_drafter: emailDrafterTool,
-        ...memoryTools
-      }
+      tools: baseTools
     }
   } catch (error) {
     logger.error('[researcher] Error:', error)

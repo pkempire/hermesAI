@@ -107,19 +107,19 @@ export function Hero({ onSelectPrompt }: HeroProps) {
 
 const QUICK_STARTS: { label: string; prompt: string }[] = [
   {
-    label: 'Recruiters',
+    label: 'Bay Area counselors',
     prompt:
-      'Find Series A–B fintech CTOs hiring senior engineers in NYC. I help with retained search.'
+      'Find 25 founder-led private college counseling firms in the Bay Area that specialize in STEM/Ivy admissions. Skip Crimson, IvyWise, C2, Princeton Review and other large franchises. I want to refer their high-school students to Lucid Academy (lucid-education.com) — read the homepage first to understand the offer, then design enrichments and outreach.'
   },
   {
-    label: 'Agencies',
+    label: 'Boston STEM directories',
     prompt:
-      'Find 25 e-commerce DTC brands in beauty doing $500k–$5M ARR — pitch them my Meta ads agency.'
+      'Find 15 Massachusetts / Greater Boston directories that list student STEM summer programs for parents. I want to get Lucid Academy (lucid-education.com) listed in their directory — find the editor or partnerships contact and draft a short pitch with a paste-ready listing blurb.'
   },
   {
-    label: 'Founders',
+    label: 'DTC beauty agency',
     prompt:
-      'Find devtool startups whose CEOs wrote about agent infra in the last 6 months. Pitching my open-source agent framework.'
+      'Find 25 e-commerce DTC brands in beauty doing $500k–$5M ARR — pitch them my Meta ads agency. I want to reach the founder or marketing lead.'
   }
 ]
 
