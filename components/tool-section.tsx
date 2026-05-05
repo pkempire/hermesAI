@@ -186,7 +186,7 @@ export function ToolSection({
                     ) : null}
                     {whyItMatters ? (
                       <div>
-                        <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[hsl(var(--hermes-gold-dark))]">Why Hermes cares</div>
+                        <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[hsl(var(--hermes-gold-dark))]">Why Outfield cares</div>
                         <p className="text-[14px] leading-relaxed text-gray-700">{whyItMatters}</p>
                       </div>
                     ) : null}

@@ -9,7 +9,6 @@ import { useEffect, useRef, useState } from 'react'
 import Textarea from 'react-textarea-autosize'
 import { useArtifact } from './artifact/artifact-context'
 import { WorkspaceHome, PipelineSection } from './workspace-home'
-import { TemplateGallery } from './template-gallery'
 import { Button } from './ui/button'
 import { createClient } from '@/lib/supabase/client'
 
@@ -255,29 +254,29 @@ export function ChatPanel({
       )}
 
       {!signedIn && messages.length === 0 ? (
-        <div className="max-w-4xl w-full mx-auto mb-6">
-          <div className="rounded-2xl border border-[hsl(var(--hermes-ink)/0.12)] bg-white px-6 py-7 sm:px-8 sm:py-8 shadow-[0_1px_0_rgba(11,23,50,0.04),0_24px_48px_-32px_rgba(11,23,50,0.18)]">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="space-y-1.5">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-[hsl(var(--hermes-ink)/0.55)]">Start free</p>
-                <h2 className="text-[1.55rem] leading-tight text-[hsl(var(--hermes-ink))]">
-                  7 days on the house. $40/mo after.
+        <div className="max-w-3xl w-full mx-auto mb-6">
+          <div className="rounded-xl border border-[hsl(var(--mist))] bg-white px-6 py-6 sm:px-7 sm:py-7">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1">
+                <p className="t-caption text-[hsl(var(--steel))]">Start free</p>
+                <h2 className="text-[1.35rem] font-semibold leading-tight text-[hsl(var(--ink))]">
+                  7 days free, then $40/mo
                 </h2>
-                <p className="text-sm text-[hsl(var(--hermes-ink)/0.7)]">
-                  No credit card. Connect Gmail, describe your ICP, send your first sequence today.
+                <p className="text-[13px] text-[hsl(var(--steel))]">
+                  No card required. Connect Gmail, send your first sequence today.
                 </p>
               </div>
-              <div className="flex flex-col items-stretch sm:items-end gap-2">
+              <div className="flex flex-col items-stretch sm:items-end gap-1.5">
                 <Button
                   type="button"
                   onClick={continueWithGoogle}
                   disabled={signupLoading}
-                  className="h-12 px-6 rounded-full bg-[hsl(var(--hermes-ink))] text-[hsl(var(--hermes-cream))] hover:bg-[hsl(var(--hermes-ink)/0.9)] text-[0.95rem] font-medium tracking-[-0.005em]"
+                  className="h-11 px-5 rounded-lg bg-[hsl(var(--ink))] text-[hsl(var(--paper))] hover:bg-[hsl(var(--ink)/0.92)] text-[14px] font-medium"
                 >
                   {signupLoading ? 'Redirecting…' : 'Continue with Google'}
                 </Button>
                 {signupError && (
-                  <span className="text-xs text-red-700">{signupError}</span>
+                  <span className="text-[11px] text-red-700">{signupError}</span>
                 )}
               </div>
             </div>
@@ -308,8 +307,8 @@ export function ChatPanel({
 
         <div className="relative mx-auto w-full max-w-3xl" id="hermes-input">
           <div className={cn(
-            'relative z-[5] flex w-full flex-col rounded-2xl border border-[hsl(var(--hermes-mist))] bg-white shadow-sm transition-all duration-200',
-            'focus-within:border-[hsl(var(--hermes-ink))] focus-within:shadow-[0_8px_30px_-10px_rgba(10,24,53,0.18)]'
+            'relative z-[5] flex w-full flex-col rounded-xl border border-[hsl(var(--mist))] bg-white transition-all duration-150',
+            'focus-within:border-[hsl(var(--ink))] focus-within:ring-2 focus-within:ring-[hsl(var(--ink)/0.08)]'
           )}>
             <Textarea
               ref={inputRef}
@@ -368,7 +367,7 @@ export function ChatPanel({
                   type="button"
                   size="icon"
                   variant={isListening ? 'default' : 'ghost'}
-                  className={cn("h-8 w-8 rounded-full hover:bg-gray-100", isListening ? "bg-[hsl(var(--hermes-gold-light))] text-[hsl(var(--hermes-gold-dark))] hover:opacity-80" : "text-gray-400 hover:text-gray-700")}
+                  className={cn("h-8 w-8 rounded-full hover:bg-gray-100", isListening ? "bg-[hsl(var(--soft))] text-[hsl(var(--ink))] hover:opacity-80" : "text-gray-400 hover:text-gray-700")}
                   onClick={startVoice}
                   title="Voice input"
                 >
@@ -380,14 +379,13 @@ export function ChatPanel({
                 type="button"
                 size="icon"
                 className={cn(
-                  'h-8 w-8 rounded-full transition-all duration-200',
+                  'h-8 w-8 rounded-lg transition-all duration-150',
                   isLoading
-                    ? 'bg-[hsl(var(--hermes-ink))] text-[hsl(var(--hermes-cream))] shadow-md'
-                    : 'bg-[hsl(var(--hermes-cream))] text-[hsl(var(--hermes-steel))] hover:bg-[hsl(var(--hermes-mist))] hover:text-[hsl(var(--hermes-ink))]',
+                    ? 'bg-[hsl(var(--ink))] text-[hsl(var(--paper))]'
+                    : 'bg-[hsl(var(--soft))] text-[hsl(var(--steel))] hover:bg-[hsl(var(--mist))] hover:text-[hsl(var(--ink))]',
                   input?.trim() && !isLoading
-                    ? 'bg-[hsl(var(--hermes-ink))] text-[hsl(var(--hermes-cream))] hover:opacity-90 shadow-md'
-                    : '',
-                  (!input || input.trim().length === 0) && !isLoading && 'scale-95 opacity-80'
+                    ? 'bg-[hsl(var(--ink))] text-[hsl(var(--paper))] hover:bg-[hsl(var(--ink)/0.92)]'
+                    : ''
                 )}
                 disabled={
                   ((!input || input.length === 0) && !isLoading) ||
@@ -408,18 +406,6 @@ export function ChatPanel({
         </div>
 
       </form>
-      )}
-
-      {signedIn && messages.length === 0 && (
-        <div className="mt-6 -mx-3 sm:-mx-4 md:-mx-8">
-          <TemplateGallery
-            onSelect={(p) => {
-              if (setInput) setInput(p)
-              try { inputRef.current?.focus() } catch {}
-              try { window.scrollTo({ top: 0, behavior: 'smooth' }) } catch {}
-            }}
-          />
-        </div>
       )}
 
       {/* Hidden file input */}

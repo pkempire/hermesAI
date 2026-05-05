@@ -72,7 +72,7 @@ async function generateContextualEnrichments(params: {
 Return 2 to 4 enrichment fields that materially improve later email drafting for this campaign.
 
 Rules:
-- Hermes already collects company name, company domain, company LinkedIn, decision maker name, decision maker title, decision maker LinkedIn, and decision maker email.
+- Outfield already collects company name, company domain, company LinkedIn, decision maker name, decision maker title, decision maker LinkedIn, and decision maker email.
 - Do not repeat identity basics.
 - Prefer outreach-relevant signals: positioning, proof, ICP fit, partnership fit, customer profile, premium indicators, recent activity, differentiators, or program specifics.
 - Labels must be short operator labels, ideally 2 to 4 words.

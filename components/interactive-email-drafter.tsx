@@ -210,7 +210,7 @@ export function InteractiveEmailDrafter({
 
     const objective = getInitialObjective()
     if (!objective.trim()) {
-      alert('Hermes needs to learn about your offer and objective first.')
+      alert('Outfield needs to learn about your offer and objective first.')
       return
     }
 
@@ -310,7 +310,7 @@ export function InteractiveEmailDrafter({
               Campaign Draft Studio
             </h2>
             <p className="mt-4 max-w-2xl text-[16px] leading-[1.6] font-medium text-gray-500/80">
-              Refine your autonomous sequence. Tighten the hook, adjust the tone, and verify the signals before Hermes initiates the Gmail send.
+              Refine your autonomous sequence. Tighten the hook, adjust the tone, and verify the signals before Outfield initiates the Gmail send.
             </p>
           </div>
 
@@ -341,7 +341,7 @@ export function InteractiveEmailDrafter({
           <div className="flex-1 overflow-y-auto w-full">
             {actualProspects.length === 0 ? (
               <div className="px-5 py-6 text-sm text-gray-400">
-                Run a prospect search first. Hermes will load the review queue here.
+                Run a prospect search first. Outfield will load the review queue here.
               </div>
             ) : (
               <div className="flex flex-col w-full">

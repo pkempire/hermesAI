@@ -81,7 +81,7 @@ function ProspectRowDetail({
 
   return (
     <div className="grid grid-cols-1 gap-5 px-6 pb-6 pt-2 lg:grid-cols-2">
-      {/* Hermes Take */}
+      {/* Take */}
       {hermesTake ? (
         <div className="rounded-xl border border-[hsl(var(--mist))] bg-[hsl(var(--soft))] p-4">
           <div className="mb-2.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[hsl(var(--steel))]">
@@ -122,7 +122,7 @@ function ProspectRowDetail({
       ) : isEnriching ? (
         <div className="flex items-center gap-2.5 rounded-xl border border-gray-100 bg-gray-50 p-4 text-[13px] text-gray-400">
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          Enriching with Hermes Take...
+          Enriching with Take...
         </div>
       ) : null}
 
@@ -185,7 +185,7 @@ export function ProspectGrid({
       <div className="flex flex-col items-center justify-center rounded-xl border border-gray-100 bg-gray-50 py-12">
         <Users className="mb-3 h-8 w-8 text-gray-300" />
         <p className="text-[14px] font-medium text-gray-500">No prospects yet</p>
-        <p className="text-[13px] text-gray-400 mt-0.5">Results will appear here as Hermes finds them.</p>
+        <p className="text-[13px] text-gray-400 mt-0.5">Results will appear here as Outfield finds them.</p>
       </div>
     )
   }

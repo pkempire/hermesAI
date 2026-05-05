@@ -253,7 +253,7 @@ export function ProspectPreviewCard({
             </>
           )}
 
-          {/* Hermes Take (if exists) */}
+          {/* Take (if exists) */}
           {prospect.hermesTake && prospect.note && (
             <>
               <Separator className="bg-gray-100" />

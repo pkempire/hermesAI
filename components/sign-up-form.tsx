@@ -1,14 +1,6 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle
-} from '@/components/ui/card'
-import { IconLogo } from '@/components/ui/icons'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { createClient } from '@/lib/supabase/client'
@@ -26,27 +18,25 @@ export function SignUpForm({
   const [repeatPassword, setRepeatPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [showEmail, setShowEmail] = useState(false)
   const router = useRouter()
 
   const handleGoogleSignUp = async () => {
     const supabase = createClient()
     setIsLoading(true)
     setError(null)
-
     try {
       const currentOrigin = typeof window !== 'undefined' ? window.location.origin : ''
       await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${currentOrigin}/auth/oauth?next=/`,
-          scopes: 'https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.modify openid email profile',
-          queryParams: {
-            prompt: 'select_account'
-          }
+          scopes: 'https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.send openid email profile',
+          queryParams: { prompt: 'select_account' }
         }
       })
-    } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : 'An OAuth error occurred')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An OAuth error occurred')
       setIsLoading(false)
     }
   }
@@ -56,121 +46,109 @@ export function SignUpForm({
     const supabase = createClient()
     setIsLoading(true)
     setError(null)
-
     if (password !== repeatPassword) {
       setError('Passwords do not match')
       setIsLoading(false)
       return
     }
-
     try {
       const { error } = await supabase.auth.signUp({ email, password })
       if (error) throw error
       router.push('/auth/sign-up-success')
       router.refresh()
-    } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : 'An error occurred')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <div
-      className={cn('flex flex-col items-center gap-6', className)}
-      {...props}
-    >
-      <Card className="w-full max-w-md border-black/5 bg-white/85 shadow-[0_30px_90px_rgba(62,45,18,0.08)] backdrop-blur-sm">
-        <CardHeader className="text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl border border-amber-200 bg-amber-50 text-amber-700 shadow-sm">
-            <IconLogo className="size-7" />
+    <div className={cn('flex flex-col gap-4', className)} {...props}>
+      <Button
+        type="button"
+        onClick={handleGoogleSignUp}
+        disabled={isLoading}
+        className="h-11 w-full bg-[hsl(var(--ink))] text-[hsl(var(--paper))] hover:bg-[hsl(var(--ink)/0.92)] text-[14px] font-medium"
+      >
+        Continue with Google
+      </Button>
+      <p className="text-center text-[11.5px] text-[hsl(var(--steel))]">
+        Recommended — Outfield drafts and sends from your Gmail.
+      </p>
+
+      {!showEmail ? (
+        <button
+          type="button"
+          onClick={() => setShowEmail(true)}
+          className="text-center text-[12.5px] text-[hsl(var(--steel))] hover:text-[hsl(var(--ink))]"
+        >
+          Or sign up with email →
+        </button>
+      ) : (
+        <>
+          <div className="relative my-1">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-[hsl(var(--mist))]" />
+            </div>
+            <div className="relative flex justify-center text-[11px] uppercase tracking-[0.16em]">
+              <span className="bg-[hsl(var(--paper))] px-2 text-[hsl(var(--steel))]">Email</span>
+            </div>
           </div>
-          <CardTitle className="mt-4 text-3xl text-gray-950">
-            Launch your first Hermes workflow
-          </CardTitle>
-          <CardDescription>
-            Start with Google for the smoothest setup, Gmail permissions, and the cleanest first-run experience.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4 flex flex-col gap-3">
+
+          <form onSubmit={handleSignUp} className="flex flex-col gap-3">
+            <div className="grid gap-1.5">
+              <Label htmlFor="email" className="text-[12px] text-[hsl(var(--steel))]">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                required
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                className="h-10 border-[hsl(var(--mist))]"
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="password" className="text-[12px] text-[hsl(var(--steel))]">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                required
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                className="h-10 border-[hsl(var(--mist))]"
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="repeat-password" className="text-[12px] text-[hsl(var(--steel))]">Repeat password</Label>
+              <Input
+                id="repeat-password"
+                type="password"
+                placeholder="••••••••"
+                required
+                value={repeatPassword}
+                onChange={e => setRepeatPassword(e.target.value)}
+                className="h-10 border-[hsl(var(--mist))]"
+              />
+            </div>
+            {error && <p className="text-[12.5px] text-red-700">{error}</p>}
             <Button
-              variant="outline"
-              type="button"
-              className="h-11 w-full border-black/10 bg-white text-gray-900 hover:bg-stone-50"
-              onClick={handleGoogleSignUp}
+              type="submit"
               disabled={isLoading}
+              className="h-10 w-full bg-[hsl(var(--ink))] text-[hsl(var(--paper))] hover:bg-[hsl(var(--ink)/0.92)] text-[13.5px]"
             >
-              Continue with Google
+              {isLoading ? 'Creating account…' : 'Create account'}
             </Button>
-            <p className="text-center text-xs leading-5 text-black/45">
-              This is the recommended path if you want Hermes to draft and send from your Gmail account.
-            </p>
-            <div className="relative my-1">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-muted-foreground">Or sign up with email</span>
-              </div>
-            </div>
-          </div>
-          <form onSubmit={handleSignUp}>
-            <div className="flex flex-col gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  required
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label htmlFor="password">Password</Label>
-                </div>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="********"
-                  required
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label htmlFor="repeat-password">Repeat Password</Label>
-                </div>
-                <Input
-                  id="repeat-password"
-                  type="password"
-                  placeholder="********"
-                  required
-                  value={repeatPassword}
-                  onChange={e => setRepeatPassword(e.target.value)}
-                />
-              </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="h-11 w-full bg-black text-white hover:bg-black/90" disabled={isLoading}>
-                {isLoading ? 'Creating account...' : 'Sign Up'}
-              </Button>
-            </div>
-            <div className="mt-6 text-center text-sm">
-              Already have an account?{' '}
-              <Link href="/auth/login" className="underline underline-offset-4">
-                Sign In
-              </Link>
-            </div>
           </form>
-        </CardContent>
-      </Card>
-      <div className="text-center text-xs text-muted-foreground">
-        <Link href="/" className="hover:underline">
-          &larr; Back to Home
+        </>
+      )}
+
+      <div className="text-center text-[12.5px] text-[hsl(var(--steel))]">
+        Already have an account?{' '}
+        <Link href="/auth/login" className="text-[hsl(var(--ink))] hover:underline">
+          Sign in
         </Link>
       </div>
     </div>

@@ -374,7 +374,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           </CommandList>
 
           <div className="flex items-center justify-between border-t border-[hsl(var(--hermes-mist))] bg-[hsl(var(--hermes-parchment),var(--hermes-cream))] px-4 py-2 text-[11px] text-[hsl(var(--hermes-ink))]/55">
-            <span className="italic tracking-wide">Hermes</span>
+            <span className="italic tracking-wide">Outfield</span>
             <span className="flex items-center gap-2">
               <kbd className="rounded border border-[hsl(var(--hermes-mist))] px-1.5 py-0.5 font-mono">↵</kbd>
               <span>to select</span>

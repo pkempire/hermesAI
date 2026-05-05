@@ -239,7 +239,7 @@ async function generateHermesTake(params: {
     const result = await generateObject({
       model: getToolCallModel(),
       schema: hermesTakeSchema,
-      system: `You are Hermes, an operator helping a founder shortlist outreach targets.
+      system: `You are Outfield, an operator helping a founder shortlist outreach targets.
 
 Write an analytical prospect note for one target.
 
@@ -265,7 +265,7 @@ CRITICAL RULES:
 
     return result.object
   } catch (error) {
-    logger.warn('Hermes take generation failed:', error)
+    logger.warn('Outfield take generation failed:', error)
     return {
       whyFit: summary || `${prospect.company || 'This company'} may be worth reviewing.`,
       outreachAngle: context?.offer
@@ -557,7 +557,7 @@ export async function enrichCompanyData(
 }
 
 /**
- * Step 2 enrichment: person resolution, email finding, and Hermes Take.
+ * Step 2 enrichment: person resolution, email finding, and Take.
  * Call on-demand when the user selects companies to find contacts for.
  * Expects prospect to have already been through enrichCompanyData.
  */

@@ -120,7 +120,7 @@ export function ProspectCard({
       </CardHeader>
       
       <CardContent className="space-y-8 px-6 py-6 md:px-8 md:py-8">
-        {/* Hermes Take prominently featured */}
+        {/* Take prominently featured */}
         <div className="rounded-3xl border border-amber-100 bg-amber-50/30 p-8 shadow-sm relative overflow-hidden group">
           <div className="mb-6 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[hsl(var(--steel))]">
             <Sparkles className="h-3.5 w-3.5 text-[hsl(var(--ink))]" strokeWidth={1.75} />

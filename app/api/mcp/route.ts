@@ -1,11 +1,11 @@
 /**
- * Streamable HTTP MCP endpoint for Hermes.
+ * Streamable HTTP MCP endpoint for Outfield.
  *
  * - mcp-handler@1.1.0 (formerly @vercel/mcp-adapter, now relocated)
  *   https://www.npmjs.com/package/mcp-handler
  * - @modelcontextprotocol/sdk@1.29.0
  *
- * Auth: the existing Hermes Supabase session cookie (lib/auth/get-current-user).
+ * Auth: the existing Outfield Supabase session cookie (lib/auth/get-current-user).
  * Server-to-server callers may pass `x-hermes-user-id`. Otherwise we 401.
  *
  * Quotas: enforced via lib/utils/quota.ts on each request (1 unit per call).
@@ -71,7 +71,7 @@ async function authedHandler(req: Request): Promise<Response> {
       JSON.stringify({
         error: 'unauthorized',
         message:
-          'Hermes MCP requires an authenticated session cookie or an x-hermes-user-id header.'
+          'Outfield MCP requires an authenticated session cookie or an x-hermes-user-id header.'
       }),
       { status: 401, headers: { 'content-type': 'application/json' } }
     )

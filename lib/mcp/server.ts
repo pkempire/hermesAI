@@ -1,5 +1,5 @@
 /**
- * Hermes MCP server factory.
+ * Outfield MCP server factory.
  *
  * Exposes the existing in-app AI tools (lib/tools/*) over the Model Context
  * Protocol so external agents (Claude Desktop, Cursor, Windsurf, MCP Inspector)
@@ -30,7 +30,7 @@ const SERVER_NAME = 'hermes'
 const SERVER_VERSION = '0.1.0'
 
 /**
- * Register Hermes tools on an existing McpServer instance.
+ * Register Outfield tools on an existing McpServer instance.
  * Used by both the stdio entrypoint and the Streamable HTTP route handler so
  * the tool surface stays in lockstep across transports.
  */
@@ -60,7 +60,7 @@ export function registerHermesTools(server: McpServer, opts: HermesMcpOptions = 
       description:
         'Search for qualified B2B prospects (companies + decision makers) using ' +
         'Exa Websets + AI-powered enrichment. Returns a webset id and starting ' +
-        'metadata; results stream into the Hermes app over time.',
+        'metadata; results stream into the Outfield app over time.',
       inputSchema: {
         query: z
           .string()
@@ -114,7 +114,7 @@ export function registerHermesTools(server: McpServer, opts: HermesMcpOptions = 
     {
       title: 'Draft outreach emails',
       description:
-        'Open the Hermes email drafter for a list of prospects. Returns the ' +
+        'Open the Outfield email drafter for a list of prospects. Returns the ' +
         'drafter configuration (template seeds + personalization controls).',
       inputSchema: {
         prospects: z
@@ -182,7 +182,7 @@ export function registerHermesTools(server: McpServer, opts: HermesMcpOptions = 
 }
 
 /**
- * Build a fully configured Hermes MCP server. Used by `bin/hermes-mcp` (stdio)
+ * Build a fully configured Outfield MCP server. Used by `bin/hermes-mcp` (stdio)
  * and by `app/api/mcp/route.ts` (Streamable HTTP via mcp-handler).
  */
 export function createHermesMcpServer(opts: HermesMcpOptions = {}): McpServer {
