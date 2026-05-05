@@ -1,4 +1,4 @@
-import { CoreMessage, streamText } from 'ai'
+import { ModelMessage, streamText } from 'ai'
 import { createEmailDrafterTool } from '../tools/email-drafter'
 import {
   createRecallMemoryTool,
@@ -72,7 +72,7 @@ export function researcher({
   searchMode,
   userId
 }: {
-  messages: CoreMessage[]
+  messages: ModelMessage[]
   model: string
   searchMode: boolean
   userId?: string

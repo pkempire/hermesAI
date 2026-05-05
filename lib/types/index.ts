@@ -1,4 +1,4 @@
-import { CoreMessage, JSONValue } from 'ai'
+import { ModelMessage, JSONValue } from 'ai'
 
 export type SearchResults = {
   images: SearchResultImage[]
@@ -68,9 +68,9 @@ export interface Chat extends Record<string, any> {
 }
 
 // ExtendedCoreMessage for saveing annotations
-export type ExtendedCoreMessage = Omit<CoreMessage, 'role' | 'content'> & {
-  role: CoreMessage['role'] | 'data'
-  content: CoreMessage['content'] | JSONValue
+export type ExtendedCoreMessage = Omit<ModelMessage, 'role' | 'content'> & {
+  role: ModelMessage['role'] | 'data'
+  content: ModelMessage['content'] | JSONValue
 }
 
 export type AIMessage = {

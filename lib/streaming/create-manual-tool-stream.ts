@@ -3,7 +3,7 @@ import {
   createUIMessageStreamResponse,
   JSONValue,
   streamText,
-  convertToCoreMessages
+  convertToModelMessages
 } from 'ai'
 import { manualResearcher } from '../agents/manual-researcher'
 import { ExtendedCoreMessage } from '../types'
@@ -22,8 +22,8 @@ export function createManualToolStreamResponse(config: BaseStreamConfig) {
         : modelId
 
       try {
-        // Convert UI messages to minimal CoreMessage for model
-        const modelMessages = convertToCoreMessages(messages)
+        // Convert UI messages to minimal ModelMessage for model
+        const modelMessages = await convertToModelMessages(messages)
 
         const { toolCallDataAnnotation, toolCallMessages } =
           await executeToolCall(

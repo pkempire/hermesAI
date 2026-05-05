@@ -1,7 +1,7 @@
 import { type Model } from '@/lib/types/models'
 import {
-  CoreMessage,
-  CoreToolMessage,
+  ModelMessage,
+  ToolModelMessage,
   generateId,
   JSONValue,
   type UIMessage as Message
@@ -16,12 +16,12 @@ export function cn(...inputs: ClassValue[]) {
 /**
  * Takes an array of AIMessage and modifies each message where the role is 'tool'.
  * Changes the role to 'assistant' and converts the content to a JSON string.
- * Returns the modified messages as an array of CoreMessage.
+ * Returns the modified messages as an array of ModelMessage.
  *
  * @param aiMessages - Array of AIMessage
  * @returns modifiedMessages - Array of modified messages
  */
-export function transformToolMessages(messages: CoreMessage[]): CoreMessage[] {
+export function transformToolMessages(messages: ModelMessage[]): ModelMessage[] {
   return messages.map(message =>
     message.role === 'tool'
       ? {
@@ -31,7 +31,7 @@ export function transformToolMessages(messages: CoreMessage[]): CoreMessage[] {
           type: 'tool'
         }
       : message
-  ) as CoreMessage[]
+  ) as ModelMessage[]
 }
 
 /**
@@ -71,7 +71,7 @@ function addToolMessageToChat({
   toolMessage,
   messages
 }: {
-  toolMessage: CoreToolMessage
+  toolMessage: ToolModelMessage
   messages: Array<Message>
 }): Array<Message> {
   return messages.map(message => {
@@ -101,8 +101,8 @@ function addToolMessageToChat({
         ...message,
         parts: existingParts,
         toolInvocations: (message as any).toolInvocations.map((toolInvocation: any) => {
-          const toolResult = toolMessage.content.find(
-            tool => tool.toolCallId === toolInvocation.toolCallId
+          const toolResult = (toolMessage.content as any[]).find(
+            (tool: any) => tool.type === 'tool-result' && tool.toolCallId === toolInvocation.toolCallId
           )
 
           if (toolResult) {
@@ -133,7 +133,7 @@ export function convertToUIMessages(
     // Handle tool messages
     if (message.role === 'tool') {
       return addToolMessageToChat({
-        toolMessage: message as CoreToolMessage,
+        toolMessage: message as ToolModelMessage,
         messages: chatMessages
       })
     }

@@ -2,10 +2,10 @@ import { getChat, saveChat } from '@/lib/actions/chat'
 import { generateRelatedQuestions } from '@/lib/agents/generate-related-questions'
 import { ExtendedCoreMessage } from '@/lib/types'
 import { convertToExtendedCoreMessages } from '@/lib/utils'
-import { CoreMessage, JSONValue, type UIMessage as Message } from 'ai'
+import { ModelMessage, JSONValue, type UIMessage as Message } from 'ai'
 
 interface HandleStreamFinishParams {
-  responseMessages: CoreMessage[]
+  responseMessages: ModelMessage[]
   originalMessages: Message[]
   model: string
   chatId: string

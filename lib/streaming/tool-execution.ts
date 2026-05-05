@@ -1,4 +1,4 @@
-import { CoreMessage, generateId, generateText, JSONValue } from 'ai'
+import { ModelMessage, generateId, generateText, JSONValue } from 'ai'
 import { z } from 'zod'
 import { searchSchema } from '../schema/search'
 import { search } from '../tools/search'
@@ -8,11 +8,11 @@ import { parseToolCallXml } from './parse-tool-call'
 
 interface ToolExecutionResult {
   toolCallDataAnnotation: ExtendedCoreMessage | null
-  toolCallMessages: CoreMessage[]
+  toolCallMessages: ModelMessage[]
 }
 
 export async function executeToolCall(
-  coreMessages: CoreMessage[],
+  coreMessages: ModelMessage[],
   dataStream: any,
   model: string,
   searchMode: boolean
@@ -107,7 +107,7 @@ export async function executeToolCall(
     } as JSONValue
   }
 
-  const toolCallMessages: CoreMessage[] = [
+  const toolCallMessages: ModelMessage[] = [
     {
       role: 'assistant',
       content: `Tool call result: ${JSON.stringify(searchResults)}`

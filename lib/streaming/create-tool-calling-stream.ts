@@ -3,18 +3,18 @@ import { logger } from '@/lib/utils/logger'
 import { isReasoningModel } from '../utils/registry'
 import { handleStreamFinish } from './handle-stream-finish'
 import {
-  CoreMessage,
+  ModelMessage,
   createUIMessageStream,
   createUIMessageStreamResponse,
   stepCountIs,
   streamText,
-  convertToCoreMessages
+  convertToModelMessages
 } from 'ai'
 import { BaseStreamConfig } from './types'
 
 // Function to check if a message contains ask_question tool invocation
-function containsAskQuestionTool(message: CoreMessage) {
-  // For CoreMessage format, we check the content array
+function containsAskQuestionTool(message: ModelMessage) {
+  // For ModelMessage format, we check the content array
   if (message.role !== 'assistant' || !Array.isArray(message.content)) {
     return false
   }
@@ -93,7 +93,7 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
 
         // Clean UI messages to remove problematic tool states before conversion
         const cleanedMessages = cleanUIMessages(validMessages)
-        const modelMessages = convertToCoreMessages(cleanedMessages)
+        const modelMessages = await convertToModelMessages(cleanedMessages)
         
         logger.debug('Messages converted successfully:', modelMessages.length)
 
@@ -168,7 +168,7 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
                 containsAskQuestionTool(
                   result.response.messages[
                     result.response.messages.length - 1
-                  ] as CoreMessage
+                  ] as ModelMessage
                 ))
 
             await handleStreamFinish({

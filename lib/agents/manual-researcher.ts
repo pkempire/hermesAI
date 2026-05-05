@@ -1,4 +1,4 @@
-import { CoreMessage, streamText } from 'ai'
+import { ModelMessage, streamText } from 'ai'
 import { getModel } from '../utils/registry'
 
 const BASE_SYSTEM_PROMPT = `
@@ -36,7 +36,7 @@ Important:
 `
 
 interface ManualResearcherConfig {
-  messages: CoreMessage[]
+  messages: ModelMessage[]
   model: string
   isSearchEnabled?: boolean
 }
