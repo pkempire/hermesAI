@@ -8,9 +8,8 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import Textarea from 'react-textarea-autosize'
 import { useArtifact } from './artifact/artifact-context'
-import { WorkspaceHome, PipelineSection } from './workspace-home'
+import { WorkspaceHome } from './workspace-home'
 import { Button } from './ui/button'
-import { createClient } from '@/lib/supabase/client'
 
 interface ChatPanelProps {
   input: string
@@ -24,13 +23,9 @@ interface ChatPanelProps {
   stop: () => void
   append: (message: any) => void
   models?: Model[]
-  /** Whether to show the scroll to bottom button */
   showScrollToBottomButton: boolean
-  /** Reference to the scroll container */
   scrollContainerRef: React.RefObject<HTMLDivElement>
-  /** Function to submit template messages directly */
   submitTemplateMessage?: (message: string) => void
-  /** When false, render a Continue-with-Google CTA instead of an interactive textbox. */
   signedIn?: boolean
 }
 
@@ -56,53 +51,20 @@ export function ChatPanel({
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
   const isFirstRender = useRef(true)
-  const [isComposing, setIsComposing] = useState(false) // Composition state
-  const [enterDisabled, setEnterDisabled] = useState(false) // Disable Enter after composition ends
+  const [isComposing, setIsComposing] = useState(false)
+  const [enterDisabled, setEnterDisabled] = useState(false)
   const submittingRef = useRef(false)
   const [isListening, setIsListening] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { close: closeArtifact } = useArtifact()
-  const [signupLoading, setSignupLoading] = useState(false)
-  const [signupError, setSignupError] = useState<string | null>(null)
-
-  async function continueWithGoogle() {
-    if (signupLoading) return
-    setSignupLoading(true)
-    setSignupError(null)
-    try {
-      const supabase = createClient()
-      const origin =
-        typeof window !== 'undefined' ? window.location.origin : ''
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${origin}/auth/oauth?next=/`,
-          scopes:
-            'https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.send',
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'select_account consent'
-          }
-        }
-      })
-      if (error) throw error
-    } catch (err) {
-      setSignupError(err instanceof Error ? err.message : 'Sign-in failed')
-      setSignupLoading(false)
-    }
-  }
 
   const handleCompositionStart = () => setIsComposing(true)
-
   const handleCompositionEnd = () => {
     setIsComposing(false)
     setEnterDisabled(true)
-    setTimeout(() => {
-      setEnterDisabled(false)
-    }, 300)
+    setTimeout(() => setEnterDisabled(false), 300)
   }
 
-  // Voice input (browser Web Speech API where available)
   const startVoice = () => {
     try {
       const w = window as any
@@ -123,7 +85,6 @@ export function ChatPanel({
     } catch {}
   }
 
-  // File upload (CSV import supported, other files inserted as a note in input)
   const onFilePicked = async (file: File) => {
     try {
       if (file.name.toLowerCase().endsWith('.csv')) {
@@ -139,7 +100,6 @@ export function ChatPanel({
           : `I uploaded a CSV file (${file.name}). Please enrich contacts and show results.`
         if (setInput) setInput(msg)
       } else {
-        // Read a snippet and place into input for context
         const text = await file.text()
         const snippet = text.slice(0, 2000)
         if (setInput) setInput((input ? input + '\n' : '') + `Attached file ${file.name} contents (snippet):\n${snippet}`)
@@ -154,37 +114,26 @@ export function ChatPanel({
     router.push('/')
   }
 
-  // Quick auth check helper
   async function ensureSignedIn(): Promise<boolean> {
     try {
-      // Save draft before auth redirect
       if (input && input.trim().length > 0) {
-        try {
-          localStorage.setItem('hermes_draft', input)
-        } catch {}
+        try { localStorage.setItem('hermes_draft', input) } catch {}
       }
       const res = await fetch('/api/auth/me', { cache: 'no-store' })
       if (!res.ok) return false
       const data = await res.json()
       return !!data?.user?.id
-    } catch {
-      return false
-    }
+    } catch { return false }
   }
 
   const isToolInvocationInProgress = () => {
     if (!messages.length) return false
-
     const lastMessage = messages[messages.length - 1]
     if (lastMessage.role !== 'assistant' || !(lastMessage as any).parts) return false
-
     const parts = (lastMessage as any).parts as any[]
     const lastPart = parts[parts.length - 1]
-
-    // Support both legacy and v5 shapes
     if (lastPart?.type === 'tool-invocation') {
       const inv = (lastPart as any).toolInvocation || lastPart
-      // Do not block input for ask_question; allow inline answering
       if (inv?.toolName === 'ask_question') return false
       return inv?.state === 'call'
     }
@@ -195,19 +144,13 @@ export function ChatPanel({
     return false
   }
 
-  // if query is not empty, submit the query
   useEffect(() => {
     if (isFirstRender.current && query && query.trim().length > 0) {
-      append({
-        role: 'user',
-        content: query
-      })
+      append({ role: 'user', content: query })
       isFirstRender.current = false
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query])
 
-  // Scroll to the bottom of the container
   const handleScrollToBottom = () => {
     const scrollContainer = scrollContainerRef.current
     if (scrollContainer) {
@@ -221,7 +164,6 @@ export function ChatPanel({
   const submitCurrentMessage = async () => {
     if (submittingRef.current) return
     if ((!input || input.trim().length === 0) && !isLoading) return
-
     submittingRef.current = true
     const isAuthed = await ensureSignedIn()
     if (!isAuthed) {
@@ -229,15 +171,9 @@ export function ChatPanel({
       submittingRef.current = false
       return
     }
-
-    try {
-      localStorage.removeItem('hermes_draft')
-    } catch {}
-
+    try { localStorage.removeItem('hermes_draft') } catch {}
     handleSubmit({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>)
-    setTimeout(() => {
-      submittingRef.current = false
-    }, 800)
+    setTimeout(() => { submittingRef.current = false }, 800)
   }
 
   return (
@@ -253,53 +189,16 @@ export function ChatPanel({
         />
       )}
 
-      {!signedIn && messages.length === 0 ? (
-        <div className="max-w-3xl w-full mx-auto mb-6">
-          <div className="rounded-xl border border-[hsl(var(--mist))] bg-white px-6 py-6 sm:px-7 sm:py-7">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="space-y-1">
-                <p className="t-caption text-[hsl(var(--steel))]">Start free</p>
-                <h2 className="text-[1.35rem] font-semibold leading-tight text-[hsl(var(--ink))]">
-                  7 days free, then $40/mo
-                </h2>
-                <p className="text-[13px] text-[hsl(var(--steel))]">
-                  No card required. Connect Gmail, send your first sequence today.
-                </p>
-              </div>
-              <div className="flex flex-col items-stretch sm:items-end gap-1.5">
-                <Button
-                  type="button"
-                  onClick={continueWithGoogle}
-                  disabled={signupLoading}
-                  className="h-11 px-5 rounded-lg bg-[hsl(var(--ink))] text-[hsl(var(--paper))] hover:bg-[hsl(var(--ink)/0.92)] text-[14px] font-medium"
-                >
-                  {signupLoading ? 'Redirecting…' : 'Continue with Google'}
-                </Button>
-                {signupError && (
-                  <span className="text-[11px] text-red-700">{signupError}</span>
-                )}
-              </div>
-            </div>
-          </div>
-          <PipelineSection />
-        </div>
-      ) : (
       <form
         ref={formRef}
-        onSubmit={async (e) => {
-          e.preventDefault()
-          await submitCurrentMessage()
-        }}
+        onSubmit={async (e) => { e.preventDefault(); await submitCurrentMessage() }}
         className={cn('max-w-4xl w-full mx-auto relative group/form', messages.length === 0 ? 'mb-6' : '')}
       >
         {showScrollToBottomButton && messages.length > 0 && (
           <Button
-            type="button"
-            variant="outline"
-            size="icon"
+            type="button" variant="outline" size="icon"
             className="absolute -top-16 right-6 z-20 size-10 rounded-full border border-black/10 bg-white/90 shadow-lg"
-            onClick={handleScrollToBottom}
-            title="Jump to latest"
+            onClick={handleScrollToBottom} title="Jump to latest"
           >
             <ChevronDown size={18} className="text-black/70" />
           </Button>
@@ -311,37 +210,22 @@ export function ChatPanel({
             'focus-within:border-[hsl(var(--ink))] focus-within:ring-2 focus-within:ring-[hsl(var(--ink)/0.08)]'
           )}>
             <Textarea
-              ref={inputRef}
-              name="input"
-              rows={2}
-              maxRows={8}
-              tabIndex={0}
+              ref={inputRef} name="input"
+              rows={2} maxRows={8} tabIndex={0}
               onCompositionStart={handleCompositionStart}
               onCompositionEnd={handleCompositionEnd}
               placeholder="Find 25 Bay Area private college counselors who specialize in STEM/Ivy applications"
-              spellCheck={false}
-              value={input}
+              spellCheck={false} value={input}
               disabled={isLoading || isToolInvocationInProgress()}
               className="w-full resize-none border-0 bg-transparent px-5 py-4 text-[15px] leading-relaxed text-gray-900 placeholder:text-gray-400 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 min-h-[85px]"
               onChange={e => {
-                if (handleInputChange) {
-                  handleInputChange(e)
-                } else if (setInput) {
-                  setInput(e.target.value)
-                }
+                if (handleInputChange) handleInputChange(e)
+                else if (setInput) setInput(e.target.value)
                 setShowEmptyScreen(e.target.value.length === 0)
               }}
               onKeyDown={e => {
-                if (
-                  e.key === 'Enter' &&
-                  !e.shiftKey &&
-                  !isComposing &&
-                  !enterDisabled
-                ) {
-                  if (!input || input.trim().length === 0) {
-                    e.preventDefault()
-                    return
-                  }
+                if (e.key === 'Enter' && !e.shiftKey && !isComposing && !enterDisabled) {
+                  if (!input || input.trim().length === 0) { e.preventDefault(); return }
                   e.preventDefault()
                   void submitCurrentMessage()
                 }
@@ -352,32 +236,21 @@ export function ChatPanel({
 
             <div className="flex items-center justify-between px-3 pb-3 pt-1">
               <div className="flex items-center gap-1.5">
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
+                <Button type="button" size="icon" variant="ghost"
                   className="h-8 w-8 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-                  onClick={() => fileInputRef.current?.click()}
-                  title="Attach file"
-                >
+                  onClick={() => fileInputRef.current?.click()} title="Attach file">
                   <Paperclip size={16} />
                 </Button>
-                <div className="mx-1 h-4 w-[1px] bg-gray-200"></div>
-                <Button
-                  type="button"
-                  size="icon"
+                <div className="mx-1 h-4 w-[1px] bg-gray-200" />
+                <Button type="button" size="icon"
                   variant={isListening ? 'default' : 'ghost'}
                   className={cn("h-8 w-8 rounded-full hover:bg-gray-100", isListening ? "bg-[hsl(var(--soft))] text-[hsl(var(--ink))] hover:opacity-80" : "text-gray-400 hover:text-gray-700")}
-                  onClick={startVoice}
-                  title="Voice input"
-                >
+                  onClick={startVoice} title="Voice input">
                   <Mic size={16} />
                 </Button>
               </div>
-              
-              <Button
-                type="button"
-                size="icon"
+
+              <Button type="button" size="icon"
                 className={cn(
                   'h-8 w-8 rounded-lg transition-all duration-150',
                   isLoading
@@ -387,14 +260,8 @@ export function ChatPanel({
                     ? 'bg-[hsl(var(--ink))] text-[hsl(var(--paper))] hover:bg-[hsl(var(--ink)/0.92)]'
                     : ''
                 )}
-                disabled={
-                  ((!input || input.length === 0) && !isLoading) ||
-                  isToolInvocationInProgress()
-                }
-                onClick={isLoading ? stop : async () => {
-                  await submitCurrentMessage()
-                }}
-              >
+                disabled={((!input || input.length === 0) && !isLoading) || isToolInvocationInProgress()}
+                onClick={isLoading ? stop : async () => { await submitCurrentMessage() }}>
                 {isLoading ? (
                   <LoaderCircle className="h-4 w-4 animate-spin text-white" />
                 ) : (
@@ -404,15 +271,9 @@ export function ChatPanel({
             </div>
           </div>
         </div>
-
       </form>
-      )}
 
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        className="hidden"
+      <input ref={fileInputRef} type="file" className="hidden"
         accept=".csv,.txt,.md,.json,.yaml,.yml,.pdf"
         onChange={async (e) => {
           const f = (e.target as HTMLInputElement).files?.[0]
