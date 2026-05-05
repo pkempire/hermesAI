@@ -3,6 +3,7 @@
 import { ProspectGrid } from '@/components/prospect-grid'
 import { logger } from '@/lib/utils/logger'
 import { memo, useMemo } from 'react'
+import { toast } from 'sonner'
 import type { Prospect, ProspectSearchContext } from './types'
 
 export interface ProspectSearchStreamerProps {
@@ -31,6 +32,11 @@ function ProspectSearchStreamerImpl({
 
   const handleFindContacts = async (ids: string[]) => {
     const toEnrich = prospects.filter(p => ids.includes(p.id))
+    if (toEnrich.length === 0) {
+      toast.warning('Select at least one company first')
+      return
+    }
+    const t = toast.loading(`Finding contacts for ${toEnrich.length} ${toEnrich.length === 1 ? 'company' : 'companies'}…`)
     try {
       const storedContext = sessionStorage.getItem('hermes-search-context')
       const ctx = storedContext ? JSON.parse(storedContext) : searchContext
@@ -39,15 +45,29 @@ function ProspectSearchStreamerImpl({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prospects: toEnrich, context: ctx })
       })
-      if (!res.ok) throw new Error('Enrichment failed')
+      if (!res.ok) {
+        const text = await res.text().catch(() => '')
+        let detail = `${res.status}`
+        try {
+          const j = JSON.parse(text)
+          if (j?.error) detail = j.error
+        } catch {
+          if (text) detail = text.slice(0, 120)
+        }
+        throw new Error(`Enrichment failed (${detail})`)
+      }
       const { enriched } = await res.json()
+      const enrichedCount = Array.isArray(enriched) ? enriched.filter((p: any) => p.contactName || p.contactEmail).length : 0
       onProspectsUpdate(prev => {
         const byId = new Map(prev.map(p => [p.id, p]))
         for (const p of enriched) byId.set(p.id, p)
         return Array.from(byId.values())
       })
+      toast.success(`Found ${enrichedCount} of ${toEnrich.length} contacts`, { id: t })
     } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error'
       logger.warn('Streamer find-contacts failed:', err)
+      toast.error(msg, { id: t })
     }
   }
 
