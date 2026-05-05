@@ -85,7 +85,7 @@ export function SignUpForm({
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl border border-amber-200 bg-amber-50 text-amber-700 shadow-sm">
             <IconLogo className="size-7" />
           </div>
-          <CardTitle className="mt-4 font-serif text-3xl text-gray-950">
+          <CardTitle className="mt-4 text-3xl text-gray-950">
             Launch your first Hermes workflow
           </CardTitle>
           <CardDescription>

@@ -1,8 +1,7 @@
 import { Analytics } from '@vercel/analytics/react'
 import type { Metadata, Viewport } from 'next'
-import { Cormorant_Garamond, Inter } from 'next/font/google'
+import { Inter } from 'next/font/google'
 
-import { CommandOrbit } from '@/components/command-orbit'
 import { CommandPaletteProvider } from '@/components/command-palette-provider'
 import ArtifactRoot from '@/components/artifact/artifact-root'
 import { Header } from '@/components/header'
@@ -18,14 +17,8 @@ const inter = Inter({
   variable: '--font-sans'
 })
 
-const cormorant = Cormorant_Garamond({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-serif'
-})
-
-const title = 'Hermes — AI Outbound Operator'
-const description = 'Describe your ICP in one line. Hermes finds the right companies, resolves the decision-maker, drafts a pitch grounded in real evidence, and sends through your Gmail. Replace Apollo, Clay, and Instantly with one operator.'
+const title = 'Outfield — AI Outbound Operator'
+const description = 'Describe who you want to reach. Outfield maps the market, finds the decision-maker, drafts pitches grounded in real evidence, and sends from your Gmail.'
 
 export const metadata: Metadata = {
   metadataBase: new URL(
@@ -92,9 +85,8 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body
         className={cn(
-          'min-h-screen flex flex-col font-sans antialiased bg-[hsl(var(--hermes-cream))] text-[hsl(var(--hermes-ink))]',
-          inter.variable,
-          cormorant.variable
+          'min-h-screen flex flex-col font-sans antialiased bg-[hsl(var(--paper))] text-[hsl(var(--ink))]',
+          inter.variable
         )}
         suppressHydrationWarning
       >
@@ -105,7 +97,6 @@ export default async function RootLayout({
           enableSystem={false}
           disableTransitionOnChange
         >
-          <CommandOrbit user={user} />
           <CommandPaletteProvider />
           <div className="flex flex-col flex-1 min-h-0 min-h-screen">
             <Header user={user} />

@@ -3,7 +3,7 @@
 import { ProspectGrid } from '@/components/prospect-grid'
 import { ProspectPreviewCard } from '@/components/prospect-preview-card'
 import { logger } from '@/lib/utils/logger'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { memo } from 'react'
 import { toast } from 'sonner'
 import type { Prospect, ProspectSearchContext } from './types'
@@ -107,11 +107,7 @@ function ResultsGrid({
     <div className="space-y-4">
       <div className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white border border-gray-100 shadow-sm">
-          <img
-            src="/images/hermes-pixel.png"
-            alt="Complete"
-            className="h-4 w-4 object-contain"
-          />
+          <CheckCircle2 className="h-4 w-4 text-[hsl(var(--ink))]" strokeWidth={1.75} />
         </div>
         <div>
           <p className="text-[14px] font-semibold text-gray-900">

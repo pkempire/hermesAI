@@ -306,7 +306,7 @@ export function InteractiveEmailDrafter({
             <div className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-600/70 mb-4 px-3 py-1 bg-amber-50 self-start rounded-full border border-amber-100/50">
               Personalization Engine
             </div>
-            <h2 className="mt-3 font-serif text-4xl leading-tight text-gray-900 md:text-[3.5rem] tracking-tight">
+            <h2 className="mt-3 text-4xl leading-tight text-gray-900 md:text-[3.5rem] tracking-tight">
               Campaign Draft Studio
             </h2>
             <p className="mt-4 max-w-2xl text-[16px] leading-[1.6] font-medium text-gray-500/80">

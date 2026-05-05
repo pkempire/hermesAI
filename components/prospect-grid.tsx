@@ -83,14 +83,10 @@ function ProspectRowDetail({
     <div className="grid grid-cols-1 gap-5 px-6 pb-6 pt-2 lg:grid-cols-2">
       {/* Hermes Take */}
       {hermesTake ? (
-        <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-4">
-          <div className="mb-2.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-amber-800/70">
-            <img
-              src="/images/hermes-pixel.png"
-              alt="Hermes"
-              className="h-3.5 w-3.5 rounded-full object-cover"
-            />
-            Hermes Take
+        <div className="rounded-xl border border-[hsl(var(--mist))] bg-[hsl(var(--soft))] p-4">
+          <div className="mb-2.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[hsl(var(--steel))]">
+            <Sparkles className="h-3.5 w-3.5 text-[hsl(var(--ink))]" strokeWidth={1.75} />
+            Take
           </div>
           <p className="text-[13px] leading-relaxed text-gray-700">
             <span className="font-semibold text-gray-900">Why fit: </span>

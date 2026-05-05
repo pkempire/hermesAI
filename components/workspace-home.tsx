@@ -1,21 +1,13 @@
 'use client'
 
 /**
- * WorkspaceHome — the ONLY home page surface (above the chat input).
+ * WorkspaceHome — the calm header above the chat input.
  *
- * Calm editorial header that doesn't fight the chat input below it.
- * No serif slab, no pixel watermark — just a tight greeting + a thin row
- * of pre-baked prompts.
+ * Editorial-dense: small caption, tight title, three template chips,
+ * recent campaigns when populated. Inter only. No serif. No mascot.
  */
 
-import {
-  ArrowRight,
-  Clock,
-  Compass,
-  Mail,
-  Search as SearchIcon,
-  Sparkles
-} from 'lucide-react'
+import { ArrowRight, Clock } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
@@ -51,33 +43,6 @@ const QUICK_STARTS: { label: string; prompt: string }[] = [
   }
 ]
 
-const PIPELINE = [
-  {
-    n: '01',
-    title: 'Brief',
-    body: 'Describe target, offer, constraints in one sentence. Hermes asks only for what it actually needs.',
-    icon: Sparkles
-  },
-  {
-    n: '02',
-    title: 'Discover',
-    body: 'Hermes maps the market with Exa Websets, scores fit, and resolves the right decision-maker per account.',
-    icon: Compass
-  },
-  {
-    n: '03',
-    title: 'Decide',
-    body: 'You review the qualified list with cited evidence per prospect. Edit criteria, drop bad fits, lock in your sequence.',
-    icon: SearchIcon
-  },
-  {
-    n: '04',
-    title: 'Send',
-    body: 'Drafts personalised pitches grounded in real evidence. Connect Gmail and send from your real inbox.',
-    icon: Mail
-  }
-]
-
 export function WorkspaceHome({ onSelectPrompt }: WorkspaceHomeProps) {
   const [recent, setRecent] = useState<RecentChat[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -110,21 +75,23 @@ export function WorkspaceHome({ onSelectPrompt }: WorkspaceHomeProps) {
   }, [])
 
   return (
-    <section className="mx-auto w-full max-w-3xl px-6 pt-10 pb-2 md:pt-14">
-      <h1 className="text-[26px] md:text-[30px] font-medium leading-[1.15] tracking-[-0.015em] text-[hsl(var(--hermes-ink))]">
-        What are we running today?
+    <section className="mx-auto w-full max-w-3xl px-6 pt-12 pb-2 md:pt-16">
+      <p className="t-caption text-[hsl(var(--steel))] mb-3">New campaign</p>
+      <h1 className="t-display text-[hsl(var(--ink))]">
+        Who do you want to reach?
       </h1>
-      <p className="mt-1.5 text-[14px] text-[hsl(var(--hermes-ink-soft))]">
-        Drop a brief in the box below — or pick a starting point.
+      <p className="mt-3 text-[15px] leading-[1.5] text-[hsl(var(--steel))]">
+        Describe one sentence. Outfield finds the companies, resolves the
+        decision-maker, drafts a pitch, and sends from your Gmail.
       </p>
 
-      <div className="mt-5 flex flex-wrap items-center gap-2">
+      <div className="mt-6 flex flex-wrap items-center gap-1.5">
         {QUICK_STARTS.map(qs => (
           <button
             key={qs.label}
             type="button"
             onClick={() => onSelectPrompt?.(qs.prompt)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-[hsl(var(--hermes-ink)/0.12)] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[hsl(var(--hermes-ink-soft))] transition-colors hover:border-[hsl(var(--hermes-ink)/0.4)] hover:text-[hsl(var(--hermes-ink))]"
+            className="inline-flex items-center rounded-full border border-[hsl(var(--mist))] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[hsl(var(--steel))] transition-colors hover:border-[hsl(var(--ink)/0.4)] hover:text-[hsl(var(--ink))] hover:bg-[hsl(var(--soft))]"
           >
             {qs.label}
           </button>
@@ -132,30 +99,28 @@ export function WorkspaceHome({ onSelectPrompt }: WorkspaceHomeProps) {
       </div>
 
       {loaded && recent.length > 0 ? (
-        <div className="mt-8">
+        <div className="mt-10">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-[11px] uppercase tracking-[0.18em] text-[hsl(var(--hermes-ink-soft))]">
-              Recent
-            </h2>
+            <p className="t-caption text-[hsl(var(--steel))]">Recent</p>
             <Link
               href="/campaigns"
-              className="text-[12px] text-[hsl(var(--hermes-ink-soft))] hover:text-[hsl(var(--hermes-ink))]"
+              className="text-[12px] text-[hsl(var(--steel))] hover:text-[hsl(var(--ink))]"
             >
-              All campaigns →
+              All →
             </Link>
           </div>
-          <ul className="divide-y divide-[hsl(var(--hermes-ink)/0.08)] rounded-xl border border-[hsl(var(--hermes-ink)/0.1)] bg-white">
+          <ul className="divide-y divide-[hsl(var(--mist))] rounded-xl border border-[hsl(var(--mist))] bg-white">
             {recent.map(chat => (
               <li key={chat.id}>
                 <Link
                   href={chat.path || `/search/${chat.id}`}
-                  className="flex items-center gap-3 px-4 py-3 text-[13.5px] text-[hsl(var(--hermes-ink))] hover:bg-[hsl(var(--hermes-cream))]"
+                  className="flex items-center gap-3 px-4 py-3 text-[13.5px] text-[hsl(var(--ink))] hover:bg-[hsl(var(--soft))]"
                 >
-                  <Clock className="h-3.5 w-3.5 text-[hsl(var(--hermes-ink-soft))]" />
+                  <Clock className="h-3.5 w-3.5 text-[hsl(var(--steel))]" />
                   <span className="truncate flex-1">
                     {chat.title || 'Untitled campaign'}
                   </span>
-                  <ArrowRight className="h-3.5 w-3.5 text-[hsl(var(--hermes-ink-soft))]" />
+                  <ArrowRight className="h-3.5 w-3.5 text-[hsl(var(--steel))]" />
                 </Link>
               </li>
             ))}
@@ -167,47 +132,60 @@ export function WorkspaceHome({ onSelectPrompt }: WorkspaceHomeProps) {
 }
 
 /**
- * PipelineSection — kept for the signed-out CTA block; signed-in users see
- * the dark TemplateGallery instead.
+ * PipelineSection — kept for the signed-out CTA explainer.
+ * Four numbered steps, dense, no icons-as-decoration.
  */
+const PIPELINE = [
+  {
+    n: '01',
+    title: 'Describe',
+    body: 'One sentence about who you want to reach. We ask only for what we need.'
+  },
+  {
+    n: '02',
+    title: 'Discover',
+    body: 'We map the market via semantic search and verify each match against your criteria.'
+  },
+  {
+    n: '03',
+    title: 'Resolve',
+    body: 'We find the right decision-maker per account and verify their email.'
+  },
+  {
+    n: '04',
+    title: 'Send',
+    body: 'Review the drafts. Send from your real Gmail inbox, with reply tracking.'
+  }
+]
+
 export function PipelineSection() {
   return (
-    <section className="mx-auto w-full max-w-4xl px-6 pt-4 pb-10">
-      <div className="mb-3 text-[11px] uppercase tracking-[0.22em] text-[hsl(var(--hermes-ink-soft))]">
-        How it works
-      </div>
-      <h2 className="text-[22px] md:text-[26px] font-medium leading-tight tracking-[-0.01em] text-[hsl(var(--hermes-ink))]">
+    <section className="mx-auto w-full max-w-4xl px-6 pt-8 pb-12">
+      <p className="t-caption text-[hsl(var(--steel))] mb-2">How it works</p>
+      <h2 className="t-title text-[hsl(var(--ink))]">
         From a single brief to live pipeline.
       </h2>
 
       <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4 lg:gap-6">
-        {PIPELINE.map(step => {
-          const Icon = step.icon
-          return (
-            <article key={step.n} className="relative flex flex-col">
-              <div className="flex items-baseline gap-3">
-                <span className="text-[20px] font-medium leading-none text-[hsl(var(--hermes-ink))]">
-                  {step.n}
-                </span>
-                <span
-                  aria-hidden="true"
-                  className="h-px flex-1 bg-[hsl(var(--hermes-ink)/0.12)]"
-                />
-                <Icon
-                  className="h-4 w-4 text-[hsl(var(--hermes-ink-soft))]"
-                  strokeWidth={1.5}
-                  aria-hidden="true"
-                />
-              </div>
-              <h3 className="mt-3 text-[16px] font-medium leading-tight text-[hsl(var(--hermes-ink))]">
-                {step.title}
-              </h3>
-              <p className="mt-1.5 text-[13px] leading-[1.55] text-[hsl(var(--hermes-ink-soft))]">
-                {step.body}
-              </p>
-            </article>
-          )
-        })}
+        {PIPELINE.map(step => (
+          <article key={step.n} className="relative flex flex-col">
+            <div className="flex items-baseline gap-3">
+              <span className="text-[14px] font-medium leading-none text-[hsl(var(--steel))]">
+                {step.n}
+              </span>
+              <span
+                aria-hidden="true"
+                className="h-px flex-1 bg-[hsl(var(--mist))]"
+              />
+            </div>
+            <h3 className="mt-3 text-[15px] font-semibold leading-tight text-[hsl(var(--ink))]">
+              {step.title}
+            </h3>
+            <p className="mt-1.5 text-[13px] leading-[1.55] text-[hsl(var(--steel))]">
+              {step.body}
+            </p>
+          </article>
+        ))}
       </div>
     </section>
   )

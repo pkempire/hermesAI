@@ -245,7 +245,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         </VisuallyHidden>
         <Command
           shouldFilter
-          className="bg-[hsl(var(--hermes-cream))] text-[hsl(var(--hermes-ink))] [&_[cmdk-group-heading]]:font-serif [&_[cmdk-group-heading]]:text-[13px] [&_[cmdk-group-heading]]:tracking-[0.04em] [&_[cmdk-group-heading]]:text-[hsl(var(--hermes-ink))]/70 [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pt-3 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-item]]:rounded-md [&_[cmdk-item]]:px-3 [&_[cmdk-item]]:py-2.5 [&_[cmdk-item][data-selected=true]]:bg-[hsl(var(--hermes-ink))]/[0.06] [&_[cmdk-item][data-selected=true]]:text-[hsl(var(--hermes-ink))]"
+          className="bg-[hsl(var(--hermes-cream))] text-[hsl(var(--hermes-ink))] [&_[cmdk-group-heading]]:[&_[cmdk-group-heading]]:text-[13px] [&_[cmdk-group-heading]]:tracking-[0.04em] [&_[cmdk-group-heading]]:text-[hsl(var(--hermes-ink))]/70 [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pt-3 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-item]]:rounded-md [&_[cmdk-item]]:px-3 [&_[cmdk-item]]:py-2.5 [&_[cmdk-item][data-selected=true]]:bg-[hsl(var(--hermes-ink))]/[0.06] [&_[cmdk-item][data-selected=true]]:text-[hsl(var(--hermes-ink))]"
         >
           <div className="flex items-center gap-2 border-b border-[hsl(var(--hermes-mist))] px-4">
             <SearchIcon className="h-4 w-4 text-[hsl(var(--hermes-ink))]/50" />
@@ -374,7 +374,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           </CommandList>
 
           <div className="flex items-center justify-between border-t border-[hsl(var(--hermes-mist))] bg-[hsl(var(--hermes-parchment),var(--hermes-cream))] px-4 py-2 text-[11px] text-[hsl(var(--hermes-ink))]/55">
-            <span className="font-serif italic tracking-wide">Hermes</span>
+            <span className="italic tracking-wide">Hermes</span>
             <span className="flex items-center gap-2">
               <kbd className="rounded border border-[hsl(var(--hermes-mist))] px-1.5 py-0.5 font-mono">↵</kbd>
               <span>to select</span>

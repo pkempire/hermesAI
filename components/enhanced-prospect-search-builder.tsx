@@ -189,7 +189,7 @@ export function EnhancedProspectSearchBuilder({
         <CardHeader className="p-0 mb-6">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <CardTitle className="font-serif text-[2.2rem] text-gray-900 tracking-tight">Search Focus</CardTitle>
+              <CardTitle className="text-[2.2rem] text-gray-900 tracking-tight">Search Focus</CardTitle>
               <CardDescription className="text-[14px] font-medium text-gray-500 mt-2">
                 Keep this tight. Strong Websets runs usually use a few clear filters.
               </CardDescription>
@@ -253,7 +253,7 @@ export function EnhancedProspectSearchBuilder({
         <CardHeader className="p-0 mb-6">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <CardTitle className="font-serif text-[2.2rem] text-gray-900 tracking-tight flex items-center gap-2">
+              <CardTitle className="text-[2.2rem] text-gray-900 tracking-tight flex items-center gap-2">
                 Enrichments
                 <span className="text-[14px] font-medium text-gray-500 mt-1 tracking-normal font-sans">Core fields used for prospect review and outreach.</span>
               </CardTitle>
@@ -307,7 +307,7 @@ export function EnhancedProspectSearchBuilder({
 
       <Card className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
         <CardHeader className="p-0 mb-6">
-          <CardTitle className="font-serif text-[2.2rem] text-gray-900 tracking-tight">Run Settings</CardTitle>
+          <CardTitle className="text-[2.2rem] text-gray-900 tracking-tight">Run Settings</CardTitle>
           <CardDescription className="text-[14px] font-medium text-gray-500 mt-2">Preview one result first, or launch the full pull.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-6 md:grid-cols-2 p-0">

@@ -2,6 +2,7 @@
 
 import { ProspectGrid } from '@/components/prospect-grid'
 import { logger } from '@/lib/utils/logger'
+import { Search } from 'lucide-react'
 import { memo, useMemo } from 'react'
 import { toast } from 'sonner'
 import type { Prospect, ProspectSearchContext } from './types'
@@ -77,11 +78,7 @@ function ProspectSearchStreamerImpl({
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-50 border border-gray-100 shadow-sm">
-              <img
-                src="/hermes-discovery.png"
-                alt="Discovering"
-                className="h-5 w-5 animate-pulse drop-shadow-sm opacity-80"
-              />
+              <Search className="h-5 w-5 animate-pulse text-[hsl(var(--ink))]" strokeWidth={1.75} />
             </div>
             <div>
               <p className="text-[15px] font-semibold text-gray-900 leading-none">

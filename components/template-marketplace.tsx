@@ -141,7 +141,7 @@ export const TemplateMarketplace = memo(function TemplateMarketplace({
             </div>
           </div>
           
-          <h3 className="mb-4 font-serif text-[1.7rem] tracking-tight text-gray-900 leading-none">
+          <h3 className="mb-4 text-[1.7rem] tracking-tight text-gray-900 leading-none">
             {template.name}
           </h3>
           <div className="min-h-[100px]">
@@ -166,7 +166,7 @@ export const TemplateMarketplace = memo(function TemplateMarketplace({
   return (
     <div className={cn("space-y-12", className)}>
       <div className="text-center space-y-4 pt-10">
-        <h2 className="font-serif text-5xl leading-none text-gray-900 md:text-[3.6rem] tracking-tight">
+        <h2 className="text-5xl leading-none text-gray-900 md:text-[3.6rem] tracking-tight">
           What can Hermes automate for you?
         </h2>
         <p className="text-[16px] font-medium text-gray-500 max-w-2xl mx-auto">

@@ -88,7 +88,7 @@ export function LoginForm({
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl border border-amber-200 bg-amber-50 text-amber-700 shadow-sm">
             <IconLogo className="size-7" />
           </div>
-          <CardTitle className="mt-4 font-serif text-3xl text-gray-950">
+          <CardTitle className="mt-4 text-3xl text-gray-950">
             Welcome back to Hermes
           </CardTitle>
           <CardDescription className="text-sm leading-6 text-black/60">

@@ -16,7 +16,7 @@ export default function StudioPage() {
       {savedProspects.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-3xl border border-gray-100 bg-gray-50 py-24 shadow-sm">
           <FolderOpen className="mb-4 h-12 w-12 text-gray-300" />
-          <h3 className="font-serif text-[1.8rem] text-gray-900">Studio is empty</h3>
+          <h3 className="text-[1.8rem] text-gray-900">Studio is empty</h3>
           <p className="text-[14px] text-gray-500 mt-2">Add prospects to the studio from the chat interface to edit their drafts.</p>
         </div>
       ) : (

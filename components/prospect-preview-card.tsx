@@ -12,6 +12,7 @@ import {
   Mail, 
   MapPin, 
   Phone, 
+  Sparkles,
   ThumbsDown, 
   ThumbsUp, 
   User,
@@ -81,7 +82,7 @@ export function ProspectPreviewCard({
       {searchSummary && (
         <Card className="border border-gray-100 bg-gray-50 shadow-sm rounded-2xl">
           <CardHeader className="pb-4">
-            <CardTitle className="text-gray-900 font-serif text-[1.4rem]">Preview Result</CardTitle>
+            <CardTitle className="text-gray-900 text-[1.4rem]">Preview Result</CardTitle>
             <CardDescription className="text-gray-500 font-medium text-[13px]">
               Here&apos;s 1 example prospect that matches your search criteria. Review the quality and decide how to proceed.
             </CardDescription>
@@ -114,7 +115,7 @@ export function ProspectPreviewCard({
         <CardHeader className="bg-gray-50 border-b border-gray-100 px-6 py-5">
           <div className="flex items-start justify-between">
             <div className="space-y-1">
-              <CardTitle className="text-[2rem] font-serif tracking-tight flex items-center space-x-3 text-gray-900">
+              <CardTitle className="text-[2rem] tracking-tight flex items-center space-x-3 text-gray-900">
                 <div className="bg-[hsl(var(--hermes-gold))]/10 w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden shrink-0">
                   {prospect.avatarUrl ? (
                     <img src={prospect.avatarUrl} alt={prospect.fullName || 'Contact'} className="w-full h-full object-cover" />
@@ -256,10 +257,10 @@ export function ProspectPreviewCard({
           {prospect.hermesTake && prospect.note && (
             <>
               <Separator className="bg-gray-100" />
-              <div className="rounded-2xl border border-[hsl(var(--hermes-gold))]/20 bg-[hsl(var(--hermes-gold))]/5 p-5 shadow-sm">
-                <div className="mb-3 flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.2em] text-[hsl(var(--hermes-gold-dark))]">
-                  <img src="/images/hermes-pixel-icon.png" alt="Hermes" className="w-5 h-5 rounded-full object-contain" />
-                  Hermes take
+              <div className="rounded-2xl border border-[hsl(var(--mist))] bg-[hsl(var(--soft))] p-5">
+                <div className="mb-3 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-[hsl(var(--steel))]">
+                  <Sparkles className="h-3.5 w-3.5 text-[hsl(var(--ink))]" strokeWidth={1.75} />
+                  Take
                 </div>
                 <div className="space-y-2 text-[14px] leading-relaxed text-gray-800">
                   <p><span className="font-semibold text-gray-900">Why fit:</span> {prospect.hermesTake.whyFit || prospect.note}</p>

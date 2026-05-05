@@ -191,7 +191,7 @@ export function ProspectTable({ prospects, onSelectionChange }: ProspectTablePro
                       )}
                     </div>
                     <div className="min-w-0 space-y-1">
-                      <div className="font-serif text-[1.6rem] leading-tight text-gray-950">
+                      <div className="text-[1.6rem] leading-tight text-gray-950">
                         {prospect.displayCompany}
                       </div>
                       {prospect.location ? (

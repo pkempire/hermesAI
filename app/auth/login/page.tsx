@@ -7,7 +7,7 @@ export default function Page() {
         <div className="flex flex-col justify-center">
           <div className="max-w-xl">
             <div className="text-[11px] uppercase tracking-[0.32em] text-black/40">Hermes Messenger</div>
-            <h1 className="mt-4 font-serif text-5xl leading-tight text-gray-950 md:text-6xl">
+            <h1 className="mt-4 text-5xl leading-tight text-gray-950 md:text-6xl">
               One login for research, workflows, and Gmail-native outbound.
             </h1>
             <p className="mt-5 text-base leading-8 text-black/62">

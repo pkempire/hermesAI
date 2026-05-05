@@ -13,7 +13,7 @@ export default function Page() {
         <div className="w-full max-w-xl">
           <Card className="border-black/5 bg-white/85 shadow-[0_30px_90px_rgba(62,45,18,0.08)] backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="font-serif text-3xl text-gray-950">Check your inbox</CardTitle>
+              <CardTitle className="text-3xl text-gray-950">Check your inbox</CardTitle>
               <CardDescription>Confirm your account to unlock Hermes.</CardDescription>
             </CardHeader>
             <CardContent>

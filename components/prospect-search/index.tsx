@@ -10,7 +10,7 @@ import {
 import { useProspectStream } from '@/hooks/use-prospect-stream'
 import { campaignStore } from '@/lib/store/campaign-store'
 import { logger } from '@/lib/utils/logger'
-import { AlertCircle, ChevronDown, ChevronRight } from 'lucide-react'
+import { AlertCircle, CheckCircle2, ChevronDown, ChevronRight, Search } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { ProspectSearchBuilder } from './builder'
 import { ProspectSearchEmpty } from './empty'
@@ -334,17 +334,13 @@ export function ProspectSearchSection({
 
   const statusIcon =
     searchStatus === 'completed' ? (
-      <img src="/images/hermes-pixel.png" alt="Complete" className="h-6 w-6 rounded-full drop-shadow-sm" />
+      <CheckCircle2 className="h-5 w-5 text-[hsl(var(--ink))]" strokeWidth={1.75} />
     ) : searchStatus === 'running' ? (
-      <img src="/hermes-discovery.png" alt="Searching" className="h-6 w-6 animate-pulse drop-shadow-sm" />
+      <Search className="h-5 w-5 text-[hsl(var(--ink))] animate-pulse" strokeWidth={1.75} />
     ) : searchStatus === 'failed' ? (
       <AlertCircle className="h-5 w-5 text-red-500" />
     ) : (
-      <img
-        src="/hermes-discovery.png"
-        alt="Ready"
-        className="h-5 w-5 opacity-50 grayscale transition-all group-hover:grayscale-0 group-hover:opacity-100"
-      />
+      <Search className="h-5 w-5 text-[hsl(var(--steel))] opacity-60 transition-opacity group-hover:opacity-100" strokeWidth={1.5} />
     )
 
   // Builder callbacks
@@ -419,7 +415,7 @@ export function ProspectSearchSection({
                     {statusIcon}
                   </div>
                   <div>
-                    <CardTitle className="font-serif text-[1.6rem] leading-none text-gray-900 tracking-tight">
+                    <CardTitle className="text-[1.6rem] leading-none text-gray-900 tracking-tight">
                       Prospect Discovery
                     </CardTitle>
                     <Badge

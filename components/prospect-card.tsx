@@ -77,7 +77,7 @@ export function ProspectCard({
               </div>
               <div className="space-y-1">
                 <div className="flex items-center space-x-3">
-                  <CardTitle className="text-[2.25rem] font-serif tracking-tight text-gray-900">
+                  <CardTitle className="text-[2.25rem] tracking-tight text-gray-900">
                     {company}
                   </CardTitle>
               </div>
@@ -112,7 +112,7 @@ export function ProspectCard({
               </div>
               <div className="flex flex-col">
                 <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] leading-none">Fit Score</span>
-                <span className="text-[20px] font-serif font-bold text-gray-900 leading-none mt-1.5">{fitScore > 0 ? fitScore : 92}%</span>
+                <span className="text-[20px] font-bold text-gray-900 leading-none mt-1.5">{fitScore > 0 ? fitScore : 92}%</span>
               </div>
             </div>
           </div>
@@ -122,18 +122,9 @@ export function ProspectCard({
       <CardContent className="space-y-8 px-6 py-6 md:px-8 md:py-8">
         {/* Hermes Take prominently featured */}
         <div className="rounded-3xl border border-amber-100 bg-amber-50/30 p-8 shadow-sm relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-amber-100/20 rounded-full blur-3xl -mr-16 -mt-16 transition-all group-hover:bg-amber-100/40" />
-          <div className="mb-6 flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-amber-700">
-            <div className="relative h-7 w-7 rounded-full ring-2 ring-amber-100 shadow-sm overflow-hidden">
-              <Image 
-                src="/images/hermes-pixel-icon.png" 
-                alt="Hermes" 
-                fill 
-                className="object-contain p-1"
-                unoptimized
-              />
-            </div>
-            Hermes Intel
+          <div className="mb-6 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[hsl(var(--steel))]">
+            <Sparkles className="h-3.5 w-3.5 text-[hsl(var(--ink))]" strokeWidth={1.75} />
+            Intel
           </div>
           <div className="space-y-3 text-base leading-relaxed text-gray-800">
             <p><span className="font-semibold text-gray-900">Why fit:</span> {hermesTake.whyFit}</p>
@@ -172,7 +163,7 @@ export function ProspectCard({
             </h4>
             <div className="space-y-4 text-[15px] font-medium text-gray-700 bg-gray-50/40 p-6 md:p-8 rounded-[2.5rem] border border-gray-100 shadow-sm transition-all hover:bg-white hover:border-amber-100/50 hover:shadow-xl group">
               <div className="flex items-center space-x-5 mb-6">
-                <div className="shrink-0 h-16 w-16 rounded-full flex items-center justify-center bg-white border border-gray-100 overflow-hidden text-amber-600 font-serif font-bold text-2xl uppercase shadow-sm relative transition-transform group-hover:scale-105">
+                <div className="shrink-0 h-16 w-16 rounded-full flex items-center justify-center bg-white border border-gray-100 overflow-hidden text-amber-600 font-bold text-2xl uppercase shadow-sm relative transition-transform group-hover:scale-105">
                   {prospect.avatarUrl ? (
                     <Image 
                       src={prospect.avatarUrl} 
@@ -186,7 +177,7 @@ export function ProspectCard({
                   )}
                 </div>
                 <div>
-                  <div className="text-[22px] font-serif font-bold text-gray-900 tracking-tight leading-tight">{name}</div>
+                  <div className="text-[22px] font-bold text-gray-900 tracking-tight leading-tight">{name}</div>
                   <div className="text-gray-500 font-medium text-[15px] mt-1">{(prospect as any).jobTitle || 'Role not confirmed'}</div>
                 </div>
               </div>

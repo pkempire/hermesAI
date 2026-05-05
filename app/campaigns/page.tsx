@@ -75,7 +75,7 @@ export default function CampaignsPage() {
     return (
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         <div className="mb-6">
-          <h1 className="font-serif text-4xl text-gray-950">Campaigns</h1>
+          <h1 className="text-4xl text-gray-950">Campaigns</h1>
         </div>
         <div className="grid gap-4">
           {[1, 2, 3].map((i) => (
@@ -91,7 +91,7 @@ export default function CampaignsPage() {
       <div className="mb-8 flex flex-col gap-5 rounded-[2rem] border border-black/5 bg-white/70 px-6 py-8 shadow-[0_24px_80px_rgba(62,45,18,0.08)] backdrop-blur-sm md:flex-row md:items-end md:justify-between md:px-8">
         <div>
           <div className="text-[11px] uppercase tracking-[0.32em] text-black/40">Delivery board</div>
-          <h1 className="mt-3 font-serif text-4xl text-gray-950 md:text-5xl">Campaigns</h1>
+          <h1 className="mt-3 text-4xl text-gray-950 md:text-5xl">Campaigns</h1>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-black/60 md:text-base">
             Track the lists you&apos;ve built, how many contacts are ready, and where each outreach motion stands.
           </p>
@@ -108,7 +108,7 @@ export default function CampaignsPage() {
         <Card className="hermes-surface">
           <CardContent className="flex flex-col items-center justify-center p-12">
             <Send className="mb-4 h-12 w-12 text-black/45" />
-            <h3 className="mb-2 font-serif text-2xl text-gray-950">No campaigns yet</h3>
+            <h3 className="mb-2 text-2xl text-gray-950">No campaigns yet</h3>
             <p className="mb-4 max-w-md text-center text-black/60">
               {isAuthenticated
                 ? 'Start your first cold email campaign by finding prospects'
@@ -129,7 +129,7 @@ export default function CampaignsPage() {
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div>
-                    <CardTitle className="font-serif text-2xl">{campaign.name}</CardTitle>
+                    <CardTitle className="text-2xl">{campaign.name}</CardTitle>
                     <CardDescription className="flex items-center gap-2 mt-2">
                       <Calendar className="w-4 h-4" />
                       Created {new Date(campaign.created_at).toLocaleDateString()}

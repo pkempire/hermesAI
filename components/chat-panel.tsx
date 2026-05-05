@@ -260,7 +260,7 @@ export function ChatPanel({
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="space-y-1.5">
                 <p className="text-[11px] uppercase tracking-[0.22em] text-[hsl(var(--hermes-ink)/0.55)]">Start free</p>
-                <h2 className="font-serif text-[1.55rem] leading-tight text-[hsl(var(--hermes-ink))]">
+                <h2 className="text-[1.55rem] leading-tight text-[hsl(var(--hermes-ink))]">
                   7 days on the house. $40/mo after.
                 </h2>
                 <p className="text-sm text-[hsl(var(--hermes-ink)/0.7)]">
