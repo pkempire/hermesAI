@@ -1,7 +1,7 @@
 /**
  * POST /api/stripe/create-checkout
  *
- * Starts a Outfield monthly subscription Checkout Session for the current user.
+ * Starts a Hermes monthly subscription Checkout Session for the current user.
  * The price and trial length are server-pinned via env so the client cannot
  * hand-craft a cheaper price.
  *

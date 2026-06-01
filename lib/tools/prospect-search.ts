@@ -6,7 +6,7 @@ import {
 } from '@/lib/clients/exa-websets'
 import { logger } from '@/lib/utils/logger'
 import { getModel, getToolCallModel, isToolCallSupported } from '@/lib/utils/registry'
-import { generateObject } from 'ai'
+import { generateText, Output } from 'ai'
 import { tool } from 'ai'
 import { z } from 'zod'
 
@@ -64,15 +64,15 @@ async function generateContextualEnrichments(params: {
   )
 
   try {
-    const result = await generateObject({
+    const result = await generateText({
       model: currentModel,
-      schema: contextualEnrichmentSchema,
+      output: Output.object({ schema: contextualEnrichmentSchema }),
       system: `You design enrichment fields for outbound prospecting.
 
 Return 2 to 4 enrichment fields that materially improve later email drafting for this campaign.
 
 Rules:
-- Outfield already collects company name, company domain, company LinkedIn, decision maker name, decision maker title, decision maker LinkedIn, and decision maker email.
+- Hermes already collects company name, company domain, company LinkedIn, decision maker name, decision maker title, decision maker LinkedIn, and decision maker email.
 - Do not repeat identity basics.
 - Prefer outreach-relevant signals: positioning, proof, ICP fit, partnership fit, customer profile, premium indicators, recent activity, differentiators, or program specifics.
 - Labels must be short operator labels, ideally 2 to 4 words.
@@ -88,7 +88,7 @@ Rules:
     })
 
     const seen = new Set<string>()
-    return result.object.enrichments
+    return result.output.enrichments
       .map(enrichment => ({
         label: compactLabel(enrichment.label),
         value: slugify(enrichment.label),
@@ -136,7 +136,7 @@ export function createProspectSearchTool(model: string) {
   logger.tool('prospect_search', 'Creating prospect search tool for model:', model)
   
   const prospectSearchTool = tool({
-    description: 'Search for qualified prospects using AI-powered research. Extract search criteria and enrichments from user campaign descriptions. ALWAYS use interactive: true to show the detailed interactive UI with individual search criteria, enrichments, and preview option.',
+    description: 'Search for qualified prospects using AI-powered research. Use interactive mode for the reviewable in-app builder. Use interactive: false for deterministic/headless/MCP-style runs when the brief is clear.',
     inputSchema: prospectSearchSchema,  
     execute: async ({
       query,

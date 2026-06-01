@@ -1,5 +1,5 @@
 /**
- * Memory tools for the Outfield agent.
+ * Memory tools for the Hermes agent.
  *
  * The agent uses these to (a) durably persist what it learns about the user
  * across sessions and (b) recall past context before answering. Both tools
@@ -88,7 +88,7 @@ export function createRememberFactTool(userId: string) {
   return tool({
     description:
       'Persist a durable fact about the user (their offer, ICP, voice, ' +
-      'past campaign, etc.) so future Outfield sessions remember it. Use ' +
+      'past campaign, etc.) so future Hermes sessions remember it. Use ' +
       'this when the user states something stable — not for one-off task ' +
       'state.',
     inputSchema: rememberSchema,

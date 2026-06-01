@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <rect width="1200" height="630" fill="#FAF9F8"/>
+  <path d="M76 70L126 95" stroke="#0B1732" stroke-width="4" stroke-linecap="round"/>
+  <path d="M76 88L116 108" stroke="#0B1732" stroke-width="4" stroke-linecap="round"/>
+  <path d="M76 106L106 121" stroke="#0B1732" stroke-width="4" stroke-linecap="round"/>
+  <text x="154" y="104" fill="#0B1732" font-family="Georgia, 'Times New Roman', serif" font-size="44" letter-spacing="-1.5">Hermes</text>
+  <text x="310" y="104" fill="#8B8D96" font-family="Georgia, 'Times New Roman', serif" font-size="44" letter-spacing="-1.5">GTM</text>
+  <text x="76" y="248" fill="#0B1732" font-family="Georgia, 'Times New Roman', serif" font-size="94" letter-spacing="-3.5">Own your</text>
+  <text x="76" y="348" fill="#0B1732" font-family="Georgia, 'Times New Roman', serif" font-size="94" letter-spacing="-3.5">growth engine.</text>
+  <text x="82" y="420" fill="#313C5A" font-family="Inter, Arial, sans-serif" font-size="28">An AI GTM engineer for prospecting, enrichment,</text>
+  <text x="82" y="458" fill="#313C5A" font-family="Inter, Arial, sans-serif" font-size="28">evidence-backed outreach, and Gmail drafts.</text>
+  <rect x="82" y="510" width="174" height="54" rx="3" fill="#071735"/>
+  <text x="126" y="545" fill="#FFFFFF" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="600">Start Free</text>
+  <rect x="670" y="124" width="430" height="350" fill="url(#dots)" opacity=".75"/>
+  <ellipse cx="874" cy="300" rx="150" ry="112" stroke="#AEB9EA" stroke-dasharray="7 8"/>
+  <ellipse cx="874" cy="300" rx="112" ry="84" stroke="#C8CEF0" stroke-dasharray="5 9"/>
+  <path d="M700 222C780 222 790 300 832 300" stroke="url(#flow)" stroke-width="2.2" stroke-dasharray="7 8"/>
+  <path d="M700 278C780 278 790 300 832 300" stroke="url(#flow)" stroke-width="2.2" stroke-dasharray="7 8"/>
+  <path d="M700 334C780 334 790 300 832 300" stroke="url(#flow)" stroke-width="2.2" stroke-dasharray="7 8"/>
+  <path d="M916 300C974 300 984 222 1060 222" stroke="url(#flow)" stroke-width="2.2"/>
+  <path d="M916 300C974 300 984 300 1060 300" stroke="url(#flow)" stroke-width="2.2"/>
+  <path d="M916 300C974 300 984 378 1060 378" stroke="url(#flow)" stroke-width="2.2"/>
+  <rect x="822" y="244" width="104" height="112" fill="#FFFFFF" stroke="#CDD2DF"/>
+  <path d="M856 294L900 274L884 318L872 302L856 294Z" stroke="#5A6EFF" stroke-width="3" stroke-linejoin="round"/>
+  <text x="850" y="338" fill="#0B1732" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="1.4">HERMES</text>
+  <rect x="646" y="204" width="98" height="38" fill="#FFFFFF" stroke="#CDD2DF"/>
+  <rect x="1026" y="203" width="132" height="44" fill="#FFFFFF" stroke="#CDD2DF"/>
+  <rect x="1026" y="278" width="132" height="44" fill="#FFFFFF" stroke="#CDD2DF"/>
+  <rect x="1026" y="353" width="132" height="44" fill="#FFFFFF" stroke="#CDD2DF"/>
+  <text x="667" y="228" fill="#343D59" font-family="Inter, Arial, sans-serif" font-size="12">Signals</text>
+  <text x="1054" y="230" fill="#343D59" font-family="Inter, Arial, sans-serif" font-size="12">Review</text>
+  <text x="1050" y="305" fill="#343D59" font-family="Inter, Arial, sans-serif" font-size="12">Drafts</text>
+  <text x="1052" y="380" fill="#343D59" font-family="Inter, Arial, sans-serif" font-size="12">Gmail</text>
+  <defs>
+    <pattern id="dots" x="0" y="0" width="18" height="18" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.2" fill="#9AA6D6"/>
+    </pattern>
+    <linearGradient id="flow" x1="668" y1="200" x2="1120" y2="400" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4D73FF"/>
+      <stop offset="1" stop-color="#A35BFF"/>
+    </linearGradient>
+  </defs>
+</svg>

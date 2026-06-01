@@ -5,7 +5,7 @@ type CustomLinkProps = Omit<
   DetailedHTMLProps<AnchorHTMLAttributes<HTMLAnchorElement>, HTMLAnchorElement>,
   'ref'
 > & {
-  children: ReactNode
+  children?: ReactNode
 }
 
 export function Citing({

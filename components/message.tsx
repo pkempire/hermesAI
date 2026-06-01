@@ -52,23 +52,30 @@ export function BotMessage({
         className
       )}
       components={{
-        code({ node, inline, className, children, ...props }) {
-          if (children.length) {
-            if (children[0] == '▍') {
+        code({ node, className, children, ...props }) {
+          const childArray = Array.isArray(children) ? [...children] : [children]
+
+          if (childArray.length) {
+            if (childArray[0] == '▍') {
               return (
                 <span className="mt-1 cursor-default animate-pulse">▍</span>
               )
             }
 
-            children[0] = (children[0] as string).replace('`▍`', '▍')
+            childArray[0] = String(childArray[0]).replace('`▍`', '▍')
           }
 
           const match = /language-(\w+)/.exec(className || '')
+          const position = (node as any)?.position
+          const inline =
+            !match &&
+            position?.start?.line &&
+            position?.start?.line === position?.end?.line
 
           if (inline) {
             return (
               <code className={className} {...props}>
-                {children}
+                {childArray}
               </code>
             )
           }
@@ -77,7 +84,7 @@ export function BotMessage({
             <CodeBlock
               key={Math.random()}
               language={(match && match[1]) || ''}
-              value={String(children).replace(/\n$/, '')}
+              value={String(childArray).replace(/\n$/, '')}
               {...props}
             />
           )

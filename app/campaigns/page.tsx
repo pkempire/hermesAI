@@ -117,7 +117,7 @@ export default function CampaignsPage() {
             <Link href="/">
               <Button className="bg-black text-white hover:bg-black/90">
                 <Plus className="w-4 h-4 mr-2" />
-                {isAuthenticated ? 'Create First Campaign' : 'Open Outfield'}
+                {isAuthenticated ? 'Create First Campaign' : 'Open Hermes'}
               </Button>
             </Link>
           </CardContent>

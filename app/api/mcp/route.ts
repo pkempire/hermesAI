@@ -1,11 +1,11 @@
 /**
- * Streamable HTTP MCP endpoint for Outfield.
+ * Streamable HTTP MCP endpoint for Hermes.
  *
  * - mcp-handler@1.1.0 (formerly @vercel/mcp-adapter, now relocated)
  *   https://www.npmjs.com/package/mcp-handler
- * - @modelcontextprotocol/sdk@1.29.0
+ * - @modelcontextprotocol/sdk@1.26.0
  *
- * Auth: the existing Outfield Supabase session cookie (lib/auth/get-current-user).
+ * Auth: the existing Hermes Supabase session cookie (lib/auth/get-current-user).
  * Server-to-server callers may pass `x-hermes-user-id`. Otherwise we 401.
  *
  * Quotas: enforced via lib/utils/quota.ts on each request (1 unit per call).
@@ -19,7 +19,7 @@ import { requireQuota } from '@/lib/utils/quota'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
-// Bumped because tools (Exa scrape, Websets preview, OpenAI generateObject)
+// Bumped because tools (Exa scrape, Websets preview, AI SDK structured output)
 // can take a while.
 export const maxDuration = 60
 
@@ -62,16 +62,13 @@ const baseHandler = createMcpHandler(
 )
 
 async function authedHandler(req: Request): Promise<Response> {
-  // GETs (capability discovery) bypass quota — they don't run tools.
-  if (req.method !== 'POST') return baseHandler(req)
-
   const userId = await resolveUserId(req)
   if (!userId) {
     return new Response(
       JSON.stringify({
         error: 'unauthorized',
         message:
-          'Outfield MCP requires an authenticated session cookie or an x-hermes-user-id header.'
+          'Hermes MCP requires an authenticated session cookie or an x-hermes-user-id header.'
       }),
       { status: 401, headers: { 'content-type': 'application/json' } }
     )
@@ -92,8 +89,22 @@ async function authedHandler(req: Request): Promise<Response> {
   return baseHandler(req)
 }
 
+async function getHandler() {
+  return Response.json({
+    name: 'hermes',
+    version: '0.1.0',
+    endpoint: '/api/mcp',
+    transport: 'streamable-http',
+    tools: [
+      'hermes.prospect_search',
+      'hermes.email_draft',
+      'hermes.scrape_site'
+    ]
+  })
+}
+
 export {
-  authedHandler as GET,
+  getHandler as GET,
   authedHandler as POST,
   authedHandler as DELETE
 }

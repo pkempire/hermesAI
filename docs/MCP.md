@@ -5,7 +5,7 @@ Desktop, Cursor, Windsurf, the MCP Inspector, custom LangGraph agents, …)
 can call the same tools that power the in-app Hermes agent.
 
 Versions used
-- @modelcontextprotocol/sdk 1.29.0
+- @modelcontextprotocol/sdk 1.26.0
 - mcp-handler 1.1.0 (the relocated @vercel/mcp-adapter)
 
 Two transports are exposed:
@@ -17,6 +17,13 @@ Tools registered
 - hermes.prospect_search   Find B2B prospects (companies + decision makers)
 - hermes.email_draft       Open the Hermes email drafter for a prospect list
 - hermes.scrape_site       Compact offer snapshot for any company URL
+
+`hermes.prospect_search` supports two execution styles:
+- Start-only: returns a Webset id immediately so another process can stream or
+  poll results.
+- Deterministic: pass `waitForResults: true` to wait for Exa to finish and
+  return enriched prospects in the MCP response. Use this for agents that need
+  a complete machine-readable payload without the in-app builder.
 
 The handlers are thin wrappers — they import the existing tool factories from
 lib/tools/*, so behaviour stays identical to the in-app agent.
@@ -63,7 +70,7 @@ Stdio:
 
 Streamable HTTP (against your running Hermes dev server):
 
-  bun run dev
+  npm run dev
   # in another shell
   npx @modelcontextprotocol/inspector
   # then in the inspector UI choose:
@@ -117,7 +124,34 @@ Sample response payload (truncated):
   }
 
 ----------------------------------------------------------------------------
-4. Auth & quotas (HTTP transport)
+4. Sample call — deterministic prospect search
+----------------------------------------------------------------------------
+
+  curl -N -X POST http://localhost:3000/api/mcp \
+    -H 'content-type: application/json' \
+    -H 'accept: application/json, text/event-stream' \
+    -H 'x-hermes-user-id: 00000000-0000-0000-0000-000000000000' \
+    -d '{
+      "jsonrpc":"2.0","id":2,"method":"tools/call",
+      "params":{
+        "name":"hermes.prospect_search",
+        "arguments":{
+          "query":"Find 10 fintech companies hiring platform engineers and likely to care about API reliability",
+          "targetPersona":"CTO or VP Engineering",
+          "offer":"API monitoring and incident response software",
+          "targetCount":10,
+          "waitForResults":true,
+          "timeoutMs":45000
+        }
+      }
+    }'
+
+The completed response includes `prospects[]` with company, decision-maker,
+LinkedIn/contact fields when available, source-backed enrichments, and the
+Hermes take used for review and drafting.
+
+----------------------------------------------------------------------------
+5. Auth & quotas (HTTP transport)
 ----------------------------------------------------------------------------
 
 POST /api/mcp resolves the caller via, in order:
@@ -131,7 +165,7 @@ GET /api/mcp (capability/handshake) is unauthenticated by design so MCP
 clients can discover the server before they hold a session.
 
 ----------------------------------------------------------------------------
-5. Files
+6. Files
 ----------------------------------------------------------------------------
 
   lib/mcp/server.ts        Shared server factory + tool registration

@@ -1,4 +1,4 @@
-import { generateObject, tool } from 'ai'
+import { generateText, Output, tool } from 'ai'
 import Exa from 'exa-js'
 import { JSDOM } from 'jsdom'
 import { z } from 'zod'
@@ -40,7 +40,8 @@ export function createScrapeSiteTool() {
         // 1. Direct fetch of primary URL content (Homepage)
         const directPromise = exa.getContents([fullUrl], { 
           text: true, 
-          livecrawl: 'always' 
+          livecrawl: 'preferred',
+          livecrawlTimeout: 10000
         } as any)
 
         // 2. Parallel discovery of key pages (About, Products, Pricing)
@@ -95,9 +96,9 @@ export function createScrapeSiteTool() {
       let snapshot: z.infer<typeof snapshotSchema> = {}
       try {
         if (summary) {
-          const extractionPromise = generateObject({
+          const extractionPromise = generateText({
             model: getToolCallModel(),
-            schema: snapshotSchema,
+            output: Output.object({ schema: snapshotSchema }),
             system: `Extract a prestige B2B offer snapshot. NO GENERIC MARKETING SLOP.
   
   Focus on:
@@ -114,7 +115,7 @@ export function createScrapeSiteTool() {
             new Promise((_, reject) => setTimeout(() => reject(new Error('Extraction timeout')), 25000))
           ]) as any
           
-          snapshot = extraction.object
+          snapshot = extraction.output
         }
       } catch (e) {
         logger.error('[scrape_site] LLM extraction failed:', e)

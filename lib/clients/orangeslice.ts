@@ -1,8 +1,10 @@
-import { generateObject } from 'ai'
+import { generateText, Output } from 'ai'
 import { configure, services } from 'orangeslice'
 import { z } from 'zod'
 
 import type { Prospect, ProspectSearchContext } from '@/components/prospect-grid'
+import { createApolloClient } from '@/lib/clients/apollo'
+import { hunterClient } from '@/lib/clients/hunter'
 import { logger } from '@/lib/utils/logger'
 import { getToolCallModel } from '@/lib/utils/registry'
 
@@ -18,6 +20,9 @@ type OrangesliceCompany = {
   country_name?: string | null
   linkedin_url?: string | null
   specialties?: string[] | string | null
+  industry?: string | null
+  company_type?: string | null
+  company_size?: string | null
   type?: string | null
   size?: string | null
 }
@@ -89,8 +94,9 @@ function extractCompanySlug(linkedinUrl?: string) {
 }
 
 function looksExecutivePersona(targetPersona?: string) {
-  // Removed forced executive checks to allow purely dynamic persona mapping.
-  return false
+  const persona = targetPersona?.toLowerCase().trim()
+  if (!persona) return true
+  return /\b(c[-\s]?suite|ceo|cto|cfo|coo|cmo|cro|chief|founder|co[-\s]?founder|cofounder|owner|president|general counsel|chief legal officer|gc)\b/.test(persona)
 }
 
 function buildTitleVariations(targetPersona?: string) {
@@ -98,6 +104,14 @@ function buildTitleVariations(targetPersona?: string) {
   if (!persona) {
     return ['founder', 'owner', 'ceo']
   }
+  const lower = persona.toLowerCase()
+  if (/\bcto|chief technology officer\b/.test(lower)) return ['CTO', 'Chief Technology Officer', 'Founder']
+  if (/\bceo|chief executive officer\b/.test(lower)) return ['CEO', 'Chief Executive Officer', 'Founder']
+  if (/\bcfo|chief financial officer\b/.test(lower)) return ['CFO', 'Chief Financial Officer', 'Founder']
+  if (/\bcmo|chief marketing officer\b/.test(lower)) return ['CMO', 'Chief Marketing Officer', 'Head of Marketing']
+  if (/\bcro|chief revenue officer\b/.test(lower)) return ['CRO', 'Chief Revenue Officer', 'Head of Revenue']
+  if (/\b(co[-\s]?founder|cofounder|founder)\b/.test(lower)) return ['Founder', 'Co-Founder', 'CEO']
+  if (/\bgeneral counsel|chief legal officer|\bgc\b/.test(lower)) return ['General Counsel', 'Chief Legal Officer', 'GC']
   return [persona]
 }
 
@@ -196,9 +210,9 @@ async function findWebsiteContacts(params: {
 
     if (!pageMarkdown) return []
 
-    const extraction = await generateObject({
+    const extraction = await generateText({
       model: getToolCallModel(),
-      schema: z.object({
+      output: Output.object({ schema: z.object({
         people: z.array(
           z.object({
             name: z.string().min(1).max(80),
@@ -207,7 +221,7 @@ async function findWebsiteContacts(params: {
             linkedinUrl: z.string().max(220).optional()
           })
         ).max(5)
-      }),
+      }) }),
       system: `Extract likely decision-makers from company site content.
 
 Return only people who appear to currently work at the company.
@@ -219,7 +233,7 @@ Do not invent emails or LinkedIn URLs.`,
       })
     })
 
-    return extraction.object.people
+    return extraction.output.people
   } catch (error) {
     logger.warn('Website contact extraction failed:', error)
     return []
@@ -236,10 +250,10 @@ async function generateHermesTake(params: {
   const summary = compact((prospect as any).summary || companyDescription || prospect.industry, 260)
 
   try {
-    const result = await generateObject({
+    const result = await generateText({
       model: getToolCallModel(),
-      schema: hermesTakeSchema,
-      system: `You are Outfield, an operator helping a founder shortlist outreach targets.
+      output: Output.object({ schema: hermesTakeSchema }),
+      system: `You are Hermes, an operator helping a founder shortlist outreach targets.
 
 Write an analytical prospect note for one target.
 
@@ -263,9 +277,9 @@ CRITICAL RULES:
       })
     })
 
-    return result.object
+    return result.output
   } catch (error) {
-    logger.warn('Outfield take generation failed:', error)
+    logger.warn('Hermes take generation failed:', error)
     return {
       whyFit: summary || `${prospect.company || 'This company'} may be worth reviewing.`,
       outreachAngle: context?.offer
@@ -273,6 +287,98 @@ CRITICAL RULES:
         : 'Open with one concrete signal from their site before pitching.',
       evidence: signalRows.slice(0, 2).map(signal => `${signal.title}: ${signal.result}`)
     }
+  }
+}
+
+async function applyApolloContactFallback(params: {
+  prospect: Prospect
+  domain?: string
+  personLinkedinUrl?: string
+}) {
+  const { prospect, domain, personLinkedinUrl } = params
+  if (!process.env.APOLLO_API_KEY) return
+  if (prospect.email && prospect.phone) return
+
+  const [firstName, ...rest] = (prospect.fullName || '').split(/\s+/).filter(Boolean)
+  const lastName = rest.join(' ')
+
+  try {
+    const apollo = createApolloClient()
+    const person = await apollo.enrichPerson({
+      linkedin_url: personLinkedinUrl,
+      first_name: firstName,
+      last_name: lastName,
+      organization_name: prospect.company,
+      domain,
+      reveal_personal_emails: false,
+      reveal_phone_number: Boolean(process.env.APOLLO_PHONE_WEBHOOK_URL),
+      webhook_url: process.env.APOLLO_PHONE_WEBHOOK_URL
+    })
+
+    if (!person) return
+
+    const fullName = [person.first_name, person.last_name].filter(Boolean).join(' ')
+    prospect.fullName = compact(fullName, 100) || prospect.fullName
+    prospect.jobTitle = compact(person.title, 120) || prospect.jobTitle
+    prospect.linkedinUrl = compact(person.linkedin_url, 220) || prospect.linkedinUrl
+
+    if (!prospect.email && person.email && person.email_status !== 'unavailable') {
+      prospect.email = compact(person.email, 160) || prospect.email
+      mergeEnrichments(prospect, [
+        toSignal(
+          person.email_status === 'verified'
+            ? 'Apollo Verified Email'
+            : 'Apollo Email',
+          person.email
+        )
+      ])
+    }
+
+    if (!prospect.phone && Array.isArray(person.phone_numbers)) {
+      const phone = person.phone_numbers.find(number => number.status === 'verified') || person.phone_numbers[0]
+      if (phone?.number) {
+        prospect.phone = compact(phone.number, 80) || prospect.phone
+        mergeEnrichments(prospect, [toSignal('Apollo Phone', phone.number)])
+      }
+    }
+
+    mergeEnrichments(prospect, [
+      toSignal('Apollo Title', person.title),
+      toSignal('Apollo LinkedIn', person.linkedin_url)
+    ])
+  } catch (error) {
+    logger.warn('Apollo contact fallback failed:', error)
+  }
+}
+
+async function applyHunterEmailFallback(prospect: Prospect, domain?: string) {
+  if (!process.env.HUNTER_API_KEY || !domain) return
+
+  try {
+    if (prospect.email) {
+      const verification = await hunterClient.verifyEmail(prospect.email)
+      mergeEnrichments(prospect, [
+        toSignal(
+          verification.deliverable ? 'Hunter Verified Email' : 'Hunter Email Check',
+          `${prospect.email} (${verification.score})`
+        )
+      ])
+      return
+    }
+
+    const [firstName, ...rest] = (prospect.fullName || '').split(/\s+/).filter(Boolean)
+    const lastName = rest.join(' ')
+    if (!firstName || !lastName) return
+
+    const found = await hunterClient.findPersonEmail(firstName, lastName, domain)
+    if (!found?.email) return
+
+    prospect.email = compact(found.email, 160) || prospect.email
+    mergeEnrichments(prospect, [
+      toSignal('Hunter Verified Email', `${found.email} (${found.score})`)
+    ])
+  } catch (error) {
+    logger.warn('Hunter email fallback failed:', error)
   }
 }
 
@@ -327,10 +433,11 @@ export async function enrichProspectWithOrangeslice(
       compact(
         typeof companyData.employee_count === 'number'
           ? `${companyData.employee_count} employees`
-          : (companyData.size as string | undefined),
+          : (companyData.company_size || companyData.size || undefined),
         80
       ) || enriched.companySize
-    enriched.industry = compact(companyData.type, 80) || enriched.industry
+    enriched.industry =
+      compact(companyData.industry || companyData.company_type || companyData.type, 80) || enriched.industry
     ;(enriched as any).summary =
       compact(companyData.description, 260) || (enriched as any).summary
 
@@ -363,7 +470,6 @@ export async function enrichProspectWithOrangeslice(
         titleVariations,
         titleSqlFilter,
         limit: 5,
-        onlyCurrent: true,
         usOnly: false
       })
 
@@ -454,6 +560,13 @@ export async function enrichProspectWithOrangeslice(
     }
   }
 
+  await applyApolloContactFallback({
+    prospect: enriched,
+    domain,
+    personLinkedinUrl
+  })
+  await applyHunterEmailFallback(enriched, domain)
+
   const signalRows = (Array.isArray(enriched.enrichments) ? enriched.enrichments : [])
     .map((entry: any) => ({
       title: String(entry?.title || '').trim(),
@@ -526,10 +639,11 @@ export async function enrichCompanyData(
         compact(
           typeof companyData.employee_count === 'number'
             ? `${companyData.employee_count} employees`
-            : (companyData.size as string | undefined),
+            : (companyData.company_size || companyData.size || undefined),
           80
         ) || enriched.companySize
-      enriched.industry = compact(companyData.type, 80) || enriched.industry
+      enriched.industry =
+        compact(companyData.industry || companyData.company_type || companyData.type, 80) || enriched.industry
       ;(enriched as any).summary = compact(companyData.description, 260) || (enriched as any).summary
       mergeEnrichments(enriched, [
         toSignal('Company Name', companyData.name),
@@ -585,11 +699,10 @@ export async function enrichPersonData(
     if (companyLinkedinUrl) {
       const employeeResult = await services.company.getEmployeesFromLinkedin({
         linkedinUrl: companyLinkedinUrl,
-        searchStrategy: 'web',
+        searchStrategy: looksExecutivePersona(context?.targetPersona) ? 'web' : 'database',
         titleVariations: buildTitleVariations(context?.targetPersona),
         titleSqlFilter: buildTitleSqlFilter(context?.targetPersona),
         limit: 3,
-        onlyCurrent: true,
         usOnly: false
       })
       const employee = employeeResult.employees?.[0]
@@ -673,6 +786,13 @@ export async function enrichPersonData(
       logger.warn('enrichPersonData: contact waterfall failed:', error)
     }
   }
+
+  await applyApolloContactFallback({
+    prospect: enriched,
+    domain,
+    personLinkedinUrl
+  })
+  await applyHunterEmailFallback(enriched, domain)
 
   const signalRows = (Array.isArray(enriched.enrichments) ? enriched.enrichments : [])
     .map((entry: any) => ({

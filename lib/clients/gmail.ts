@@ -132,3 +132,30 @@ export function toBase64Url(str: string) {
   return Buffer.from(str).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
+function cleanHeader(value: string) {
+  return value.replace(/[\r\n]+/g, ' ').trim()
+}
+
+export function createRawEmail({
+  to,
+  subject,
+  body,
+  html = true
+}: {
+  to: string
+  subject: string
+  body: string
+  html?: boolean
+}) {
+  const contentType = html ? 'text/html; charset=UTF-8' : 'text/plain; charset=UTF-8'
+  return toBase64Url(
+    [
+      `To: ${cleanHeader(to)}`,
+      `Subject: ${cleanHeader(subject)}`,
+      `Content-Type: ${contentType}`,
+      'MIME-Version: 1.0',
+      '',
+      body
+    ].join('\r\n')
+  )
+}

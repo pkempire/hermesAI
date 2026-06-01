@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { Prospect } from './prospect-grid'
+import Image from 'next/image'
 
 interface ProspectPreviewCardProps {
   prospect: Prospect
@@ -118,7 +119,14 @@ export function ProspectPreviewCard({
               <CardTitle className="text-[2rem] tracking-tight flex items-center space-x-3 text-gray-900">
                 <div className="bg-[hsl(var(--hermes-gold))]/10 w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden shrink-0">
                   {prospect.avatarUrl ? (
-                    <img src={prospect.avatarUrl} alt={prospect.fullName || 'Contact'} className="w-full h-full object-cover" />
+                    <Image
+                      src={prospect.avatarUrl}
+                      alt={prospect.fullName || 'Contact'}
+                      width={48}
+                      height={48}
+                      className="h-full w-full object-cover"
+                      unoptimized
+                    />
                   ) : (
                     <User className="w-6 h-6 text-[hsl(var(--hermes-gold-dark))]" />
                   )}
@@ -128,7 +136,14 @@ export function ProspectPreviewCard({
               <CardDescription className="flex items-center space-x-2 text-[14px] font-medium text-gray-500 pt-1 ml-[3.75rem]">
                 <div className="w-5 h-5 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center border border-gray-200 shrink-0">
                   {prospect.companyLogoUrl ? (
-                    <img src={prospect.companyLogoUrl} alt={prospect.company || 'Company'} className="w-full h-full object-cover" />
+                    <Image
+                      src={prospect.companyLogoUrl}
+                      alt={prospect.company || 'Company'}
+                      width={20}
+                      height={20}
+                      className="h-full w-full object-cover"
+                      unoptimized
+                    />
                   ) : (
                     <Building className="w-3 h-3 text-gray-400" />
                   )}

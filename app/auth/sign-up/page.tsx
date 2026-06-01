@@ -7,9 +7,9 @@ export default function Page() {
         <div className="mb-8 text-center">
           <div className="inline-flex items-center gap-2 text-[15px] font-semibold tracking-[-0.01em] text-[hsl(var(--ink))]">
             <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-[hsl(var(--ink))] text-[10px] font-bold text-[hsl(var(--paper))]">
-              O
+              H
             </span>
-            Outfield
+            Hermes
           </div>
           <h1 className="mt-6 t-title text-[hsl(var(--ink))]">
             Start your 7-day trial

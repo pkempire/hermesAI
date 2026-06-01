@@ -9,7 +9,7 @@
  *   hermes-mcp                           # starts the stdio loop
  *   HERMES_MCP_MODEL=openai:gpt-4o ./bin/hermes-mcp
  *
- * SDK: @modelcontextprotocol/sdk@1.29.0
+ * SDK: @modelcontextprotocol/sdk@1.26.0
  */
 
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'

@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import Textarea from 'react-textarea-autosize'
 import { useArtifact } from './artifact/artifact-context'
+import { TemplateMarketplace } from './template-marketplace'
 import { WorkspaceHome } from './workspace-home'
 import { Button } from './ui/button'
 
@@ -15,7 +16,7 @@ interface ChatPanelProps {
   input: string
   handleInputChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void
   setInput?: (value: string) => void
-  handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void
+  handleSubmit: (e: React.FormEvent<HTMLFormElement>, messageOverride?: string) => void
   isLoading: boolean
   messages: Message[]
   setMessages: (messages: Message[]) => void
@@ -24,7 +25,7 @@ interface ChatPanelProps {
   append: (message: any) => void
   models?: Model[]
   showScrollToBottomButton: boolean
-  scrollContainerRef: React.RefObject<HTMLDivElement>
+  scrollContainerRef: React.RefObject<HTMLDivElement | null>
   submitTemplateMessage?: (message: string) => void
   signedIn?: boolean
 }
@@ -55,6 +56,7 @@ export function ChatPanel({
   const [enterDisabled, setEnterDisabled] = useState(false)
   const submittingRef = useRef(false)
   const [isListening, setIsListening] = useState(false)
+  const [runMode, setRunMode] = useState<'guided' | 'deterministic'>('guided')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { close: closeArtifact } = useArtifact()
 
@@ -114,10 +116,10 @@ export function ChatPanel({
     router.push('/')
   }
 
-  async function ensureSignedIn(): Promise<boolean> {
+  async function ensureSignedIn(promptToPersist = input): Promise<boolean> {
     try {
-      if (input && input.trim().length > 0) {
-        try { localStorage.setItem('hermes_draft', input) } catch {}
+      if (promptToPersist && promptToPersist.trim().length > 0) {
+        try { localStorage.setItem('hermes_draft', promptToPersist) } catch {}
       }
       const res = await fetch('/api/auth/me', { cache: 'no-store' })
       if (!res.ok) return false
@@ -141,6 +143,11 @@ export function ChatPanel({
       if ((lastPart as any)?.toolName === 'ask_question') return false
       return true
     }
+    if (typeof lastPart?.type === 'string' && lastPart.type.startsWith('tool-')) {
+      const toolName = lastPart.type.replace(/^tool-/, '')
+      if (toolName === 'ask_question') return false
+      return lastPart.state === 'input-streaming' || lastPart.state === 'input-available'
+    }
     return false
   }
 
@@ -149,7 +156,7 @@ export function ChatPanel({
       append({ role: 'user', content: query })
       isFirstRender.current = false
     }
-  }, [query])
+  }, [append, query])
 
   const handleScrollToBottom = () => {
     const scrollContainer = scrollContainerRef.current
@@ -172,7 +179,41 @@ export function ChatPanel({
       return
     }
     try { localStorage.removeItem('hermes_draft') } catch {}
-    handleSubmit({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>)
+    const messageOverride =
+      runMode === 'deterministic'
+        ? `${input.trim()}\n\nRun mode: deterministic. Skip the interactive builder when the brief is clear; start the search directly and ask only for required missing context.`
+        : undefined
+    handleSubmit({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>, messageOverride)
+    if (messageOverride && setInput) setInput('')
+    setTimeout(() => { submittingRef.current = false }, 800)
+  }
+
+  const loadTemplatePrompt = (prompt: string) => {
+    setRunMode('guided')
+    if (setInput) setInput(prompt)
+    requestAnimationFrame(() => {
+      document.getElementById('hermes-input')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      })
+      inputRef.current?.focus()
+    })
+  }
+
+  const runTemplatePrompt = async (prompt: string) => {
+    if (submittingRef.current || isLoading) return
+    submittingRef.current = true
+    const isAuthed = await ensureSignedIn(prompt)
+    if (!isAuthed) {
+      router.push('/auth/login')
+      submittingRef.current = false
+      return
+    }
+
+    try { localStorage.removeItem('hermes_draft') } catch {}
+    const directPrompt = `${prompt.trim()}\n\nRun mode: deterministic. Skip the interactive builder when the brief is clear; start the search directly and ask only for required missing context.`
+    handleSubmit({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>, directPrompt)
+    if (setInput) setInput('')
     setTimeout(() => { submittingRef.current = false }, 800)
   }
 
@@ -181,12 +222,7 @@ export function ChatPanel({
       className={cn('w-full group/form-container shrink-0 relative z-10', messages.length > 0 ? 'px-3 sm:px-4 pb-3 sm:pb-5' : 'px-3 sm:px-5 md:px-8 pb-6 sm:pb-10')}
     >
       {messages.length === 0 && (
-        <WorkspaceHome
-          onSelectPrompt={(p) => {
-            if (setInput) setInput(p)
-            try { inputRef.current?.focus() } catch {}
-          }}
-        />
+        <WorkspaceHome />
       )}
 
       <form
@@ -235,7 +271,7 @@ export function ChatPanel({
             />
 
             <div className="flex items-center justify-between px-3 pb-3 pt-1">
-              <div className="flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <Button type="button" size="icon" variant="ghost"
                   className="h-8 w-8 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700"
                   onClick={() => fileInputRef.current?.click()} title="Attach file">
@@ -248,6 +284,24 @@ export function ChatPanel({
                   onClick={startVoice} title="Voice input">
                   <Mic size={16} />
                 </Button>
+                <div className="ml-1 flex h-8 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 p-0.5">
+                  {(['guided', 'deterministic'] as const).map(mode => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setRunMode(mode)}
+                      className={cn(
+                        'px-2.5 text-[11px] font-medium capitalize transition-colors',
+                        runMode === mode
+                          ? 'bg-white text-[hsl(var(--ink))] shadow-sm'
+                          : 'text-gray-400 hover:text-gray-700'
+                      )}
+                      title={mode === 'guided' ? 'Use the reviewable search builder' : 'Skip the builder when the brief is clear'}
+                    >
+                      {mode === 'deterministic' ? 'Direct' : 'Guided'}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <Button type="button" size="icon"
@@ -272,6 +326,14 @@ export function ChatPanel({
           </div>
         </div>
       </form>
+
+      {messages.length === 0 && (
+        <TemplateMarketplace
+          onSelectPrompt={loadTemplatePrompt}
+          onRunPrompt={runTemplatePrompt}
+          disabled={isLoading}
+        />
+      )}
 
       <input ref={fileInputRef} type="file" className="hidden"
         accept=".csv,.txt,.md,.json,.yaml,.yml,.pdf"

@@ -105,7 +105,8 @@ hermesAI/
 Prerequisites:
 
 - Node.js >= 20 (Next.js 15 requires it)
-- [Bun](https://bun.sh) 1.2+ (or `pnpm` / `npm` work)
+- npm 10+ (the checked-in lockfile is `package-lock.json`)
+- [Bun](https://bun.sh) 1.2+ only if you run the local stdio MCP server
 - A Supabase project (auth + Postgres)
 - An Upstash Redis instance (or local Redis on `:6379`)
 - API keys for at least: OpenAI, Exa, and one of Tavily/SearXNG
@@ -121,18 +122,17 @@ cp .env.example .env.local
 $EDITOR .env.local                     # fill in keys (see comments)
 
 # 2. Install
-bun install                            # or `pnpm install`
+npm install
 
 # 3. Migrate
-bunx supabase db push                  # applies supabase/migrations/
+npx supabase db push                   # applies supabase/migrations/
 
 # 4. Run
-bun run dev                            # http://localhost:3000
+npm run dev                            # http://localhost:3000
 ```
 
-Common pitfall: `bun run dev` against Node 18 fails. Use `nvm use 20` (or
-`fnm use 20`) before running. The package's `engines` block pins Bun 1.2.12 but
-the underlying Node must be 20+.
+Common pitfall: running Next against Node 18 fails. Use `nvm use 20` (or
+`fnm use 20`) before running. The package's `engines` block requires Node 20+.
 
 ## Required services
 

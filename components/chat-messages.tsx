@@ -22,7 +22,7 @@ interface ChatMessagesProps {
   chatId?: string
   addToolResult?: (params: { toolCallId: string; result: any }) => void
   /** Ref for the scroll container */
-  scrollContainerRef: React.RefObject<HTMLDivElement>
+  scrollContainerRef: React.RefObject<HTMLDivElement | null>
   onUpdateMessage?: (messageId: string, newContent: string) => Promise<void>
   reload?: (
     messageId: string,

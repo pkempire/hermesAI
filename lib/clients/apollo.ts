@@ -70,6 +70,7 @@ export interface ApolloPersonMatchParams {
   reveal_phone_number?: boolean
   run_waterfall_email?: boolean
   run_waterfall_phone?: boolean
+  webhook_url?: string
 }
 
 export class ApolloClient {
@@ -105,7 +106,13 @@ export class ApolloClient {
     }
     
     try {
-      const response = await fetch(`${this.baseUrl}/people/match`, {
+      const url = new URL(`${this.baseUrl}/people/match`)
+      for (const [key, value] of Object.entries(params)) {
+        if (value === undefined || value === null || value === '') continue
+        url.searchParams.set(key, String(value))
+      }
+
+      const response = await fetch(url.toString(), {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify(params)

@@ -11,11 +11,6 @@ export const DEFAULT_MODEL: Model = {
 
 export async function getModels(): Promise<Model[]> {
   try {
-    // For server-side rendering, just return the default model
-    // The client-side code can load models via static files if needed
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('Loading default model for server-side rendering')
-    }
     return [DEFAULT_MODEL]
   } catch (error) {
     if (process.env.NODE_ENV !== 'production') {
@@ -30,4 +25,3 @@ export function getModel(modelId: string): Model {
   // In a real implementation, you'd look up the model from the models list
   return DEFAULT_MODEL
 }
-

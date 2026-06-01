@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient as createSupabaseAdminClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
@@ -26,7 +26,12 @@ export async function GET() {
       checks[name] = {
         ok: false,
         ms: Date.now() - t0,
-        error: err instanceof Error ? err.message.slice(0, 200) : String(err)
+        error:
+          err instanceof Error
+            ? err.message.slice(0, 200)
+            : typeof err === 'object' && err
+            ? JSON.stringify(err).slice(0, 200)
+            : String(err)
       }
     }
   }
@@ -34,7 +39,12 @@ export async function GET() {
   // Run checks in parallel
   await Promise.all([
     check('supabase', async () => {
-      const sb = await createClient()
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL) throw new Error('NEXT_PUBLIC_SUPABASE_URL missing')
+      const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      if (!key) throw new Error('Supabase key missing')
+      const sb = createSupabaseAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL, key, {
+        auth: { autoRefreshToken: false, persistSession: false }
+      })
       const { error } = await sb.from('subscriptions').select('user_id').limit(1)
       if (error) throw error
     }),

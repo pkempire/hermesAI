@@ -2,19 +2,9 @@
 
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import Link from 'next/link'
-import { SiDiscord, SiGithub, SiX } from 'react-icons/si'
+import { SiGithub } from 'react-icons/si'
 
 const externalLinks = [
-  {
-    name: 'X',
-    href: 'https://x.com/useoutfield',
-    icon: <SiX className="mr-2 h-4 w-4" />
-  },
-  {
-    name: 'Discord',
-    href: 'https://discord.gg/outfield',
-    icon: <SiDiscord className="mr-2 h-4 w-4" />
-  },
   {
     name: 'GitHub',
     href: 'https://github.com/pkempire/hermesAI',

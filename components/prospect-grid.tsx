@@ -11,10 +11,12 @@ import {
   Loader2,
   Mail,
   MapPin,
+  Phone,
   Sparkles,
   User,
   Users
 } from 'lucide-react'
+import Image from 'next/image'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { campaignStore } from '@/lib/store/campaign-store'
@@ -143,6 +145,16 @@ function ProspectRowDetail({
             <a href={prospect.linkedinUrl} target="_blank" rel="noopener noreferrer" className="flex-1 text-[13px] font-medium text-gray-800 hover:text-blue-700 flex items-center gap-1">
               LinkedIn Profile <ExternalLink className="h-2.5 w-2.5 opacity-50" />
             </a>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">Auto-message soon</span>
+          </div>
+        )}
+        {prospect.phone && (
+          <div className="flex items-center gap-2.5 rounded-lg border border-gray-100 bg-white px-3 py-2 shadow-sm">
+            <Phone className="h-3.5 w-3.5 shrink-0 text-gray-500" />
+            <span className="flex-1 text-[13px] font-medium text-gray-800 truncate">
+              {prospect.phone}
+            </span>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded">Phone</span>
           </div>
         )}
         {enrichments.slice(0, 4).map((e: any, i: number) => (
@@ -152,7 +164,7 @@ function ProspectRowDetail({
           </div>
         ))}
         {!prospect.email && !isEnriching && (
-          <p className="text-[12px] text-gray-400 italic px-1">No contact found yet — select and click Find Contacts.</p>
+          <p className="text-[12px] text-gray-400 italic px-1">No verified email yet - select and click Find Contacts. Phone enrichment is on the premium roadmap.</p>
         )}
       </div>
     </div>
@@ -185,7 +197,7 @@ export function ProspectGrid({
       <div className="flex flex-col items-center justify-center rounded-xl border border-gray-100 bg-gray-50 py-12">
         <Users className="mb-3 h-8 w-8 text-gray-300" />
         <p className="text-[14px] font-medium text-gray-500">No prospects yet</p>
-        <p className="text-[13px] text-gray-400 mt-0.5">Results will appear here as Outfield finds them.</p>
+        <p className="text-[13px] text-gray-400 mt-0.5">Results will appear here as Hermes finds them.</p>
       </div>
     )
   }
@@ -314,7 +326,14 @@ export function ProspectGrid({
                 {/* Company logo */}
                 <div className="h-8 w-8 shrink-0 rounded-lg border border-gray-100 bg-gray-50 flex items-center justify-center overflow-hidden">
                   {prospect.companyLogoUrl ? (
-                    <img src={prospect.companyLogoUrl} alt="" className="h-full w-full object-cover" />
+                    <Image
+                      src={prospect.companyLogoUrl}
+                      alt=""
+                      width={32}
+                      height={32}
+                      className="h-full w-full object-cover"
+                      unoptimized
+                    />
                   ) : (
                     <Building className="h-3.5 w-3.5 text-gray-300" />
                   )}

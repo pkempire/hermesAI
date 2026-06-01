@@ -5,7 +5,7 @@
  */
 
 import { LandingPage } from '@/components/landing'
-import { HermesApp } from '@/components/hermes-app'
+import { HermesAppLoader } from '@/components/hermes-app-loader'
 import { getModels } from '@/lib/config/models'
 import { createClient } from '@/lib/supabase/server'
 
@@ -18,5 +18,5 @@ export default async function Page() {
     return <LandingPage />
   }
 
-  return <HermesApp models={models} />
+  return <HermesAppLoader models={models} />
 }

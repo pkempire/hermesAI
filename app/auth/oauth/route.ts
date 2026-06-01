@@ -7,6 +7,7 @@ export async function GET(request: Request) {
   const code = searchParams.get('code')
   const provider = searchParams.get('provider')
   const next = searchParams.get('next') ?? '/'
+  const invite = searchParams.get('invite')?.trim()
 
   const forwardedHost = request.headers.get('x-forwarded-host')
   const host = request.headers.get('host') || new URL(request.url).host
@@ -35,7 +36,11 @@ export async function GET(request: Request) {
             // overwrite this row with `starter` + stripe_customer_id once
             // they actually enter checkout. Override via STRIPE_TRIAL_DAYS
             // env if you ever need to extend it for a cohort.
-            const trialDays = Number(process.env.STRIPE_TRIAL_DAYS ?? 7)
+            const inviteCode =
+              invite && /^[a-z0-9_-]{3,40}$/i.test(invite) ? invite : null
+            const trialDays = inviteCode
+              ? 30
+              : Number(process.env.STRIPE_TRIAL_DAYS ?? 7)
             const monthlyQuota = Number(process.env.STRIPE_MONTHLY_QUOTA ?? 1500)
             const trialEnd = new Date(
               Date.now() + trialDays * 24 * 60 * 60 * 1000
@@ -48,9 +53,11 @@ export async function GET(request: Request) {
                 quota_monthly: monthlyQuota,
                 used_this_month: 0,
                 trial_expires_at: trialEnd,
+                invite_code: inviteCode,
                 metadata: {
                   source: 'auto_trial_on_signup',
-                  trial_started_at: new Date().toISOString()
+                  trial_started_at: new Date().toISOString(),
+                  invite_code: inviteCode
                 }
               })
           }
@@ -78,9 +85,11 @@ export async function GET(request: Request) {
       provider: 'google',
       options: {
         redirectTo: callbackUrl,
-        scopes: 'https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.readonly',
+        scopes:
+          'https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.send',
         queryParams: {
-          prompt: 'select_account'
+          access_type: 'offline',
+          prompt: 'select_account consent'
         }
       }
     })

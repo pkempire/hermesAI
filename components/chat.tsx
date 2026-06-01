@@ -98,8 +98,9 @@ export function Chat({
     error,
     clearError,
     regenerate,
+    addToolOutput,
     addToolResult
-  } = chatHook
+  } = chatHook as any
   
   // Create append alias for compatibility with existing code
   const append = sendMessage
@@ -327,7 +328,7 @@ export function Chat({
     ) as any)
 
     try {
-      const messageIndex = messages.findIndex(msg => msg.id === messageId)
+      const messageIndex = messages.findIndex((msg: any) => msg.id === messageId)
       if (messageIndex === -1) return
 
       const messagesUpToEdited = messages.slice(0, messageIndex + 1)
@@ -364,16 +365,30 @@ export function Chat({
         try {
           const last = messages[messages.length - 1] as any
           const parts = (last?.parts || []) as any[]
-          const lastPart = parts[parts.length - 1]
-          const isAsk = lastPart?.type === 'tool-call' && lastPart?.toolName === 'ask_question'
+          const lastPart = [...parts].reverse().find((part: any) => {
+            if (part?.type === 'tool-call') return part.toolName === 'ask_question'
+            if (part?.type === 'tool-ask_question') {
+              return part.state !== 'output-available' && part.state !== 'output-error'
+            }
+            return false
+          })
+          const isAsk =
+            lastPart?.type === 'tool-call' ||
+            lastPart?.type === 'tool-ask_question'
           const toolCallId = isAsk ? lastPart.toolCallId : undefined
-          if (isAsk && (chatHook as any)?.addToolResult) {
+          const submitToolOutput = addToolOutput || addToolResult
+          if (isAsk && toolCallId && typeof submitToolOutput === 'function') {
             // Treat short confirmations like "continue" as acceptance to proceed
             const normalized = messageToSend.trim().toLowerCase()
             const value = ['continue', 'proceed', 'go ahead', 'yes', 'yep', 'ok', 'okay'].includes(normalized)
               ? 'continue'
               : messageToSend.trim()
-            ;(chatHook as any).addToolResult({ tool: 'ask_question', toolCallId, output: { type: 'text', value } })
+            submitToolOutput({
+              tool: 'ask_question',
+              toolCallId,
+              output: { type: 'text', value }
+            })
+            void sendMessage()
             if (!messageOverride) setInput('')
             return
           }
@@ -428,8 +443,9 @@ export function Chat({
               chatId={id}
               addToolResult={({ toolCallId, output, tool }: any) => {
                 // Adapter to legacy prop shape { toolCallId, result }
-                if (typeof (chatHook as any)?.addToolResult === 'function') {
-                  ;(chatHook as any).addToolResult({ tool, toolCallId, output })
+                const submitToolOutput = addToolOutput || addToolResult
+                if (typeof submitToolOutput === 'function') {
+                  submitToolOutput({ tool, toolCallId, output })
                 }
               }}
               scrollContainerRef={scrollContainerRef}
@@ -466,8 +482,9 @@ export function Chat({
               isLoading={isLoading}
               chatId={id}
               addToolResult={({ toolCallId, output, tool }: any) => {
-                if (typeof (chatHook as any)?.addToolResult === 'function') {
-                  ;(chatHook as any).addToolResult({ tool, toolCallId, output })
+                const submitToolOutput = addToolOutput || addToolResult
+                if (typeof submitToolOutput === 'function') {
+                  submitToolOutput({ tool, toolCallId, output })
                 }
               }}
               scrollContainerRef={scrollContainerRef}

@@ -23,6 +23,7 @@ import {
 import { useEffect, useMemo, useState } from 'react'
 import { Prospect } from './prospect-grid'
 import Image from 'next/image'
+import { toast } from 'sonner'
 
 interface EmailTemplate {
   id: string
@@ -150,6 +151,7 @@ export function InteractiveEmailDrafter({
     callToActionType: 'meeting'
   })
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isCreatingDraft, setIsCreatingDraft] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState(0)
 
   // Auto-generate drafts on load if none exist
@@ -210,7 +212,7 @@ export function InteractiveEmailDrafter({
 
     const objective = getInitialObjective()
     if (!objective.trim()) {
-      alert('Outfield needs to learn about your offer and objective first.')
+      alert('Hermes needs to learn about your offer and objective first.')
       return
     }
 
@@ -267,6 +269,54 @@ export function InteractiveEmailDrafter({
     onEmailsGenerated?.(emailTemplates)
   }
 
+  const handleCreateGmailDraft = async () => {
+    if (!activeProspect) {
+      toast.error('Select a prospect first.')
+      return
+    }
+    if (!activeProspect.email) {
+      toast.error('Find a verified email before creating a Gmail draft.')
+      return
+    }
+    if (!activeTemplate?.subject || !activeTemplate?.body) {
+      toast.error('Generate or write a subject and body first.')
+      return
+    }
+
+    setIsCreatingDraft(true)
+    try {
+      const res = await fetch('/api/gmail/draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: activeProspect.email,
+          subject: activeTemplate.subject,
+          body: activeTemplate.body.replace(/\n/g, '<br />')
+        })
+      })
+
+      if (res.status === 401) {
+        window.location.href = '/auth/login'
+        return
+      }
+
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        const message = data?.error || 'Failed to create Gmail draft'
+        if (/No Gmail token|authorization/i.test(message)) {
+          window.location.href = '/api/auth/gmail/connect'
+          return
+        }
+        throw new Error(message)
+      }
+      toast.success('Gmail draft created.')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to create Gmail draft')
+    } finally {
+      setIsCreatingDraft(false)
+    }
+  }
+
   const Avatar = ({ url, initials, isCompany }: { url?: string, initials: string, isCompany?: boolean }) => {
     if (url) {
       return (
@@ -310,7 +360,7 @@ export function InteractiveEmailDrafter({
               Campaign Draft Studio
             </h2>
             <p className="mt-4 max-w-2xl text-[16px] leading-[1.6] font-medium text-gray-500/80">
-              Refine your autonomous sequence. Tighten the hook, adjust the tone, and verify the signals before Outfield initiates the Gmail send.
+              Refine your sequence. Tighten the hook, adjust the tone, and verify the signals before Hermes creates the Gmail draft.
             </p>
           </div>
 
@@ -341,7 +391,7 @@ export function InteractiveEmailDrafter({
           <div className="flex-1 overflow-y-auto w-full">
             {actualProspects.length === 0 ? (
               <div className="px-5 py-6 text-sm text-gray-400">
-                Run a prospect search first. Outfield will load the review queue here.
+                Run a prospect search first. Hermes will load the review queue here.
               </div>
             ) : (
               <div className="flex flex-col w-full">
@@ -466,11 +516,17 @@ export function InteractiveEmailDrafter({
                     {isGenerating ? 'Drafting...' : 'Autodraft'}
                   </Button>
                   <Button
-                    onClick={handleGenerate}
-                    disabled={isGenerating || emailTemplates[0]?.body.length === 0}
+                    onClick={handleCreateGmailDraft}
+                    disabled={
+                      isGenerating ||
+                      isCreatingDraft ||
+                      emailTemplates[0]?.body.length === 0 ||
+                      !activeProspect?.email
+                    }
                     className="h-11 rounded-2xl shadow-lg bg-gray-900 px-8 text-[13px] font-bold tracking-wide text-white hover:bg-amber-600 transition-all active:scale-95"
                   >
-                    Initiate Gmail Send <Send className="ml-2 h-3.5 w-3.5" />
+                    {isCreatingDraft ? 'Creating draft' : 'Create Gmail Draft'}
+                    <Send className="ml-2 h-3.5 w-3.5" />
                   </Button>
                 </div>
               </div>

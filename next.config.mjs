@@ -1,5 +1,11 @@
+import { dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const repoRoot = dirname(fileURLToPath(import.meta.url))
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  outputFileTracingRoot: repoRoot,
   // Strip console.* calls from production builds (keep error + warn).
   // This is the cheapest, safest way to silence the 170+ scattered console
   // statements without rewriting every file.

@@ -17,8 +17,9 @@ const inter = Inter({
   variable: '--font-sans'
 })
 
-const title = 'Outfield — AI Outbound Operator'
-const description = 'Describe who you want to reach. Outfield maps the market, finds the decision-maker, drafts pitches grounded in real evidence, and sends from your Gmail.'
+const title = 'Hermes — AI GTM Engineer'
+const description =
+  'Describe who you want to reach. Hermes maps the market, resolves decision-makers, drafts evidence-backed outreach, and creates Gmail drafts for review.'
 
 export const metadata: Metadata = {
   metadataBase: new URL(
@@ -40,7 +41,7 @@ export const metadata: Metadata = {
         url: '/opengraph-image.png',
         width: 1200,
         height: 630,
-        alt: 'HermesAI - AI Messenger for Outbound'
+        alt: 'Hermes - AI GTM Engineer'
       }
     ]
   },

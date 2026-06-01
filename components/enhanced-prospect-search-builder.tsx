@@ -204,7 +204,7 @@ export function EnhancedProspectSearchBuilder({
             <div className="py-12 flex flex-col items-center justify-center text-center bg-gray-50 rounded-2xl border border-gray-100">
               <AlertCircle className="mx-auto mb-4 h-12 w-12 text-gray-400" />
               <p className="font-medium text-gray-900 text-lg">No structured criteria extracted from your brief.</p>
-              <p className="text-[14px] text-gray-500 mt-1">Outfield will use the original request as the search query.</p>
+              <p className="text-[14px] text-gray-500 mt-1">Hermes will use the original request as the search query.</p>
               <Button onClick={addCriterion} variant="outline" className="mt-4 rounded-full border-gray-200">Add Field</Button>
             </div>
           ) : (

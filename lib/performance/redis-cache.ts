@@ -1,5 +1,5 @@
 /**
- * High-performance Redis caching layer for Outfield AI
+ * High-performance Redis caching layer for Hermes
  * Dramatically speeds up repeated queries and API calls
  */
 

@@ -1,5 +1,5 @@
 /**
- * Outfield long-term memory — server-side helpers.
+ * Hermes long-term memory - server-side helpers.
  *
  * Memory is durable per-user state that survives sessions: the user's offer
  * summary, their canonical ICPs, past campaign briefs and outcomes, voice

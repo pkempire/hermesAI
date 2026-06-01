@@ -1,4 +1,5 @@
 import { saveGmailTokens } from '@/lib/clients/gmail'
+import { getCurrentUserId } from '@/lib/auth/get-current-user'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(req: NextRequest) {
@@ -16,6 +17,11 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const currentUserId = await getCurrentUserId()
+    if (!currentUserId || currentUserId === 'anonymous' || currentUserId !== state) {
+      return NextResponse.redirect(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}?gmail_error=invalid_state`)
+    }
+
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -34,7 +40,7 @@ export async function GET(req: NextRequest) {
 
     const tokens = await tokenResponse.json()
 
-    await saveGmailTokens(state, {
+    await saveGmailTokens(currentUserId, {
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,
       expires_at: tokens.expires_in ? Date.now() + (tokens.expires_in * 1000) : undefined

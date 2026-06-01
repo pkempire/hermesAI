@@ -133,7 +133,7 @@ function ResultsGrid({
           target="_blank"
           rel="noreferrer"
         >
-          Unlock Outfield Premium
+          Unlock Hermes Premium
         </a>
       </div>
     </div>

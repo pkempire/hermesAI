@@ -94,7 +94,7 @@ function ProspectSearchStreamerImpl({
 
         <div className="h-2 w-full rounded-full bg-gray-100/80 overflow-hidden shadow-inner mt-5 mix-blend-multiply">
           <div
-            className="h-full rounded-full transition-all duration-[800ms] ease-out bg-[hsl(var(--hermes-gold))] bg-gradient-to-r from-[hsl(var(--hermes-gold))]/80 to-[hsl(var(--hermes-gold-dark))]"
+            className="h-full rounded-full transition-all duration-700 ease-out bg-[hsl(var(--hermes-gold))] bg-gradient-to-r from-[hsl(var(--hermes-gold))]/80 to-[hsl(var(--hermes-gold-dark))]"
             style={{ width: `${percent}%` }}
           />
         </div>

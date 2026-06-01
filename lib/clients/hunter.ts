@@ -6,9 +6,10 @@
 interface HunterEmailResult {
   email: string | null
   score: number
-  verification: {
-    result: 'deliverable' | 'undeliverable' | 'risky' | 'unknown'
-    score: number
+  verification?: {
+    status?: 'valid' | 'accept_all' | 'unknown' | 'invalid' | 'webmail' | 'disposable' | 'deliverable' | null
+    result?: 'deliverable' | 'undeliverable' | 'risky' | 'unknown' | null
+    score?: number | null
   }
   first_name?: string
   last_name?: string
@@ -29,9 +30,14 @@ export class HunterClient {
 
   constructor(apiKey?: string) {
     this.apiKey = apiKey || process.env.HUNTER_API_KEY || ''
-    if (!this.apiKey) {
-      console.warn('⚠️ [Hunter] No API key provided - email enrichment will be disabled')
-    }
+  }
+
+  private isDeliverable(result: HunterEmailResult | { result?: string; status?: string; score?: number }) {
+    const candidate = result as HunterEmailResult & { result?: string; status?: string }
+    const status = candidate.verification?.status ?? candidate.status
+    const legacyResult = candidate.verification?.result ?? candidate.result
+    const score = candidate.score ?? candidate.verification?.score ?? 0
+    return (status === 'valid' || status === 'deliverable' || legacyResult === 'deliverable') && score >= 85
   }
 
   /**
@@ -54,8 +60,7 @@ export class HunterClient {
 
       // Filter for verified emails only
       const verifiedEmails = data.data.emails.filter(email =>
-        email.verification.result === 'deliverable' &&
-        email.verification.score >= 85
+        this.isDeliverable(email)
       )
 
       console.log(`✅ [Hunter] Found ${verifiedEmails.length} verified emails for ${domain}`)
@@ -86,7 +91,7 @@ export class HunterClient {
       const data = await response.json() as { data: HunterEmailResult }
 
       // Only return if email is deliverable
-      if (data.data.verification.result === 'deliverable') {
+      if (this.isDeliverable(data.data)) {
         console.log(`✅ [Hunter] Found verified email: ${data.data.email}`)
         return data.data
       }
@@ -116,10 +121,11 @@ export class HunterClient {
         throw new Error(`Hunter API error: ${response.status}`)
       }
 
-      const data = await response.json() as { data: { result: string; score: number } }
+      const data = await response.json() as { data: { result?: string; status?: string; score: number } }
 
-      const deliverable = data.data.result === 'deliverable' && data.data.score >= 85
-      console.log(`${deliverable ? '✅' : '❌'} [Hunter] Email verification: ${email} - ${data.data.result} (${data.data.score}%)`)
+      const deliverable = this.isDeliverable(data.data)
+      const status = data.data.status || data.data.result || 'unknown'
+      console.log(`${deliverable ? '✅' : '❌'} [Hunter] Email verification: ${email} - ${status} (${data.data.score}%)`)
 
       return {
         deliverable,
@@ -165,9 +171,9 @@ export class HunterClient {
           if (personEmail && personEmail.email) {
             return {
               email: personEmail.email || undefined,
-              emailScore: personEmail.verification.score,
-              verified: true
-            }
+            emailScore: personEmail.score,
+            verified: true
+          }
           }
         }
 
@@ -184,8 +190,8 @@ export class HunterClient {
 
           return {
             email: bestEmail.email || undefined,
-            emailScore: bestEmail.verification.score,
-            verified: bestEmail.verification.result === 'deliverable'
+            emailScore: bestEmail.score,
+            verified: this.isDeliverable(bestEmail)
           }
         }
 

@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /*
- * Outfield design system.
+ * Hermes design system.
  *
  * One typeface (Inter, variable). Five color tokens. Five type sizes.
  * The four hermes-* legacy tokens are kept ONLY as aliases mapping to the
@@ -13,7 +13,7 @@
 
 @layer base {
   :root {
-    /* ── Outfield palette ─────────────────────────────────────────── */
+    /* ── Hermes palette ───────────────────────────────────────────── */
     --ink:      222 80% 11%;   /* #05122F  primary text + CTAs */
     --paper:    30  20% 99%;   /* #FDFCFB  page bg */
     --mist:     228 13% 92%;   /* #E8E9EE  hairline borders */
@@ -69,7 +69,7 @@
     --elevation-3: 0 18px 40px rgba(5, 18, 47, 0.08);
   }
 
-  /* Force light mode — Outfield is a light editorial product. */
+  /* Force light mode - Hermes is a light editorial product. */
   .dark {
     --background: var(--paper);
     --foreground: var(--ink);

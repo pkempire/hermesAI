@@ -439,7 +439,7 @@ export function ProspectSearchSection({
                   {uiType === 'interactive'
                     ? 'Edit the filters, keep the strongest fields, then run the search.'
                     : uiType === 'streaming'
-                    ? 'Outfield is searching and enriching live.'
+                    ? 'Hermes is searching and enriching live.'
                     : searchMessage || 'Ready to configure the search.'}
                 </CardDescription>
                 <div className="flex flex-wrap items-center gap-3 text-[13px] font-semibold text-gray-500 uppercase tracking-widest mt-2">
