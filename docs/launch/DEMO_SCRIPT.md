@@ -1,112 +1,190 @@
 # Hermes Demo Script
 
-## Positioning
+## Sharp Positioning
 
-Hermes is an AI GTM engineer for teams that want to launch outbound from a
-plain-English brief. It combines live prospecting, source-backed enrichment,
-decision-maker resolution, and Gmail-ready drafting into one review-first
-workflow.
+Hermes is an AI GTM engineer for going from "I should test this outbound idea"
+to a reviewed Gmail draft with live evidence attached.
 
-The honest claim: Hermes helps compress the research and first-draft work that
-usually happens across Google, LinkedIn, Apollo, Clay, and Instantly. It does
-not replace judgment. It gives a founder or sales operator a cleaner way to
-create, inspect, and iterate on campaigns.
+The wedge is not generic AI research. The wedge is:
+
+- weird prospecting briefs normal databases miss
+- live source discovery instead of stale list filters
+- structured enrichments like reviews, jobs, conference sponsors, LinkedIn
+  identity, and contact verification
+- reviewable prospect cards before any email exists
+- Gmail drafts and MCP workflows after the user trusts the data
+
+Do not say Hermes "replaces sales." Say Hermes helps a founder or sales
+operator get to the first high-quality send without juggling search, enrichment,
+spreadsheets, and email tabs.
+
+## Demo Prompt
+
+Use a local-services workflow because it is easy to understand, not AI-startup
+inside baseball, and it demonstrates a data source that generic databases miss.
+
+```text
+Find 25 commercial roofing companies in Chicago with recent Google reviews
+mentioning leaks, slow response, warranty issues, or poor follow-up.
+
+I sell review monitoring and customer response software for local service
+businesses. Find the owner or operations lead, show me the evidence, then draft
+one respectful email that references the review pattern without sounding creepy.
+```
+
+If Google review enrichment is not fully live yet, use this as the scripted
+product direction and run the closest working flow with Exa/Websets plus website
+and LinkedIn evidence. Do not fake sent emails.
 
 ## 90-Second Demo Flow
 
-### 0:00-0:10 — Landing
+### 0:00-0:08 - Cold Open
 
-Show the homepage.
+Show the app, not a marketing page.
 
 Voiceover:
-"I built Hermes because outbound kept turning into a pile of tabs: Google,
-LinkedIn, enrichment tools, spreadsheets, and email drafts. Hermes turns that
-into one natural-language GTM workflow."
+"Most outbound tools start with a database filter. Hermes starts with the messy
+sentence a real operator would say."
 
-### 0:10-0:25 — Prompt
+### 0:08-0:20 - Prompt
 
-Use the landing preview or workspace prompt:
+Paste the demo prompt.
+
+On screen:
+- chat prompt
+- Guided / Direct toggle
+- template marketplace underneath
+
+Voiceover:
+"This is the kind of list I would normally build with Google Maps, reviews,
+LinkedIn, enrichment tools, and Gmail open at the same time."
+
+### 0:20-0:35 - Plan
+
+Show Hermes converting the prompt into steps:
+
+1. Find roofing companies in the target geography
+2. Pull review evidence and classify pain themes
+3. Resolve owner or operations leader
+4. Verify contact channels when available
+5. Draft from evidence
+6. Create Gmail draft for review
+
+Voiceover:
+"Hermes plans the workflow, but the actual API calls are structured and
+deterministic. Reviews are reviews, contacts are contacts, drafts are drafts."
+
+### 0:35-0:58 - Prospect Cards
+
+Show streaming cards and expand one.
+
+Callouts:
+- company
+- review pain theme
+- source link
+- owner/ops contact
+- LinkedIn when available
+- email/phone confidence when available
+- Hermes take
+
+Voiceover:
+"The point is not to create a giant spreadsheet. The point is to know why this
+account is worth a human email before I write it."
+
+### 0:58-1:18 - Draft
+
+Open the email drafter.
+
+Voiceover:
+"Now Hermes drafts from the attached evidence. The email is specific, but it
+doesn't overclaim or pretend I know more than I do."
+
+Show draft angle:
 
 ```text
-Find 30 companies sponsoring supply chain or manufacturing conferences in the US
-this quarter. I sell field marketing content production. Reach the VP Marketing,
-events lead, or demand gen leader and draft a post-event campaign pitch.
+Subject: Quick idea after reading recent customer feedback
+
+Hi {{firstName}},
+
+I was looking at recent feedback for {{company}} and noticed a few customers
+mentioning response time after leak or warranty issues. That seems like the
+kind of operational detail that can quietly cost a local service business good
+reviews even when the actual work is strong.
+
+Hermes helps teams monitor review patterns, flag urgent customer issues, and
+draft fast responses before small misses turn into more public complaints.
+
+Worth a quick look this week?
 ```
 
-Voiceover:
-"Instead of starting with a database filter, I describe the market, buyer, and
-offer. Hermes converts that into criteria, enrichments, and a reviewable run."
+### 1:18-1:30 - Gmail + MCP
 
-### 0:25-0:45 — Builder / Direct Mode
-
-Show the guided builder first. Point at:
-- Search focus
-- Enrichment fields
-- Target count
-- Preview 1 result
-- Direct mode toggle in the chat input
+Create a Gmail draft. Then flash the MCP tools or docs.
 
 Voiceover:
-"For careful campaigns, I can preview one result first. For repeatable
-workflows or MCP agents, I can run direct mode and skip the builder."
+"For launch, Hermes creates Gmail drafts for review. The same workflow is also
+available through MCP, so a power user can run deterministic prospecting and
+drafting from Claude, Cursor, or another agent."
 
-### 0:45-1:05 — Prospect Viewer
-
-Show streaming cards and expanded details:
-- Company
-- Decision-maker
-- LinkedIn
-- Phone/email when available
-- Evidence and Hermes take
+## 30-Second Social Cut
 
 Voiceover:
-"The key is reviewability. Hermes shows why a company matched, what evidence it
-found, and which person it thinks I should contact before I spend time writing."
-
-### 1:05-1:20 — Draft Email
-
-Open the email drafter and create a Gmail draft.
-
-Voiceover:
-"Once the list looks right, Hermes drafts from the actual evidence. Nothing
-sends automatically. It creates Gmail drafts so I can inspect, edit, and send
-manually."
-
-### 1:20-1:30 — MCP / Automation
-
-Show `docs/MCP.md` or the MCP inspector call.
-
-Voiceover:
-"The same tools are exposed over MCP, so Claude, Cursor, or another agent can
-run deterministic prospecting and drafting workflows programmatically."
+"I kept avoiding outbound because the first email required an entire mini data
+operation. Hermes turns a messy GTM idea into a reviewed draft: find the right
+accounts, attach live evidence, resolve the buyer, and draft the email. This
+example finds local roofing companies with review pain and writes one email
+from the evidence. No spreadsheet gymnastics. No auto-spam. Just get to one
+good send."
 
 ## Launch Post
 
 ```text
-Launching Hermes: an AI GTM engineer for outbound.
+I built Hermes because I kept procrastinating on outbound.
 
-I kept procrastinating on outbound because the workflow was always scattered:
-Google searches, LinkedIn tabs, enrichment tools, spreadsheets, and manual
-email personalization.
+Not because writing one email is hard.
+Because getting to one good email means opening Google, LinkedIn, review sites,
+enrichment tools, a spreadsheet, and Gmail - then trying to remember why each
+lead was interesting.
 
-Hermes turns that into one review-first workflow:
+Hermes is my attempt at an AI GTM engineer:
 
-- Describe the market, buyer, and offer in plain English
-- Preview and refine the prospecting run
-- Enrich companies and decision-makers with source-backed evidence
-- Draft outreach from real context
-- Create Gmail drafts for review
-- Run deterministic workflows over MCP when you want automation
+- describe the market in plain English
+- find accounts from live sources, not only stale databases
+- attach evidence like reviews, jobs, conference sponsors, website claims, or
+  social signals
+- resolve the right buyer
+- draft outreach from the evidence
+- create a Gmail draft for review
+- expose the same workflow over MCP for power users
 
-It is not trying to be a magic "send 10,000 emails" button. The goal is better
-research, faster campaign setup, and more control for founders and lean sales
-teams.
+First workflow I am showing:
+"Find commercial roofing companies in Chicago with recent review pain, identify
+the owner or ops lead, and draft a respectful email for review monitoring
+software."
 
-Early access is open with a no-card trial.
+This is not a magic 10,000-email cannon. It is for founders and sales operators
+who want to get from idea to one good send much faster.
+
+Opening early access now. No-card trial.
 ```
 
-## Short Website Description
+## Differentiation Lines
 
-Hermes is an AI GTM engineer that turns a plain-English outbound brief into a
-reviewable prospecting workflow: live account discovery, enrichment,
-decision-maker resolution, evidence-backed copy, and Gmail drafts.
+Use these in posts, landing copy, and voiceover:
+
+- "From messy GTM idea to reviewed Gmail draft."
+- "Live evidence first. Draft second."
+- "A GTM engineer for the work before the send."
+- "Not another database filter."
+- "Reviewable cards, not black-box automation."
+- "Natural-language workflows, deterministic execution."
+- "For weird lists your CRM does not already have."
+
+Avoid:
+
+- "honest claim"
+- "AI SDR"
+- "fully autonomous outbound"
+- "replaces your sales team"
+- "guaranteed replies"
+- "23% response rate" unless backed by real Hermes data

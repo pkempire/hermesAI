@@ -22,16 +22,16 @@
 
 ## Shot List
 
-1. Landing hero and product prompt preview.
+1. App prompt with a concrete workflow, not a generic product tour.
 2. Sign-in gate preserving the landing prompt.
-3. Workspace prompt with Guided/Direct mode.
-4. Prospect builder with preview mode.
-5. Streaming prospect viewer.
-6. Expanded prospect card with LinkedIn, phone/email fields, evidence, and
-   Hermes take.
-7. Email drafter and "Create Gmail Draft".
-8. MCP deterministic prospect search example in `docs/MCP.md`.
-9. Pricing page showing free trial, Operator, and Premium roadmap.
+3. Template marketplace under the chat.
+4. Guided/Direct mode and review-first builder.
+5. Source plan: discovery, evidence, buyer resolution, contact, draft.
+6. Streaming prospect viewer.
+7. Expanded prospect card with source-backed evidence and confidence.
+8. Email drafter and "Create Gmail Draft".
+9. MCP deterministic workflow example in `docs/MCP.md`.
+10. Pricing page showing free trial, Operator, and Premium roadmap.
 
 ## Launch-Blocking Checks
 
@@ -49,7 +49,9 @@
 ## Messaging Guardrails
 
 - Say "review-first" and "Gmail drafts", not "fully autonomous sending".
-- Say "source-backed enrichment" instead of "perfect data".
-- Say "helps compress research and drafting" instead of "replaces sales".
+- Say "live evidence" and "source-backed prospect cards" instead of "perfect
+  data".
+- Say "from messy GTM idea to reviewed Gmail draft" instead of "replaces
+  sales".
 - Present LinkedIn sending, network search, and phone enrichment as roadmap or
   optional enrichment, not launch-critical promises.

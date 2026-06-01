@@ -84,7 +84,11 @@ Hermes is a Next.js App Router application with a chat-first operator workflow.
 
 ### Add next
 
-- Apollo enrichment
+- Capability registry for discovery, enrichment, drafting, and execution
+- Workflow run state with resumable artifacts and events
+- Google reviews / Google Maps enrichment capability
+- MCP workflow tools: start, status, results, cancel
+- Apollo or another contact provider as part of a verified contact waterfall
 - Sentry
 - Playwright smoke tests
 
@@ -92,7 +96,7 @@ Hermes is a Next.js App Router application with a chat-first operator workflow.
 
 - Instantly
 - AgentMail
-- MCP-dependent runtime behavior
+- fully autonomous send/enroll behavior
 
 ## Open Risks
 
@@ -100,3 +104,8 @@ Hermes is a Next.js App Router application with a chat-first operator workflow.
 - limited automated test coverage
 - enrichment still weaker than the final product vision
 - remaining legacy UI and workflow surfaces outside the main path
+
+## Next Architecture Doc
+
+The canonical next-step backend design lives in
+`docs/AGENT_ORCHESTRATION_ARCHITECTURE.md`.
