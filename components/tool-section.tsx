@@ -4,6 +4,7 @@ import { ProspectSearchSection } from './prospect-search-section'
 import RetrieveSection from './retrieve-section'
 import { SearchSection } from './search-section'
 import { ErrorBoundary } from './error-boundary'
+import { CheckCircle2, ExternalLink, Globe2 } from 'lucide-react'
 
 interface ToolSectionProps {
   tool: any
@@ -136,26 +137,42 @@ export function ToolSection({
           : typeof siteData?.referralHook === 'string'
           ? siteData.referralHook.trim()
           : ''
+      const businessModel = typeof siteData?.businessModel === 'string' ? siteData.businessModel.trim() : ''
+      const referralHook = typeof siteData?.referralHook === 'string' ? siteData.referralHook.trim() : ''
+      const searchPlanningNotes = typeof siteData?.searchPlanningNotes === 'string' ? siteData.searchPlanningNotes.trim() : ''
+      const proofPoints = Array.isArray(siteData?.proofPoints)
+        ? siteData.proofPoints.filter((point: any) => typeof point === 'string' && point.trim()).slice(0, 4)
+        : []
+      const references = Array.isArray(siteData?.references)
+        ? siteData.references.filter((ref: any) => ref?.url).slice(0, 3)
+        : []
+      const snapshotRows = [
+        ['Offer', offer],
+        ['Audience', audience],
+        ['Model', businessModel],
+        ['Why it matters', whyItMatters],
+        ['Referral angle', referralHook],
+        ['Search notes', searchPlanningNotes]
+      ].filter(([, value]) => value)
 
       return (
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm ring-1 ring-gray-100/50">
+        <div className="rounded-xl border border-[hsl(var(--mist))] bg-white p-4 shadow-[0_8px_24px_rgba(5,18,47,0.04)]">
           <div className="flex items-center gap-3 mb-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 shadow-sm border border-blue-100">
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9" />
-              </svg>
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[hsl(var(--mist))] bg-[hsl(var(--soft))] text-[hsl(var(--ink))]">
+              <Globe2 className="h-4 w-4" />
             </div>
             <div className="flex-1">
-              <div className="text-[15px] font-semibold text-gray-900 tracking-tight">
+              <div className="text-[14px] font-semibold text-[hsl(var(--ink))] tracking-tight">
                 {tool.state === 'call' ? 'Reading site' : 'Offer snapshot ready'}
               </div>
-              <div className="text-[13px] text-gray-500">
+              <div className="text-[12px] text-[hsl(var(--steel))]">
                 {tool.state === 'call' ? 'Analyzing homepage and key pages...' : 'Homepage signals extracted for search planning'}
               </div>
             </div>
             {tool.state === 'result' && (
-              <div className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 border border-emerald-100">
-                ✓ Done
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Done
               </div>
             )}
           </div>
@@ -163,43 +180,63 @@ export function ToolSection({
           {tool.state === 'result' && siteData && (
             <div className="space-y-3 mt-4">
               {siteData.companyName && (
-                <div className="flex items-center gap-2 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2">
-                  <span className="text-[13px] font-semibold text-gray-600">Company:</span>
-                  <span className="text-[13px] text-gray-900 font-medium">{siteData.companyName}</span>
+                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[hsl(var(--mist))] bg-[hsl(var(--soft))] px-3 py-2">
+                  <span className="text-[12px] font-semibold text-[hsl(var(--steel))]">Company</span>
+                  <span className="text-[13px] text-[hsl(var(--ink))] font-medium">{siteData.companyName}</span>
                 </div>
               )}
-              {(offer || audience || whyItMatters) && (
-                <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm ring-1 ring-gray-50">
-                  <div className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400">Offer Snapshot</div>
-                  <div className="space-y-4">
-                    {offer ? (
-                      <div>
-                        <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[hsl(var(--hermes-gold-dark))]">Offer</div>
-                        <p className="text-[14px] leading-relaxed text-gray-700">{offer}</p>
+              {snapshotRows.length > 0 && (
+                <div className="divide-y divide-[hsl(var(--mist))] rounded-lg border border-[hsl(var(--mist))] bg-white">
+                  {snapshotRows.map(([label, value]) => (
+                    <div key={label} className="grid gap-1 px-3 py-2.5 sm:grid-cols-[128px_1fr] sm:gap-4">
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[hsl(var(--steel))]">
+                        {label}
                       </div>
-                    ) : null}
-                    {audience ? (
-                      <div>
-                        <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[hsl(var(--hermes-gold-dark))]">Audience</div>
-                        <p className="text-[14px] leading-relaxed text-gray-700">{audience}</p>
-                      </div>
-                    ) : null}
-                    {whyItMatters ? (
-                      <div>
-                        <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[hsl(var(--hermes-gold-dark))]">Why Hermes cares</div>
-                        <p className="text-[14px] leading-relaxed text-gray-700">{whyItMatters}</p>
-                      </div>
-                    ) : null}
+                      <p className="text-[13px] leading-relaxed text-[hsl(var(--ink))]">
+                        {value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {proofPoints.length > 0 && (
+                <div className="rounded-lg border border-[hsl(var(--mist))] bg-[hsl(var(--soft))] px-3 py-2.5">
+                  <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[hsl(var(--steel))]">
+                    Proof points
                   </div>
+                  <ul className="space-y-1.5">
+                    {proofPoints.map((point: string) => (
+                      <li key={point} className="flex gap-2 text-[13px] leading-relaxed text-[hsl(var(--ink))]">
+                        <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[hsl(var(--steel))]" />
+                        <span>{point}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {references.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {references.map((ref: any) => (
+                    <a
+                      key={ref.url}
+                      href={ref.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-[hsl(var(--mist))] bg-white px-2.5 py-1 text-[11px] font-medium text-[hsl(var(--steel))] hover:text-[hsl(var(--ink))]"
+                    >
+                      <span className="truncate">{ref.title || ref.url}</span>
+                      <ExternalLink className="h-3 w-3 shrink-0" />
+                    </a>
+                  ))}
                 </div>
               )}
             </div>
           )}
 
           {tool.state === 'call' && (
-            <div className="mt-4 flex items-center justify-center gap-3 rounded-xl bg-gray-50 py-3 border border-gray-100">
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-              <span className="text-[13px] font-medium text-blue-600">Analyzing homepage content...</span>
+            <div className="mt-4 flex items-center justify-center gap-3 rounded-lg border border-[hsl(var(--mist))] bg-[hsl(var(--soft))] py-3">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-[hsl(var(--ink))] border-t-transparent" />
+              <span className="text-[13px] font-medium text-[hsl(var(--ink))]">Analyzing homepage content...</span>
             </div>
           )}
         </div>

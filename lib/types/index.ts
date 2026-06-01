@@ -5,6 +5,8 @@ export type SearchResults = {
   results: SearchResultItem[]
   number_of_results?: number
   query: string
+  provider?: string
+  search_depth?: string
 }
 
 // If enabled the include_images_description is true, the images will be an array of { url: string, description: string }

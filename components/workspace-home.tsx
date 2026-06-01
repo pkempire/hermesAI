@@ -2,17 +2,18 @@
 
 export function WorkspaceHome() {
   return (
-    <section className="mx-auto w-full max-w-3xl px-4 pb-2 pt-10 sm:px-6 md:pt-14">
-      <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.14em] text-[hsl(var(--steel))]">
-        New campaign
+    <section className="mx-auto w-full max-w-3xl px-4 pb-3 pt-6 text-center sm:px-6 md:pt-8">
+      <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[hsl(var(--steel))]">
+        GTM workflow
       </p>
-      <h1 className="text-[clamp(1.75rem,4vw,2.35rem)] font-semibold leading-[1.06] text-[hsl(var(--ink))]">
-        Who do you want to reach?
+      <h1 className="text-[clamp(1.85rem,4vw,2.65rem)] font-semibold leading-[1.04] tracking-[-0.02em] text-[hsl(var(--ink))]">
+        Describe the market.
+        <br className="hidden sm:block" /> Review the evidence.
       </h1>
-      <p className="mt-3 max-w-[620px] text-[14px] leading-[1.55] text-[hsl(var(--steel))]">
+      <p className="mx-auto mt-3 max-w-[610px] text-[14px] leading-[1.6] text-[hsl(var(--steel))]">
         Paste a messy GTM idea, choose a template below, or describe the
-        market, buyer, offer, and constraints in plain English. Hermes will
-        keep the run review-first before any email leaves your account.
+        market, buyer, offer, and constraints in plain English. Hermes will map
+        sources, enrich prospects, and keep drafts review-first.
       </p>
     </section>
   )

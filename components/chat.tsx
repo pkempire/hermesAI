@@ -492,7 +492,7 @@ export function Chat({
               reload={handleReloadFrom}
             />
           </div>
-          <div className={cn("relative", messages.length === 0 ? "min-h-full py-12" : "border-t border-border")}>
+          <div className={cn("relative", messages.length === 0 ? "min-h-full py-8 md:py-10" : "border-t border-border bg-[hsl(var(--paper))]")}>
             <ChatPanel
               input={input}
               handleInputChange={handleInputChange}

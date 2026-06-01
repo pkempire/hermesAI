@@ -33,10 +33,13 @@ export function SearchSection({
   const searchResults: TypeSearchResults =
     tool.state === 'result' ? tool.result : undefined
   const query = tool.args?.query as string | undefined
-  const includeDomains = tool.args?.includeDomains as string[] | undefined
+  const includeDomains = (tool.args?.include_domains || tool.args?.includeDomains) as string[] | undefined
   const includeDomainsString = includeDomains
     ? ` [${includeDomains.join(', ')}]`
     : ''
+  const provider = searchResults?.provider || 'unknown'
+  const depth = searchResults?.search_depth || tool.args?.search_depth || 'basic'
+  const resultCount = searchResults?.results?.length ?? undefined
 
   const { open } = useArtifact()
   const header = (
@@ -48,8 +51,8 @@ export function SearchSection({
     >
       <ToolArgsSection
         tool="search"
-        number={searchResults?.results?.length}
-      >{`${query}${includeDomainsString}`}</ToolArgsSection>
+        number={resultCount}
+      >{`${query || 'web search'}${includeDomainsString}`}</ToolArgsSection>
     </button>
   )
 
@@ -62,6 +65,19 @@ export function SearchSection({
       onOpenChange={onOpenChange}
       showIcon={false}
     >
+      {searchResults && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 text-[11px] text-[hsl(var(--steel))]">
+          <span className="rounded-full border border-[hsl(var(--mist))] bg-white px-2 py-1">
+            Provider: {provider}
+          </span>
+          <span className="rounded-full border border-[hsl(var(--mist))] bg-white px-2 py-1">
+            Depth: {depth}
+          </span>
+          <span className="rounded-full border border-[hsl(var(--mist))] bg-white px-2 py-1">
+            Results: {resultCount ?? 0}
+          </span>
+        </div>
+      )}
       {searchResults &&
         searchResults.images &&
         searchResults.images.length > 0 && (

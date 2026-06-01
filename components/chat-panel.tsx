@@ -219,7 +219,7 @@ export function ChatPanel({
 
   return (
     <div
-      className={cn('w-full group/form-container shrink-0 relative z-10', messages.length > 0 ? 'px-3 sm:px-4 pb-3 sm:pb-5' : 'px-3 sm:px-5 md:px-8 pb-6 sm:pb-10')}
+      className={cn('w-full group/form-container shrink-0 relative z-10', messages.length > 0 ? 'px-3 sm:px-4 pb-3 sm:pb-5' : 'px-3 sm:px-5 md:px-8 pb-5 sm:pb-8')}
     >
       {messages.length === 0 && (
         <WorkspaceHome />
@@ -228,7 +228,7 @@ export function ChatPanel({
       <form
         ref={formRef}
         onSubmit={async (e) => { e.preventDefault(); await submitCurrentMessage() }}
-        className={cn('max-w-4xl w-full mx-auto relative group/form', messages.length === 0 ? 'mb-6' : '')}
+        className={cn('max-w-4xl w-full mx-auto relative group/form', messages.length === 0 ? 'mb-5' : '')}
       >
         {showScrollToBottomButton && messages.length > 0 && (
           <Button
@@ -242,8 +242,8 @@ export function ChatPanel({
 
         <div className="relative mx-auto w-full max-w-3xl" id="hermes-input">
           <div className={cn(
-            'relative z-[5] flex w-full flex-col rounded-xl border border-[hsl(var(--mist))] bg-white transition-all duration-150',
-            'focus-within:border-[hsl(var(--ink))] focus-within:ring-2 focus-within:ring-[hsl(var(--ink)/0.08)]'
+            'relative z-[5] flex w-full flex-col rounded-xl border border-[hsl(var(--mist))] bg-white shadow-[0_14px_38px_rgba(5,18,47,0.06)] transition-all duration-150',
+            'focus-within:border-[hsl(var(--ink)/0.45)] focus-within:ring-2 focus-within:ring-[hsl(var(--ink)/0.06)]'
           )}>
             <Textarea
               ref={inputRef} name="input"
@@ -253,7 +253,7 @@ export function ChatPanel({
               placeholder="Find 25 Bay Area private college counselors who specialize in STEM/Ivy applications"
               spellCheck={false} value={input}
               disabled={isLoading || isToolInvocationInProgress()}
-              className="w-full resize-none border-0 bg-transparent px-5 py-4 text-[15px] leading-relaxed text-gray-900 placeholder:text-gray-400 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 min-h-[85px]"
+              className="w-full resize-none border-0 bg-transparent px-5 py-4 text-[15px] leading-relaxed text-gray-900 placeholder:text-gray-400 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 min-h-[78px]"
               onChange={e => {
                 if (handleInputChange) handleInputChange(e)
                 else if (setInput) setInput(e.target.value)

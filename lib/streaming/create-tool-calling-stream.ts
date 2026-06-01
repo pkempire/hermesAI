@@ -12,6 +12,44 @@ import {
 } from 'ai'
 import { BaseStreamConfig } from './types'
 
+function summarizeToolPartForModel(part: any): any | null {
+  const type = typeof part?.type === 'string' ? part.type : ''
+  const isTypedTool = type.startsWith('tool-') && !['tool-call', 'tool-result', 'tool-invocation'].includes(type)
+  if (!isTypedTool && !['tool-call', 'tool-result', 'tool-invocation'].includes(type)) {
+    return part
+  }
+
+  const toolName =
+    isTypedTool
+      ? type.replace(/^tool-/, '')
+      : part.toolName || part?.toolInvocation?.toolName
+  const output =
+    part.output ??
+    part.result ??
+    part?.toolInvocation?.result ??
+    part?.toolInvocation?.output
+
+  if (output === undefined || output === null) {
+    return null
+  }
+
+  let text: string
+  if (typeof output === 'string') {
+    text = output
+  } else {
+    try {
+      text = JSON.stringify(output)
+    } catch {
+      text = String(output)
+    }
+  }
+
+  return {
+    type: 'text',
+    text: `\n[${toolName || 'tool'} result]\n${text.slice(0, 6000)}\n`
+  }
+}
+
 // Function to check if a message contains ask_question tool invocation
 function containsAskQuestionTool(message: ModelMessage) {
   // For ModelMessage format, we check the content array
@@ -73,18 +111,12 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
         // Clean UI messages to remove problematic tool states before conversion
         const cleanUIMessages = (messages: any[]) => {
           return messages.map((message) => {
-            // Filter parts for both user and assistant messages to remove input-available states
             if (message.parts && Array.isArray(message.parts)) {
               return {
                 ...message,
-                parts: message.parts.filter((part: any) => {
-                  // Check if part is an object and has a state property
-                  if (typeof part === "object" && part !== null && "state" in part) {
-                    return part.state !== "input-available"
-                  }
-                  // If part doesn't have state property, keep it
-                  return true
-                }),
+                parts: message.parts
+                  .map((part: any) => summarizeToolPartForModel(part))
+                  .filter(Boolean)
               }
             }
             return message
@@ -92,7 +124,11 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
         }
 
         // Clean UI messages to remove problematic tool states before conversion
-        const cleanedMessages = cleanUIMessages(validMessages)
+        const cleanedMessages = cleanUIMessages(validMessages).filter((message: any) => {
+          if (Array.isArray(message?.parts)) return message.parts.length > 0
+          if (Array.isArray(message?.content)) return message.content.length > 0
+          return typeof message?.content === 'string' && message.content.trim().length > 0
+        })
         const modelMessages = await convertToModelMessages(cleanedMessages)
         
         logger.debug('Messages converted successfully:', modelMessages.length)

@@ -21,7 +21,7 @@ export function createSearchTool(fullModel: string) {
   const schema = getSearchSchemaForModel(fullModel) || z.object({})
   return tool({
     description:
-      'Search the web for information. Use sparingly: prefer prospect_search for finding entities, scrape_site for analysing a known site. ' +
+      'Generic web search for background facts and source checks. Do not use for lead lists or entity discovery; use prospect_search for that. Use sparingly: prefer prospect_search for finding entities, scrape_site for analysing a known site. ' +
       'Hard limits: max 10 search calls per server lifetime, max 2 of any specific query. ' +
       'Always cite specific results back to the user; do not call again with a slight rewording.',
     inputSchema: schema ?? ({} as any),
@@ -141,7 +141,11 @@ export function createSearchTool(fullModel: string) {
       if (process.env.NODE_ENV !== 'production') {
         console.log('completed search')
       }
-      return searchResult
+      return {
+        ...searchResult,
+        provider: searchAPI,
+        search_depth: effectiveSearchDepthForAPI
+      }
     }
   })
 }
