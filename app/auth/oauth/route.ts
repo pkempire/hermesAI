@@ -61,16 +61,6 @@ export async function GET(request: Request) {
                 }
               })
           }
-          try {
-            const { data: sessionData } = await supabase.auth.getSession()
-            const providerAccess = (sessionData as any)?.session?.provider_token
-            const providerRefresh = (sessionData as any)?.session?.provider_refresh_token
-            if (providerAccess) {
-              await supabase
-                .from('gmail_credentials')
-                .upsert({ user_id: userId, access_token: providerAccess, refresh_token: providerRefresh || null })
-            }
-          } catch {}
         }
       } catch {}
 
@@ -85,11 +75,9 @@ export async function GET(request: Request) {
       provider: 'google',
       options: {
         redirectTo: callbackUrl,
-        scopes:
-          'https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.send',
+        scopes: 'openid email profile',
         queryParams: {
-          access_type: 'offline',
-          prompt: 'select_account consent'
+          prompt: 'select_account'
         }
       }
     })

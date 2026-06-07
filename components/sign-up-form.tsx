@@ -31,8 +31,8 @@ export function SignUpForm({
         provider: 'google',
         options: {
           redirectTo: `${currentOrigin}/auth/oauth?next=/`,
-          scopes: 'https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.send openid email profile',
-          queryParams: { access_type: 'offline', prompt: 'select_account consent' }
+          scopes: 'openid email profile',
+          queryParams: { prompt: 'select_account' }
         }
       })
     } catch (err: unknown) {
@@ -74,7 +74,7 @@ export function SignUpForm({
         Continue with Google
       </Button>
       <p className="text-center text-[11.5px] text-[hsl(var(--steel))]">
-        Recommended - Hermes creates reviewed drafts from your Gmail.
+        Recommended - connect Gmail later when you are ready to create drafts.
       </p>
 
       {!showEmail ? (

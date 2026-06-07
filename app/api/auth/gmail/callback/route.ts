@@ -7,19 +7,21 @@ export async function GET(req: NextRequest) {
   const code = searchParams.get('code')
   const state = searchParams.get('state') // userId
   const error = searchParams.get('error')
+  const requestOrigin = new URL(req.url).origin
+  const appOrigin = process.env.NEXTAUTH_URL || requestOrigin
 
   if (error) {
-    return NextResponse.redirect(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}?gmail_error=${error}`)
+    return NextResponse.redirect(`${appOrigin}?gmail_error=${error}`)
   }
 
   if (!code || !state) {
-    return NextResponse.redirect(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}?gmail_error=missing_params`)
+    return NextResponse.redirect(`${appOrigin}?gmail_error=missing_params`)
   }
 
   try {
     const currentUserId = await getCurrentUserId()
     if (!currentUserId || currentUserId === 'anonymous' || currentUserId !== state) {
-      return NextResponse.redirect(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}?gmail_error=invalid_state`)
+      return NextResponse.redirect(`${appOrigin}?gmail_error=invalid_state`)
     }
 
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
@@ -30,7 +32,7 @@ export async function GET(req: NextRequest) {
         client_secret: process.env.GOOGLE_CLIENT_SECRET!,
         code,
         grant_type: 'authorization_code',
-        redirect_uri: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/auth/gmail/callback`
+        redirect_uri: `${appOrigin}/api/auth/gmail/callback`
       })
     })
 
@@ -46,9 +48,9 @@ export async function GET(req: NextRequest) {
       expires_at: tokens.expires_in ? Date.now() + (tokens.expires_in * 1000) : undefined
     })
 
-    return NextResponse.redirect(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}?gmail_connected=true`)
+    return NextResponse.redirect(`${appOrigin}?gmail_connected=true`)
   } catch (error) {
     console.error('Gmail OAuth error:', error)
-    return NextResponse.redirect(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}?gmail_error=token_exchange_failed`)
+    return NextResponse.redirect(`${appOrigin}?gmail_error=token_exchange_failed`)
   }
 }

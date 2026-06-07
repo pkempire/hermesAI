@@ -48,7 +48,7 @@ export function LoginForm({
         provider: 'google',
         options: {
           redirectTo: `${currentOrigin}/auth/oauth?next=/`,
-          scopes: 'https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.send',
+          scopes: 'openid email profile',
           queryParams: { prompt: 'select_account' }
         }
       })

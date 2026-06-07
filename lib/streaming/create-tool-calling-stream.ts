@@ -6,6 +6,7 @@ import {
   ModelMessage,
   createUIMessageStream,
   createUIMessageStreamResponse,
+  hasToolCall,
   stepCountIs,
   streamText,
   convertToModelMessages
@@ -144,7 +145,7 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
 
         const result = streamText({
           ...researcherConfig,
-          stopWhen: stepCountIs(5),
+          stopWhen: [hasToolCall('prospect_search'), stepCountIs(5)],
           // Tool-call and tool-result parts are automatically included in the stream
           // No need to manually intercept and re-write them
           // Campaign progress events are emitted via custom data-pipeline parts

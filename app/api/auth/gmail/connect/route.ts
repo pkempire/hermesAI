@@ -1,7 +1,7 @@
 import { getCurrentUserId } from '@/lib/auth/get-current-user'
 import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET(_req: NextRequest) {
+export async function GET(req: NextRequest) {
   const userId = await getCurrentUserId()
   if (!userId || userId === 'anonymous') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -12,7 +12,9 @@ export async function GET(_req: NextRequest) {
     return NextResponse.json({ error: 'Gmail integration not configured' }, { status: 500 })
   }
 
-  const redirectUri = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/auth/gmail/callback`
+  const requestOrigin = new URL(req.url).origin
+  const appOrigin = process.env.NEXTAUTH_URL || requestOrigin
+  const redirectUri = `${appOrigin}/api/auth/gmail/callback`
   const scopes = [
     'https://www.googleapis.com/auth/gmail.compose',
     'https://www.googleapis.com/auth/gmail.send',

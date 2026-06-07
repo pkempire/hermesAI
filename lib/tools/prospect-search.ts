@@ -4,6 +4,7 @@ import {
   createExaWebsetsClient,
   createProspectSearchCriteria
 } from '@/lib/clients/exa-websets'
+import { createClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/utils/logger'
 import { getModel, getToolCallModel, isToolCallSupported } from '@/lib/utils/registry'
 import { generateText, Output } from 'ai'
@@ -130,6 +131,69 @@ function assembleInteractiveEnrichments(params: {
       return true
     })
     .slice(0, 10)
+}
+
+async function persistImmediateSearchOwnership(params: {
+  websetId: string
+  query: string
+  targetPersona?: string
+  offer?: string
+  targetCount: number
+  criteria: Array<{ description: string; successRate?: number }>
+  enrichments: Array<{ description: string; format: string; instructions?: string }>
+}) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Unable to persist search ownership: user is not authenticated')
+  }
+
+  const { data: existing, error: existingError } = await supabase
+    .from('campaigns')
+    .select('id')
+    .eq('user_id', user.id)
+    .contains('settings', { exa_webset_id: params.websetId } as any)
+    .maybeSingle()
+
+  if (existingError) {
+    throw existingError
+  }
+
+  if (existing) return existing.id
+
+  const { data: campaign, error } = await supabase
+    .from('campaigns')
+    .insert({
+      user_id: user.id,
+      name: params.query.slice(0, 80) || 'Prospect Campaign',
+      status: 'active',
+      prospect_query: {
+        query: params.query,
+        targetPersona: params.targetPersona || null,
+        offer: params.offer || null
+      },
+      entity_type: 'company',
+      enrichments: params.enrichments,
+      filters: {},
+      target_count: params.targetCount,
+      settings: {
+        source: 'chat_tool_immediate',
+        exa_webset_id: params.websetId,
+        original_query: params.query,
+        target_persona: params.targetPersona || null,
+        offer: params.offer || null,
+        criteria: params.criteria
+      }
+    })
+    .select('id')
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  return campaign.id
 }
 
 export function createProspectSearchTool(model: string) {
@@ -267,6 +331,16 @@ export function createProspectSearchTool(model: string) {
         })
         
         logger.debug('Webset created:', webset.id)
+
+        await persistImmediateSearchOwnership({
+          websetId: webset.id,
+          query,
+          targetPersona,
+          offer,
+          targetCount,
+          criteria: websetSearchConfig.criteria || [],
+          enrichments: websetEnrichments
+        })
         
         // Return streaming configuration for real-time updates
         return {

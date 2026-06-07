@@ -10,18 +10,21 @@ const scrapeSchema = z.object({
 })
 
 const snapshotSchema = z.object({
-  companyName: z.string().optional(),
-  offer: z.string().optional(),
-  targetAudience: z.string().optional(),
-  businessModel: z.string().optional(),
-  whyItMatters: z.string().optional(),
-  referralHook: z.string().optional(),
-  searchPlanningNotes: z.string().optional(),
-  proofPoints: z.array(z.string()).max(4).optional(),
-  confidence: z.number().min(0).max(1).optional()
+  companyName: z.string().nullable(),
+  offer: z.string().nullable(),
+  targetAudience: z.string().nullable(),
+  businessModel: z.string().nullable(),
+  whyItMatters: z.string().nullable(),
+  referralHook: z.string().nullable(),
+  searchPlanningNotes: z.string().nullable(),
+  proofPoints: z.array(z.string()).max(4).nullable(),
+  confidence: z.number().min(0).max(1).nullable()
 })
 
-function cleanFallback(value: string | undefined, fallback = '') {
+function cleanFallback(
+  value: string | null | undefined,
+  fallback: string | null | undefined = ''
+) {
   const normalized = value?.replace(/\s+/g, ' ').trim()
   return normalized && normalized.length > 0 ? normalized : fallback
 }
@@ -30,7 +33,7 @@ function inferSnapshotFromSignals(params: {
   host: string
   summary: string
   refs: Array<{ title: string; url: string }>
-}): z.infer<typeof snapshotSchema> {
+}): Partial<z.infer<typeof snapshotSchema>> {
   const text = [
     params.host,
     params.summary,
@@ -172,7 +175,7 @@ export function createScrapeSiteTool() {
         }
       }
 
-      let snapshot: z.infer<typeof snapshotSchema> = {}
+      let snapshot: Partial<z.infer<typeof snapshotSchema>> = {}
       try {
         if (summary) {
           const extractionPromise = generateText({
@@ -185,7 +188,7 @@ Rules:
 - Identify the actual offer, buyer/user/audience, and referral/search implications.
 - If the site is education, coaching, admissions, student programs, consumer services, marketplace, nonprofit, or local services, name that plainly.
 - The user may use this snapshot to find partners or prospects, so include who would care and why.
-- If a field is unclear, leave it empty instead of inventing.
+- If a field is unclear, return null instead of inventing.
 - Keep every field concise and operational.`,
             prompt: JSON.stringify({
               url: fullUrl,
@@ -196,13 +199,13 @@ Rules:
 
           const extraction = await Promise.race([
             extractionPromise,
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Extraction timeout')), 25000))
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Extraction timeout')), 12000))
           ]) as any
           
           snapshot = extraction.output
         }
       } catch (e) {
-        logger.error('[scrape_site] LLM extraction failed:', e)
+        logger.warn('[scrape_site] LLM extraction unavailable, using extracted signals:', e)
       }
 
       const inferred = inferSnapshotFromSignals({ host, summary, refs })
@@ -216,7 +219,10 @@ Rules:
         whyItMatters: cleanFallback(snapshot.whyItMatters, inferred.whyItMatters),
         referralHook: cleanFallback(snapshot.referralHook, inferred.referralHook),
         searchPlanningNotes: cleanFallback(snapshot.searchPlanningNotes, inferred.searchPlanningNotes),
-        proofPoints: (snapshot.proofPoints?.length ? snapshot.proofPoints : inferred.proofPoints) || [],
+        proofPoints:
+          (Array.isArray(snapshot.proofPoints) && snapshot.proofPoints.length
+            ? snapshot.proofPoints
+            : inferred.proofPoints) || [],
         confidence:
           snapshot.confidence ??
           inferred.confidence ??
