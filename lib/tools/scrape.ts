@@ -21,6 +21,8 @@ const snapshotSchema = z.object({
   confidence: z.number().min(0).max(1).nullable()
 })
 
+type Snapshot = z.infer<typeof snapshotSchema>
+
 function cleanFallback(
   value: string | null | undefined,
   fallback: string | null | undefined = ''
@@ -29,11 +31,87 @@ function cleanFallback(
   return normalized && normalized.length > 0 ? normalized : fallback
 }
 
+const genericSnapshotPattern =
+  /^(consulting\/?b2b services|b2b services|consulting services|b2b companies|companies|general business interest|business interest|unknown|n\/a)$/i
+
+function isGenericSnapshotValue(value: string | null | undefined) {
+  const normalized = value?.replace(/\s+/g, ' ').trim()
+  return !normalized || genericSnapshotPattern.test(normalized)
+}
+
+function specificFallback(
+  value: string | null | undefined,
+  fallback: string | null | undefined = ''
+) {
+  const normalized = value?.replace(/\s+/g, ' ').trim()
+  if (normalized && !isGenericSnapshotValue(normalized)) {
+    return normalized
+  }
+  return cleanFallback(fallback)
+}
+
+function visibleTextFromHtml(html: string, host: string) {
+  const dom = new JSDOM(html)
+  const doc = dom.window.document
+  for (const node of Array.from(doc.querySelectorAll('script, style, noscript, svg'))) {
+    node.remove()
+  }
+
+  const title = cleanFallback(doc.querySelector('title')?.textContent, host)
+  const description = cleanFallback(
+    doc.querySelector('meta[name="description"]')?.getAttribute('content') ||
+      doc.querySelector('meta[property="og:description"]')?.getAttribute('content')
+  )
+  const headings = Array.from(doc.querySelectorAll('h1, h2, h3'))
+    .map(el => cleanFallback(el.textContent))
+    .filter(Boolean)
+    .slice(0, 30)
+  const paragraphs = Array.from(doc.querySelectorAll('p, li, a[href]'))
+    .map(el => cleanFallback(el.textContent))
+    .filter(text => text && text.length > 8)
+    .slice(0, 90)
+
+  return {
+    title,
+    text: [title, description, ...headings, ...paragraphs]
+      .filter(Boolean)
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .slice(0, 7000)
+  }
+}
+
+async function fetchDirectSiteContent(fullUrl: string, host: string) {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 7000)
+  try {
+    const resp = await fetch(fullUrl, {
+      redirect: 'follow',
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'HermesAI/1.0 (+https://gethermes.vercel.app)',
+        Accept: 'text/html,application/xhtml+xml'
+      }
+    })
+    if (!resp.ok) {
+      throw new Error(`Direct fetch returned ${resp.status}`)
+    }
+    const html = await resp.text()
+    const extracted = visibleTextFromHtml(html, host)
+    return {
+      ...extracted,
+      url: resp.url || fullUrl
+    }
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
 function inferSnapshotFromSignals(params: {
   host: string
   summary: string
   refs: Array<{ title: string; url: string }>
-}): Partial<z.infer<typeof snapshotSchema>> {
+}): Partial<Snapshot> {
   const text = [
     params.host,
     params.summary,
@@ -50,7 +128,7 @@ function inferSnapshotFromSignals(params: {
     .slice(0, 4)
 
   const educationSignals =
-    /(academy|student|students|teen|teens|high school|middle school|college|admissions|programs|coding|ai builder|research coaching|innovators)/i
+    /(academy|student|students|teen|teens|high school|middle school|college|admissions|applied ai|summer program|programs|coding|ai builder|research coaching|innovators)/i
 
   if (educationSignals.test(text)) {
     return {
@@ -76,14 +154,43 @@ function inferSnapshotFromSignals(params: {
   }
 }
 
+function buildScrapeResult(params: {
+  fullUrl: string
+  host: string
+  snapshot?: Partial<Snapshot>
+  inferred?: Partial<Snapshot>
+  refs: Array<{ title: string; url: string }>
+}) {
+  const { fullUrl, host, snapshot = {}, inferred = {}, refs } = params
+
+  return {
+    site: fullUrl,
+    companyName: specificFallback(snapshot.companyName, host.replace(/^www\./, '')),
+    offer: specificFallback(snapshot.offer, inferred.offer),
+    targetAudience: specificFallback(snapshot.targetAudience, inferred.targetAudience),
+    businessModel: specificFallback(snapshot.businessModel, inferred.businessModel),
+    whyItMatters: specificFallback(snapshot.whyItMatters, inferred.whyItMatters),
+    referralHook: specificFallback(snapshot.referralHook, inferred.referralHook),
+    searchPlanningNotes: specificFallback(snapshot.searchPlanningNotes, inferred.searchPlanningNotes),
+    proofPoints:
+      (Array.isArray(snapshot.proofPoints) && snapshot.proofPoints.length
+        ? snapshot.proofPoints
+        : inferred.proofPoints) || [],
+    confidence:
+      snapshot.confidence ??
+      inferred.confidence ??
+      (snapshot.offer || snapshot.targetAudience ? 0.7 : 0.25),
+    references: refs.slice(0, 8)
+  }
+}
+
 export function createScrapeSiteTool() {
   return tool({
     description: 'Analyze a known company website and return a compact GTM offer snapshot using Exa content with direct-fetch fallback. Use before prospect_search when the user asks Hermes to understand their offer or ICP.',
     inputSchema: scrapeSchema,
     execute: async ({ url }) => {
       const apiKey = process.env.EXA_API_KEY
-      if (!apiKey) throw new Error('EXA_API_KEY is not set')
-      const exa = new Exa(apiKey)
+      const exa = apiKey ? new Exa(apiKey) : null
 
       const fullUrl = url.startsWith('http') ? url : `https://${url}`
       const urlObj = new URL(fullUrl)
@@ -93,10 +200,38 @@ export function createScrapeSiteTool() {
       const refs: Array<{ title: string; url: string }> = []
 
       try {
-        logger.info(`[scrape_site] Direct extraction for: ${fullUrl}`)
+        const direct = await fetchDirectSiteContent(fullUrl, host)
+        if (direct.text) {
+          summary += `DIRECT HOMEPAGE CRAWL:\n${direct.text}\n\n`
+          refs.push({ title: direct.title || 'Homepage', url: direct.url })
+
+          const directInferred = inferSnapshotFromSignals({ host, summary, refs })
+          if (
+            (directInferred.confidence ?? 0) >= 0.55 &&
+            directInferred.offer &&
+            directInferred.targetAudience
+          ) {
+            return buildScrapeResult({
+              fullUrl,
+              host,
+              inferred: directInferred,
+              refs
+            })
+          }
+        }
+      } catch (fetchErr) {
+        logger.warn('[scrape_site] Direct homepage fetch failed:', fetchErr)
+      }
+
+      try {
+        if (!exa) {
+          throw new Error('EXA_API_KEY is not set')
+        }
+
+        logger.info(`[scrape_site] Exa extraction for: ${fullUrl}`)
         
-        // 1. Direct fetch of primary URL content (Homepage)
-        const directPromise = exa.getContents([fullUrl], { 
+        // 1. Exa content fetch of primary URL content.
+        const directPromise = exa.getContents([fullUrl], {
           text: true, 
           livecrawl: 'preferred',
           livecrawlTimeout: 10000
@@ -113,7 +248,7 @@ export function createScrapeSiteTool() {
 
         const [directRes, discoveryRes] = await Promise.race([
           Promise.all([directPromise, discoveryPromise]),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Exa operation timeout')), 45000))
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Exa operation timeout')), 16000))
         ]) as [any, any]
 
         const mainContent = directRes.results?.[0]
@@ -155,31 +290,17 @@ export function createScrapeSiteTool() {
 
         summary = summary.slice(0, 10000) // Cap for LLM
       } catch (e) {
-        logger.warn('[scrape_site] Exa direct extraction failed, falling back to basic fetch:', e)
-        // Basic fallback
-        try {
-          const resp = await fetch(fullUrl, { headers: { 'User-Agent': 'HermesAI/1.0' } })
-          const html = await resp.text()
-          const dom = new JSDOM(html)
-          const doc = dom.window.document
-          const title = doc.querySelector('title')?.textContent || host
-          const metas = Array.from(doc.querySelectorAll('meta[name="description"], meta[property="og:description"], h1, h2, p'))
-            .slice(0, 50)
-            .map(el => el.textContent?.trim() || '')
-            .filter(Boolean)
-          
-          summary = `DIRECT FETCH FALLBACK:\n${[title, ...metas].join('\n')}`.slice(0, 4000)
-          refs.push({ title, url: fullUrl })
-        } catch (fetchErr) {
-          logger.error('[scrape_site] All fetch methods failed:', fetchErr)
-        }
+        logger.warn('[scrape_site] Exa extraction skipped or failed; using direct crawl if available:', e)
       }
 
-      let snapshot: Partial<z.infer<typeof snapshotSchema>> = {}
+      let snapshot: Partial<Snapshot> = {}
       try {
         if (summary) {
+          const controller = new AbortController()
+          const timeout = setTimeout(() => controller.abort(), 12000)
           const extractionPromise = generateText({
             model: getToolCallModel(),
+            abortSignal: controller.signal,
             output: Output.object({ schema: snapshotSchema }),
             system: `You extract GTM planning facts from a website.
 
@@ -197,10 +318,7 @@ Rules:
             })
           })
 
-          const extraction = await Promise.race([
-            extractionPromise,
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Extraction timeout')), 12000))
-          ]) as any
+          const extraction = await extractionPromise.finally(() => clearTimeout(timeout)) as any
           
           snapshot = extraction.output
         }
@@ -210,25 +328,7 @@ Rules:
 
       const inferred = inferSnapshotFromSignals({ host, summary, refs })
 
-      return {
-        site: fullUrl,
-        companyName: cleanFallback(snapshot.companyName, host.replace(/^www\./, '')),
-        offer: cleanFallback(snapshot.offer, inferred.offer),
-        targetAudience: cleanFallback(snapshot.targetAudience, inferred.targetAudience),
-        businessModel: cleanFallback(snapshot.businessModel, inferred.businessModel),
-        whyItMatters: cleanFallback(snapshot.whyItMatters, inferred.whyItMatters),
-        referralHook: cleanFallback(snapshot.referralHook, inferred.referralHook),
-        searchPlanningNotes: cleanFallback(snapshot.searchPlanningNotes, inferred.searchPlanningNotes),
-        proofPoints:
-          (Array.isArray(snapshot.proofPoints) && snapshot.proofPoints.length
-            ? snapshot.proofPoints
-            : inferred.proofPoints) || [],
-        confidence:
-          snapshot.confidence ??
-          inferred.confidence ??
-          (snapshot.offer || snapshot.targetAudience ? 0.7 : 0.25),
-        references: refs.slice(0, 8)
-      }
+      return buildScrapeResult({ fullUrl, host, snapshot, inferred, refs })
     }
   })
 }

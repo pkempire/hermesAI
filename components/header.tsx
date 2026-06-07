@@ -19,9 +19,9 @@ interface SubscriptionSnapshot {
 const NAV_LINKS = [
   ['Product', '/#services'],
   ['Workflow', '/#process'],
-  ['Examples', '/#work'],
+  ['Preview', '/#product'],
   ['Pricing', '/#pricing'],
-  ['Launch', '/#contact']
+  ['Start', '/#contact']
 ] as const
 
 function HermesMark() {
@@ -85,7 +85,7 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
       <div className="mx-auto flex h-14 w-full max-w-[1160px] items-center justify-between px-5 md:px-8">
         <Link href="/" className="flex items-center gap-4 text-[#0b1732]" aria-label="Hermes GTM home">
           <HermesMark />
-          <span className="font-serif text-[27px] leading-none tracking-[-0.03em]">
+          <span className="text-[24px] font-semibold leading-none">
             Hermes <span className="text-[#8b8d96]">GTM</span>
           </span>
         </Link>

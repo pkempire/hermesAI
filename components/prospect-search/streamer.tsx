@@ -77,8 +77,8 @@ function ProspectSearchStreamerImpl({
       <div className="px-1">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-50 border border-gray-100 shadow-sm">
-              <Search className="h-5 w-5 animate-pulse text-[hsl(var(--ink))]" strokeWidth={1.75} />
+            <div className="flex h-10 w-10 items-center justify-center rounded-md border border-[#d8def7] bg-[#edf1ff]">
+              <Search className="h-5 w-5 animate-pulse text-[#315dff]" strokeWidth={1.75} />
             </div>
             <div>
               <p className="text-[15px] font-semibold text-gray-900 leading-none">
@@ -87,14 +87,14 @@ function ProspectSearchStreamerImpl({
               <p className="text-[13px] text-gray-500 mt-1.5 font-medium">{message}</p>
             </div>
           </div>
-          <div className="text-[11px] font-bold uppercase tracking-wider text-[hsl(var(--hermes-gold-dark))] bg-[hsl(var(--hermes-gold))]/5 px-2.5 py-1 rounded-md shadow-sm border border-[hsl(var(--hermes-gold))]/10">
+          <div className="rounded-md border border-[#d8def7] bg-[#edf1ff] px-2.5 py-1 text-[11px] font-bold uppercase text-[#315dff]">
             {prospects.length} extracted
           </div>
         </div>
 
-        <div className="h-2 w-full rounded-full bg-gray-100/80 overflow-hidden shadow-inner mt-5 mix-blend-multiply">
+        <div className="mt-5 h-2 w-full overflow-hidden rounded-full bg-[#e8e9ee]">
           <div
-            className="h-full rounded-full transition-all duration-700 ease-out bg-[hsl(var(--hermes-gold))] bg-gradient-to-r from-[hsl(var(--hermes-gold))]/80 to-[hsl(var(--hermes-gold-dark))]"
+            className="h-full rounded-full bg-[#315dff] transition-all duration-700 ease-out"
             style={{ width: `${percent}%` }}
           />
         </div>
