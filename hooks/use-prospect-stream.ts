@@ -30,6 +30,8 @@ export interface ProspectStreamState<TProspect extends ProspectStreamProspect = 
   found: number
   analyzed: number
   completion: number
+  companyEnriched: number
+  companyEnrichmentPending: number
   message: string
   error: string | null
 }
@@ -42,7 +44,14 @@ export interface UseProspectStreamOptions {
   /** Receive the full final prospects list once the stream completes. */
   onComplete?: (prospects: ProspectStreamProspect[]) => void
   /** Called once per progress tick with the upserted (changed) prospect ids. */
-  onProgress?: (state: { found: number; analyzed: number; completion: number; total: number }) => void
+  onProgress?: (state: {
+    found: number
+    analyzed: number
+    completion: number
+    total: number
+    companyEnriched: number
+    companyEnrichmentPending: number
+  }) => void
   /** Called on stream-level error. */
   onError?: (message: string) => void
 }
@@ -55,6 +64,8 @@ const initialState = (): ProspectStreamState => ({
   found: 0,
   analyzed: 0,
   completion: 0,
+  companyEnriched: 0,
+  companyEnrichmentPending: 0,
   message: '',
   error: null
 })
@@ -67,8 +78,8 @@ const initialState = (): ProspectStreamState => ({
  * Doc references verified:
  *  - MDN EventSource (close on unmount, no auto-reconnect when we close()):
  *    https://developer.mozilla.org/docs/Web/API/EventSource
- *  - AI SDK v5 streaming guidance (SSE for one-way agent updates):
- *    docs/RESEARCH_2026.md §2
+ *  - Exa Websets are async-first; items can be listed while the webset runs:
+ *    docs/BACKEND_API_AUDIT.md
  */
 export function useProspectStream<TProspect extends ProspectStreamProspect = ProspectStreamProspect>(
   options: UseProspectStreamOptions
@@ -135,6 +146,14 @@ export function useProspectStream<TProspect extends ProspectStreamProspect = Pro
       const found = typeof data.found === 'number' ? data.found : data.totalProspects || 0
       const analyzed = typeof data.analyzed === 'number' ? data.analyzed : 0
       const completion = typeof data.completion === 'number' ? data.completion : 0
+      const companyEnriched =
+        typeof data.companyEnriched === 'number'
+          ? data.companyEnriched
+          : incoming.filter((prospect: any) => prospect.companyEnrichmentStatus === 'completed').length
+      const companyEnrichmentPending =
+        typeof data.companyEnrichmentPending === 'number'
+          ? data.companyEnrichmentPending
+          : Math.max(0, found - companyEnriched)
 
       setState(prev => {
         // Upsert by id
@@ -156,6 +175,8 @@ export function useProspectStream<TProspect extends ProspectStreamProspect = Pro
           found: Math.max(found, prospects.length),
           analyzed,
           completion: event === 'complete' ? 100 : completion,
+          companyEnriched: Math.max(companyEnriched, prev.companyEnriched),
+          companyEnrichmentPending,
           message: data.message || prev.message,
           error: null
         }
@@ -165,7 +186,9 @@ export function useProspectStream<TProspect extends ProspectStreamProspect = Pro
         found,
         analyzed,
         completion,
-        total: incoming.length
+        total: incoming.length,
+        companyEnriched,
+        companyEnrichmentPending
       })
 
       if (event === 'complete') {

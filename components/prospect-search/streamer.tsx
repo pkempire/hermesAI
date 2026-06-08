@@ -13,6 +13,10 @@ export interface ProspectSearchStreamerProps {
   message: string
   prospects: Prospect[]
   targetCount: number
+  analyzed?: number
+  completion?: number
+  companyEnriched?: number
+  companyEnrichmentPending?: number
   searchContext?: ProspectSearchContext
   onProspectsUpdate: (updater: (prev: Prospect[]) => Prospect[]) => void
   liveStatusLabel: string
@@ -24,6 +28,10 @@ function ProspectSearchStreamerImpl({
   message,
   prospects,
   targetCount,
+  analyzed = 0,
+  completion = 0,
+  companyEnriched,
+  companyEnrichmentPending,
   searchContext,
   onProspectsUpdate,
   liveStatusLabel
@@ -32,28 +40,51 @@ function ProspectSearchStreamerImpl({
     return Math.min((prospects.length / Math.max(1, targetCount)) * 100, 100)
   }, [prospects.length, targetCount])
 
+  const displayPercent = Math.max(percent, completion)
+
+  const enrichedCount = useMemo(() => {
+    if (typeof companyEnriched === 'number') return companyEnriched
+    return prospects.filter((prospect: any) => {
+      const status = prospect.companyEnrichmentStatus
+      return status === 'completed' || (!status && prospect.reviewReady)
+    }).length
+  }, [companyEnriched, prospects])
+
+  const pendingEnrichment = useMemo(() => {
+    if (typeof companyEnrichmentPending === 'number') return companyEnrichmentPending
+    return Math.max(0, prospects.length - enrichedCount)
+  }, [companyEnrichmentPending, enrichedCount, prospects.length])
+
   const stages = useMemo(
     () => [
       {
         label: 'Discover',
-        value: prospects.length > 0 ? `${prospects.length} live` : 'searching',
+        value: prospects.length > 0
+          ? `${prospects.length} found`
+          : analyzed > 0
+            ? `${analyzed} analyzed`
+            : 'searching',
         icon: Search,
         active: searchStatus === 'running'
       },
       {
         label: 'Enrich',
-        value: prospects.length > 0 ? 'queued' : 'waiting',
+        value: prospects.length > 0
+          ? `${enrichedCount}/${prospects.length} company`
+          : 'waiting',
         icon: Database,
-        active: prospects.length > 0
+        active: prospects.length > 0 && pendingEnrichment > 0
       },
       {
         label: 'Review',
-        value: `${Math.round(percent)}%`,
+        value: searchStatus === 'completed'
+          ? 'ready'
+          : `${Math.round(displayPercent)}%`,
         icon: BadgeCheck,
         active: searchStatus === 'completed'
       }
     ],
-    [percent, prospects.length, searchStatus]
+    [analyzed, displayPercent, enrichedCount, pendingEnrichment, prospects.length, searchStatus]
   )
 
   const handleFindContacts = async (ids: string[]) => {
@@ -124,7 +155,7 @@ function ProspectSearchStreamerImpl({
         <div className="mt-4 h-2 w-full overflow-hidden rounded-md bg-[#e8ebf2]">
           <div
             className="h-full rounded-md bg-[#315dff] transition-all duration-700 ease-out"
-            style={{ width: `${percent}%` }}
+            style={{ width: `${displayPercent}%` }}
           />
         </div>
       </div>

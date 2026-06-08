@@ -168,10 +168,15 @@ export function ProspectSearchSection({
   const stream = useProspectStream<Prospect>({
     websetId: streamingWebsetId,
     target: streamingTarget,
-    onProgress: ({ found }) => {
+    onProgress: ({ found, companyEnriched }) => {
       const targetTotal = streamingTarget || streamingCriteria?.targetCount || 25
       const percent = Math.max(0, Math.min(100, Math.round((found / Math.max(1, targetTotal)) * 100)))
-      emitPipeline({ stepNumber: 1, totalSteps: 5, percent, label: 'Finding companies' })
+      emitPipeline({
+        stepNumber: 1,
+        totalSteps: 5,
+        percent,
+        label: companyEnriched > 0 ? `Finding companies · ${companyEnriched} enriched` : 'Finding companies'
+      })
     },
     onComplete: finalProspects => {
       const list = finalProspects.length > 0 ? finalProspects : stream.prospects
@@ -513,6 +518,10 @@ export function ProspectSearchSection({
                   message={searchMessage}
                   prospects={prospects}
                   targetCount={displayTargetCount}
+                  analyzed={stream.analyzed}
+                  completion={stream.completion}
+                  companyEnriched={stream.companyEnriched}
+                  companyEnrichmentPending={stream.companyEnrichmentPending}
                   searchContext={searchContext}
                   onProspectsUpdate={updater => setProspects(prev => updater(prev))}
                   liveStatusLabel={liveStatusLabel}

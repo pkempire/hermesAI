@@ -1,7 +1,7 @@
 import { canAccessWebset } from '@/lib/auth/authorize-webset-access'
 import { requireAuthUser } from '@/lib/auth/require-auth-user'
 import { convertToProspect, createEnrichmentDescriptionMap } from '@/lib/clients/exa-websets'
-import { enrichProspectWithOrangeslice } from '@/lib/clients/orangeslice'
+import { enrichCompanyData } from '@/lib/clients/orangeslice'
 import { createClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/utils/logger'
 import Exa from 'exa-js'
@@ -81,6 +81,24 @@ export async function GET(req: NextRequest) {
       const enrichmentKeys = new Map<string, string>()
       let allProspects: any[] = []
 
+      const asQueuedProspect = (prospect: any) => ({
+        ...prospect,
+        reviewReady: false,
+        companyEnrichmentStatus: 'queued'
+      })
+
+      const getCompanyEnrichmentCounts = (prospects: any[]) => {
+        const companyEnriched = prospects.filter(
+          (prospect: any) => prospect.companyEnrichmentStatus === 'completed'
+        ).length
+        const companyEnrichmentPending = prospects.filter((prospect: any) => {
+          const status = prospect.companyEnrichmentStatus
+          return status !== 'completed' && status !== 'failed'
+        }).length
+
+        return { companyEnriched, companyEnrichmentPending }
+      }
+
       const send = (data: Record<string, any>) => {
         if (isClosed) return
         try {
@@ -132,16 +150,11 @@ export async function GET(req: NextRequest) {
             const rawItems = itemsResponse.data || []
             const latestProspects = rawItems
               .map((item: any) => ({
-                prospect: convertToProspect(item, enrichmentDescriptions),
-                rawSignature: JSON.stringify({
-                  updatedAt: item.updatedAt,
-                  enrichments: item.enrichments,
-                  properties: item.properties
-                })
+                prospect: convertToProspect(item, enrichmentDescriptions)
               }))
               .filter(({ prospect }: any) => prospect.fullName || prospect.company || prospect.website)
 
-            for (const { prospect, rawSignature } of latestProspects) {
+            for (const { prospect } of latestProspects) {
               const enrichmentKey = JSON.stringify({
                 company: prospect.company,
                 website: prospect.website,
@@ -154,19 +167,28 @@ export async function GET(req: NextRequest) {
               const hasChanged = enrichmentKeys.get(prospect.id) !== enrichmentKey
               if (hasChanged) {
                 enrichmentKeys.set(prospect.id, enrichmentKey)
-                enrichedProspects.delete(prospect.id)
+                enrichedProspects.set(prospect.id, asQueuedProspect(prospect))
               }
 
               if (!enrichmentPromises.has(prospect.id)) {
                 enrichmentPromises.set(
                   prospect.id,
-                  enrichProspectWithOrangeslice(prospect, storedSearchContext)
+                  enrichCompanyData(prospect, storedSearchContext)
                     .then(enriched => {
-                      enrichedProspects.set(prospect.id, enriched)
+                      enrichedProspects.set(prospect.id, {
+                        ...enriched,
+                        reviewReady: true,
+                        companyEnrichmentStatus: 'completed'
+                      })
                     })
                     .catch(error => {
-                      logger.warn('Prospect enrichment failed:', error)
-                      enrichedProspects.set(prospect.id, { ...prospect, reviewReady: true })
+                      logger.warn('Company enrichment failed:', error)
+                      enrichedProspects.set(prospect.id, {
+                        ...prospect,
+                        reviewReady: true,
+                        companyEnrichmentStatus: 'failed',
+                        companyEnrichmentError: error instanceof Error ? error.message : 'Failed'
+                      })
                     })
                     .finally(() => {
                       enrichmentPromises.delete(prospect.id)
@@ -175,11 +197,11 @@ export async function GET(req: NextRequest) {
               }
             }
 
-            const reviewReadyProspects = latestProspects
-              .map(({ prospect }) => enrichedProspects.get(prospect.id) || null)
-              .filter((prospect: any): prospect is any => Boolean(prospect) && prospect.reviewReady !== false && Boolean(prospect.id))
+            const streamableProspects = latestProspects
+              .map(({ prospect }) => enrichedProspects.get(prospect.id) || asQueuedProspect(prospect))
+              .filter((prospect: any): prospect is any => Boolean(prospect) && Boolean(prospect.id))
 
-            changedProspects = reviewReadyProspects
+            changedProspects = streamableProspects
               .filter((prospect: any) => {
                 const signature = JSON.stringify(prospect)
                 if (seenProspectSignatures.get(prospect.id) === signature) return false
@@ -187,11 +209,13 @@ export async function GET(req: NextRequest) {
                 return true
               })
 
-            allProspects = reviewReadyProspects
+            allProspects = streamableProspects
             prospects = allProspects
           } catch (itemsError) {
             logger.error('Error listing stream items:', itemsError)
           }
+
+          const { companyEnriched, companyEnrichmentPending } = getCompanyEnrichmentCounts(prospects)
 
           send({
             type: 'prospect_search_progress',
@@ -202,6 +226,8 @@ export async function GET(req: NextRequest) {
             found: Math.max(found, prospects.length),
             completion,
             totalProspects: prospects.length,
+            companyEnriched,
+            companyEnrichmentPending,
             prospects: changedProspects,
             message: `Analyzed ${analyzed} records and found ${Math.max(found, prospects.length)} matches.`
           })
@@ -217,13 +243,13 @@ export async function GET(req: NextRequest) {
             if (enrichmentPromises.size > 0) {
               await Promise.race([
                 Promise.allSettled(Array.from(enrichmentPromises.values())),
-                // Give Orangeslice up to 45 seconds to finish resolving instead of 12
-                new Promise(resolve => setTimeout(resolve, 45000))
+                // Discovery should never feel blocked by auxiliary company enrichment.
+                new Promise(resolve => setTimeout(resolve, 12000))
               ])
-              prospects = Array.from(enrichedProspects.values()).filter(
-                (prospect: any): prospect is any => Boolean(prospect) && prospect.reviewReady !== false && Boolean(prospect.id)
-              )
+              prospects = allProspects.map(prospect => enrichedProspects.get(prospect.id) || prospect)
             }
+
+            const { companyEnriched, companyEnrichmentPending } = getCompanyEnrichmentCounts(prospects)
 
             send({
               type: 'prospect_search_complete',
@@ -234,6 +260,8 @@ export async function GET(req: NextRequest) {
               found: prospects.length,
               completion: 100,
               totalProspects: prospects.length,
+              companyEnriched,
+              companyEnrichmentPending,
               prospects,
               message: `Search completed with ${prospects.length} prospects.`
             })
@@ -248,6 +276,8 @@ export async function GET(req: NextRequest) {
               logger.warn('Failed to cancel webset after target reached:', cancelError)
             }
 
+            const { companyEnriched, companyEnrichmentPending } = getCompanyEnrichmentCounts(prospects)
+
             send({
               type: 'prospect_search_complete',
               event: 'complete',
@@ -257,6 +287,8 @@ export async function GET(req: NextRequest) {
               found: prospects.length,
               completion: 100,
               totalProspects: prospects.length,
+              companyEnriched,
+              companyEnrichmentPending,
               prospects,
               reason: 'target_reached',
               message: 'Target reached. Search stopped.'

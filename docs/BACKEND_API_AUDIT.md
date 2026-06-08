@@ -1,6 +1,6 @@
 # Hermes Backend API Audit
 
-Last updated: 2026-06-07
+Last updated: 2026-06-08
 
 ## Stack Answer
 
@@ -16,6 +16,17 @@ The core agent stack is:
 - `app/api/prospect-search/stream/route.ts`: SSE polling loop for Exa Websets, converts items to prospects, currently enriches with Orangeslice while streaming.
 - `app/api/enrich/people/route.ts`: on-demand selected-company contact enrichment.
 - `app/api/mcp/route.ts` and `bin/hermes-mcp`: Streamable HTTP and stdio MCP surfaces for external agents.
+
+Current agent-infra status:
+
+- The app is on AI SDK v6-era packages and uses `streamText` tool calling.
+- It is not yet using `ToolLoopAgent` or `createAgentUIStreamResponse`.
+- It is not yet using Vercel Workflow/durable execution for long-running runs.
+- That is acceptable for a launch demo if the app is honest about reviewable
+  discovery/drafting. It is not enough for high-volume autonomous GTM execution.
+- The next architecture step is intent parser -> deterministic workflow executor
+  -> event log/UI stream -> agentic recovery, not exposing every vendor connector
+  directly to the chat model.
 
 ## Customer-Facing Routes
 
@@ -44,10 +55,33 @@ Deprecated route handlers:
 2. The model calls `scrape_site` if the offer needs context, then `prospect_search`.
 3. `prospect_search` returns either an in-app builder config or a deterministic Webset start payload.
 4. `POST /api/prospect-search/execute` creates or reuses an Exa Webset and persists a Supabase campaign row for ownership.
-5. `GET /api/prospect-search/stream` polls Exa every 1.5 seconds, lists Webset items, converts them to `Prospect`, starts Orangeslice enrichment promises, and emits SSE progress/complete events.
+5. `GET /api/prospect-search/stream` polls Exa every 1.5 seconds, lists Webset items, converts them to `Prospect`, streams raw companies immediately, starts lightweight Orangeslice company enrichment, and emits SSE progress/complete events.
 6. The prospect grid renders companies first. The user selects rows and clicks Find Contacts.
-7. `POST /api/enrich/people` runs the deeper person/contact waterfall in batches of 6.
+7. `POST /api/enrich/people` runs the deeper person/contact/Hermes-take waterfall in batches of 6.
 8. The grid merges returned prospects and sends selected prospects into Draft Studio.
+
+## Exa Websets Notes
+
+The current Exa docs show the simple happy path:
+
+- `exa.websets.create({ search, enrichments })`
+- `exa.websets.waitUntilIdle(webset.id, { timeout, pollInterval, onPoll })`
+- `exa.websets.items.list(webset.id, { limit })`
+
+Hermes wraps this because the product needs a live UI, auth, campaign ownership, and partial results. That wrapper should stay thin.
+
+What is now aligned:
+
+- Search creation uses the official SDK shape.
+- Item listing uses `exa.websets.items.list`.
+- Discovery no longer blocks on full person/contact enrichment.
+- The stream now emits raw Exa items quickly, then updates rows as company enrichment completes.
+
+What should change before high-volume production:
+
+- Use Exa events/webhooks (`webset.search.updated`, `webset.item.created`, `webset.item.enriched`, `webset.idle`) to update durable workflow state instead of relying only on a long-lived polling request.
+- Store Exa `dashboardUrl`, progress, external ids, and event ids on the campaign/workflow record.
+- Keep polling only as the browser-facing fallback when webhooks are not configured.
 
 ## Contact Enrichment Fix
 
@@ -73,6 +107,11 @@ Keep the TypeScript/Vercel backend for now. The slow path is not language runtim
 - Optional Apollo/Hunter fallback calls.
 - Per-prospect Hermes take generation.
 
+The 2026-06-08 patch separated these phases:
+
+- Discovery stream: Exa item discovery + lightweight company enrichment.
+- Find Contacts: Orangeslice person lookup + contact lookup + Apollo/Hunter fallback + Hermes take.
+
 Recommended launch architecture:
 
 - Keep `POST /api/chat` streaming and short.
@@ -84,7 +123,10 @@ Recommended launch architecture:
 
 ## Near-Term Launch Blockers
 
-- Configure Supabase OAuth redirects for production and localhost.
+- Configure Supabase OAuth redirects for production and local development.
+  Production should point at `https://gethermes.vercel.app/**`. Localhost should
+  only exist in Supabase dashboard/dev config for local testing, not hard-coded
+  into production code.
 - Confirm production env has `EXA_API_KEY`, `ORANGESLICE_API_KEY`, Supabase vars, OpenAI/Anthropic vars, and Stripe/Gmail vars.
 - Test one full campaign on production after deploy: scrape site, configure search, stream prospects, find contacts, save to Draft Studio, draft email.
 - Consider disabling Apollo/Hunter fallbacks unless keys are present and quotas are understood.
