@@ -222,7 +222,7 @@ export function ChatPanel({
       className={cn('w-full group/form-container shrink-0 relative z-10', messages.length > 0 ? 'px-3 sm:px-4 pb-3 sm:pb-5' : 'px-3 sm:px-5 md:px-8 pb-5 sm:pb-8')}
     >
       {messages.length === 0 && (
-        <WorkspaceHome />
+        <WorkspaceHome onSelectPrompt={loadTemplatePrompt} />
       )}
 
       <form
@@ -242,8 +242,8 @@ export function ChatPanel({
 
         <div className="relative mx-auto w-full max-w-3xl" id="hermes-input">
           <div className={cn(
-            'relative z-[5] flex w-full flex-col rounded-xl border border-[hsl(var(--mist))] bg-white shadow-[0_14px_38px_rgba(5,18,47,0.06)] transition-all duration-150',
-            'focus-within:border-[hsl(var(--ink)/0.45)] focus-within:ring-2 focus-within:ring-[hsl(var(--ink)/0.06)]'
+            'relative z-[5] flex w-full flex-col rounded-lg border border-[#dfe4ee] bg-white/95 shadow-[0_18px_52px_rgba(5,18,47,0.08)] transition-all duration-150',
+            'focus-within:border-[#bfc9ff] focus-within:ring-2 focus-within:ring-[#315dff]/10'
           )}>
             <Textarea
               ref={inputRef} name="input"
@@ -253,7 +253,7 @@ export function ChatPanel({
               placeholder="Find 25 Bay Area private college counselors who specialize in STEM/Ivy applications"
               spellCheck={false} value={input}
               disabled={isLoading || isToolInvocationInProgress()}
-              className="w-full resize-none border-0 bg-transparent px-5 py-4 text-[15px] leading-relaxed text-gray-900 placeholder:text-gray-400 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 min-h-[78px]"
+              className="min-h-[86px] w-full resize-none border-0 bg-transparent px-5 py-4 text-[15px] leading-relaxed text-[#071329] placeholder:text-[#9aa2b4] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
               onChange={e => {
                 if (handleInputChange) handleInputChange(e)
                 else if (setInput) setInput(e.target.value)
@@ -273,32 +273,32 @@ export function ChatPanel({
             <div className="flex items-center justify-between px-3 pb-3 pt-1">
               <div className="flex flex-wrap items-center gap-1.5">
                 <Button type="button" size="icon" variant="ghost"
-                  className="h-8 w-8 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                  className="h-8 w-8 rounded-md text-[#9aa2b4] hover:bg-[#f5f7ff] hover:text-[#315dff]"
                   onClick={() => fileInputRef.current?.click()} title="Attach file">
                   <Paperclip size={16} />
                 </Button>
-                <div className="mx-1 h-4 w-[1px] bg-gray-200" />
+                <div className="mx-1 h-4 w-[1px] bg-[#dfe4ee]" />
                 <Button type="button" size="icon"
                   variant={isListening ? 'default' : 'ghost'}
-                  className={cn("h-8 w-8 rounded-full hover:bg-gray-100", isListening ? "bg-[hsl(var(--soft))] text-[hsl(var(--ink))] hover:opacity-80" : "text-gray-400 hover:text-gray-700")}
+                  className={cn("h-8 w-8 rounded-md hover:bg-[#f5f7ff]", isListening ? "bg-[#edf1ff] text-[#315dff] hover:opacity-90" : "text-[#9aa2b4] hover:text-[#315dff]")}
                   onClick={startVoice} title="Voice input">
                   <Mic size={16} />
                 </Button>
-                <div className="ml-1 flex h-8 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 p-0.5">
+                <div className="ml-1 flex h-8 overflow-hidden rounded-md border border-[#dfe4ee] bg-[#f8faff] p-0.5">
                   {(['guided', 'deterministic'] as const).map(mode => (
                     <button
                       key={mode}
                       type="button"
                       onClick={() => setRunMode(mode)}
                       className={cn(
-                        'px-2.5 text-[11px] font-medium capitalize transition-colors',
+                        'px-3 text-[11px] font-semibold transition-colors',
                         runMode === mode
-                          ? 'bg-white text-[hsl(var(--ink))] shadow-sm'
-                          : 'text-gray-400 hover:text-gray-700'
+                          ? 'bg-white text-[#071329] shadow-sm'
+                          : 'text-[#8a92a6] hover:text-[#071329]'
                       )}
                       title={mode === 'guided' ? 'Use the reviewable search builder' : 'Skip the builder when the brief is clear'}
                     >
-                      {mode === 'deterministic' ? 'Direct' : 'Guided'}
+                      {mode === 'deterministic' ? 'Direct' : 'Review'}
                     </button>
                   ))}
                 </div>
@@ -306,12 +306,12 @@ export function ChatPanel({
 
               <Button type="button" size="icon"
                 className={cn(
-                  'h-8 w-8 rounded-lg transition-all duration-150',
+                  'h-8 w-8 rounded-md transition-colors duration-150',
                   isLoading
-                    ? 'bg-[hsl(var(--ink))] text-[hsl(var(--paper))]'
-                    : 'bg-[hsl(var(--soft))] text-[hsl(var(--steel))] hover:bg-[hsl(var(--mist))] hover:text-[hsl(var(--ink))]',
+                    ? 'bg-[#071329] text-white'
+                    : 'bg-[#f5f7ff] text-[#9aa2b4] hover:bg-[#edf1ff] hover:text-[#315dff]',
                   input?.trim() && !isLoading
-                    ? 'bg-[hsl(var(--ink))] text-[hsl(var(--paper))] hover:bg-[hsl(var(--ink)/0.92)]'
+                    ? 'bg-[#071329] text-white hover:bg-[#102448]'
                     : ''
                 )}
                 disabled={((!input || input.length === 0) && !isLoading) || isToolInvocationInProgress()}

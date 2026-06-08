@@ -16,12 +16,17 @@ interface SubscriptionSnapshot {
   trial_days_remaining: number | null
 }
 
-const NAV_LINKS = [
+const LANDING_NAV_LINKS = [
   ['Product', '/#services'],
   ['Workflow', '/#process'],
   ['Preview', '/#product'],
   ['Pricing', '/#pricing'],
   ['Start', '/#contact']
+] as const
+
+const APP_NAV_LINKS = [
+  ['Campaigns', '/campaigns'],
+  ['Draft Studio', '/studio']
 ] as const
 
 function HermesMark() {
@@ -72,6 +77,7 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
   }, [user])
 
   const trialDays = snapshot.trial_days_remaining
+  const navLinks = user ? APP_NAV_LINKS : LANDING_NAV_LINKS
 
   return (
     <header
@@ -82,7 +88,7 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
           : 'bg-[#faf9f8]'
       )}
     >
-      <div className="mx-auto flex h-14 w-full max-w-[1160px] items-center justify-between px-5 md:px-8">
+      <div className="mx-auto flex h-14 w-full max-w-[1180px] items-center justify-between px-5 md:px-8">
         <Link href="/" className="flex items-center gap-4 text-[#0b1732]" aria-label="Hermes GTM home">
           <HermesMark />
           <span className="text-[24px] font-semibold leading-none">
@@ -90,9 +96,16 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-11 text-[13px] font-medium text-[#252d42] md:flex">
-          {NAV_LINKS.map(([label, href]) => (
-            <Link key={label} href={href} className="transition-colors hover:text-[#315dff]">
+        <nav className="hidden items-center gap-9 text-[13px] font-medium text-[#252d42] md:flex">
+          {navLinks.map(([label, href]) => (
+            <Link
+              key={label}
+              href={href}
+              className={cn(
+                'transition-colors hover:text-[#315dff]',
+                user && 'rounded-md border border-[#dfe2eb] bg-white/55 px-3 py-1.5 text-[#46506a] hover:border-[#bfc9ff]'
+              )}
+            >
               {label}
             </Link>
           ))}

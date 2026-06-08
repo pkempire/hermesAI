@@ -75,7 +75,16 @@ export async function POST(req: NextRequest) {
   }
 
   const enriched = results.filter(Boolean)
-  const found = enriched.filter((p: any) => p.contactName || p.contactEmail).length
+  const found = enriched.filter((p: any) =>
+    p.email ||
+    p.contactEmail ||
+    p.phone ||
+    p.contactPhone ||
+    p.linkedinUrl?.includes?.('linkedin.com/in/') ||
+    p.contactLinkedinUrl?.includes?.('linkedin.com/in/') ||
+    (p.fullName && p.fullName !== 'Unknown Contact') ||
+    p.contactName
+  ).length
 
   logger.debug(
     `/api/enrich/people: attempted=${batch.length} found=${found} failed=${failed}`

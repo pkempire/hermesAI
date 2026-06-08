@@ -10,7 +10,7 @@ import {
 import { useProspectStream } from '@/hooks/use-prospect-stream'
 import { campaignStore } from '@/lib/store/campaign-store'
 import { logger } from '@/lib/utils/logger'
-import { AlertCircle, CheckCircle2, ChevronDown, ChevronRight, Search } from 'lucide-react'
+import { AlertCircle, CheckCircle2, ChevronDown, ChevronRight, Database, Search, SlidersHorizontal } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { ProspectSearchBuilder } from './builder'
 import { ProspectSearchEmpty } from './empty'
@@ -334,14 +334,29 @@ export function ProspectSearchSection({
 
   const statusIcon =
     searchStatus === 'completed' ? (
-      <CheckCircle2 className="h-5 w-5 text-[hsl(var(--ink))]" strokeWidth={1.75} />
+      <CheckCircle2 className="h-5 w-5 text-emerald-600" strokeWidth={1.75} />
     ) : searchStatus === 'running' ? (
-      <Search className="h-5 w-5 text-[hsl(var(--ink))] animate-pulse" strokeWidth={1.75} />
+      <Search className="h-5 w-5 animate-pulse text-[#315dff]" strokeWidth={1.75} />
     ) : searchStatus === 'failed' ? (
       <AlertCircle className="h-5 w-5 text-red-500" />
     ) : (
-      <Search className="h-5 w-5 text-[hsl(var(--steel))] opacity-60 transition-opacity group-hover:opacity-100" strokeWidth={1.5} />
+      <Search className="h-5 w-5 text-[#6a7283] opacity-70 transition-opacity group-hover:opacity-100" strokeWidth={1.5} />
     )
+
+  const statusTone =
+    searchStatus === 'completed'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+      : searchStatus === 'running'
+      ? 'border-[#cbd4ff] bg-[#edf1ff] text-[#315dff]'
+      : searchStatus === 'failed'
+      ? 'border-red-200 bg-red-50 text-red-700'
+      : 'border-[#dfe4ee] bg-white text-[#6a7283]'
+
+  const summaryItems = [
+    { label: 'Type', value: displayEntityType, icon: SlidersHorizontal },
+    { label: 'Target', value: displayTargetCount, icon: Search },
+    { label: 'Fields', value: displayEnrichmentCount, icon: Database }
+  ]
 
   // Builder callbacks
   const handleStreamingFlush = useCallback(() => {
@@ -404,57 +419,73 @@ export function ProspectSearchSection({
   }, [])
 
   return (
-    <div className="my-5 w-full rounded-3xl border border-gray-200 bg-white shadow-sm ring-1 ring-gray-100/50 overflow-hidden">
+    <div className="my-5 w-full overflow-hidden rounded-lg border border-[#dfe4ee] bg-white shadow-[0_18px_50px_rgba(5,18,47,0.06)]">
       <Collapsible open={isOpen !== false} onOpenChange={onOpenChange}>
         <Card className="w-full border-none bg-transparent shadow-none">
           <CollapsibleTrigger asChild>
-            <CardHeader className="cursor-pointer rounded-t-3xl px-5 py-5 transition-all duration-200 hover:bg-gray-50 md:px-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="rounded-2xl bg-[hsl(var(--hermes-gold))]/10 p-3 shadow-sm">
+            <CardHeader className="cursor-pointer rounded-t-lg px-5 py-5 transition-colors duration-150 hover:bg-[#fbfcff] md:px-6">
+              <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[#dfe4ee] bg-[#f5f7ff] shadow-sm">
                     {statusIcon}
                   </div>
                   <div>
-                    <CardTitle className="text-[1.6rem] leading-none text-gray-900 tracking-tight">
+                    <CardTitle className="text-[24px] leading-none text-[#071329] tracking-normal">
                       Prospect Discovery
                     </CardTitle>
                     <Badge
                       variant={statusBadge.variant}
-                      className="mt-2 border-transparent bg-gray-100/80 text-[10px] uppercase tracking-wider text-gray-500 font-semibold shadow-none"
+                      className={`mt-3 rounded-md px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] shadow-none ${statusTone}`}
                     >
+                      {searchStatus === 'running' && <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-current" />}
                       {statusBadge.label}
                     </Badge>
                   </div>
                 </div>
-                <div className="rounded-full border border-gray-200 bg-white p-2.5 shadow-sm transition-transform duration-200">
+                <div className="flex items-center gap-3">
+                  <div className="hidden gap-2 md:flex">
+                    {summaryItems.map(({ label, value, icon: Icon }) => (
+                      <div key={label} className="min-w-[86px] rounded-md border border-[#dfe4ee] bg-white px-3 py-2">
+                        <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8a92a6]">
+                          <Icon className="h-3 w-3" />
+                          {label}
+                        </div>
+                        <div className="truncate text-[13px] font-semibold capitalize text-[#071329]">
+                          {value}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="rounded-md border border-[#dfe4ee] bg-white p-2.5 shadow-sm transition-colors hover:border-[#bfc9ff]">
                   {isOpen ? (
-                    <ChevronDown className="h-5 w-5 text-gray-400" />
+                    <ChevronDown className="h-5 w-5 text-[#8a92a6]" />
                   ) : (
-                    <ChevronRight className="h-5 w-5 text-gray-400" />
+                    <ChevronRight className="h-5 w-5 text-[#8a92a6]" />
                   )}
+                  </div>
                 </div>
               </div>
-              <div className="mt-4 space-y-3">
-                <CardDescription className="text-[14px] leading-relaxed text-gray-500 font-medium">
+              <div className="mt-5 space-y-3">
+                <CardDescription className="max-w-[720px] text-[14px] leading-relaxed text-[#5f687a] font-medium">
                   {uiType === 'interactive'
                     ? 'Edit the filters, keep the strongest fields, then run the search.'
                     : uiType === 'streaming'
                     ? 'Hermes is searching and enriching live.'
                     : searchMessage || 'Ready to configure the search.'}
                 </CardDescription>
-                <div className="flex flex-wrap items-center gap-3 text-[13px] font-semibold text-gray-500 uppercase tracking-widest mt-2">
-                  <span className="text-[hsl(var(--hermes-gold-dark))]">Type: {displayEntityType}</span>
-                  <span className="text-gray-200">|</span>
+                <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6a7283] md:hidden">
+                  <span className="text-[#315dff]">Type: {displayEntityType}</span>
+                  <span className="text-[#d1d6e2]">/</span>
                   <span>Target: {displayTargetCount}</span>
                   {prospects.length > 0 && prospects.length < displayTargetCount && (
                     <>
-                      <span className="text-gray-200">|</span>
+                      <span className="text-[#d1d6e2]">/</span>
                       <span className="text-emerald-600">
                         Found: {prospects.length} ({Math.round((prospects.length / displayTargetCount) * 100)}%)
                       </span>
                     </>
                   )}
-                  <span className="text-gray-200">|</span>
+                  <span className="text-[#d1d6e2]">/</span>
                   <span>{displayEnrichmentCount} fields</span>
                 </div>
               </div>
@@ -462,7 +493,7 @@ export function ProspectSearchSection({
           </CollapsibleTrigger>
 
           <CollapsibleContent>
-            <CardContent className="space-y-6 px-5 pb-6 pt-2 md:px-6 border-t border-gray-100">
+            <CardContent className="space-y-6 border-t border-[#edf0f6] px-5 pb-6 pt-5 md:px-6">
               {uiType === 'idle' && tool && <ProspectSearchEmpty />}
 
               {uiType === 'interactive' && toolResult?.props && (
