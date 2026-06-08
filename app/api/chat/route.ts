@@ -1,5 +1,5 @@
 import { getCurrentUserId } from '@/lib/auth/get-current-user'
-import { createManualToolStreamResponse } from '@/lib/streaming/create-manual-tool-stream'
+import { DEFAULT_MODEL } from '@/lib/config/models'
 import { createToolCallingStreamResponse } from '@/lib/streaming/create-tool-calling-stream'
 import { Model } from '@/lib/types/models'
 import { logger } from '@/lib/utils/logger'
@@ -8,15 +8,6 @@ import { isProviderEnabled } from '@/lib/utils/registry'
 import { cookies } from 'next/headers'
 
 export const maxDuration = 30
-
-const DEFAULT_MODEL: Model = {
-  id: 'gpt-5-mini',
-  name: 'GPT-5 Mini',
-  provider: 'OpenAI',
-  providerId: 'openai',
-  enabled: true,
-  toolCallType: 'native'
-}
 
 export async function POST(req: Request) {
   try {
@@ -83,25 +74,21 @@ export async function POST(req: Request) {
       )
     }
 
-    const supportsToolCalling = selectedModel.toolCallType === 'native'
+    if (selectedModel.toolCallType !== 'native') {
+      return new Response('Selected model does not support native tool calling', {
+        status: 400
+      })
+    }
 
-    logger.debug('Selected model:', { name: selectedModel.name, searchMode, supportsToolCalling })
+    logger.debug('Selected model:', { name: selectedModel.name, searchMode })
 
-    return supportsToolCalling
-      ? createToolCallingStreamResponse({
-          messages,
-          model: selectedModel,
-          chatId,
-          searchMode,
-          userId
-        })
-      : createManualToolStreamResponse({
-          messages,
-          model: selectedModel,
-          chatId,
-          searchMode,
-          userId
-        })
+    return createToolCallingStreamResponse({
+      messages,
+      model: selectedModel,
+      chatId,
+      searchMode,
+      userId
+    })
   } catch (error) {
     logger.error('API route error:', error)
     return new Response('Error processing your request', {

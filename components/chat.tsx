@@ -47,10 +47,10 @@ export function Chat({
   const [uiData, setUiData] = useState<JSONValue[]>([])
 
   const chatHook = useChat({
-    id: id, // Use the actual chat ID from the URL, not a constant
-    messages: savedMessages?.length ? savedMessages : undefined, // v5: renamed from initialMessages
+    id,
+    messages: savedMessages?.length ? savedMessages : undefined,
     transport: new DefaultChatTransport({
-      api: '/api/chat', // v5: use transport instead of direct api prop
+      api: '/api/chat',
     }),
     body: {
       id
@@ -68,7 +68,7 @@ export function Chat({
         const data = (part as any)?.data ?? part
         if (!data) return
         // Handle custom data parts (pipeline events, etc.)
-        // Tool-call and tool-result parts are handled automatically by useChat hook
+        // Tool-call and tool-result parts are handled by the AI SDK stream.
         if ((part as any)?.type?.startsWith?.('data-')) {
           const normalizedType = (part as any).type.replace('data-', '')
           setUiData(prev => [...prev, { type: normalizedType, data: (part as any).data }])
@@ -85,10 +85,9 @@ export function Chat({
       }
       toast.error(`Error in chat: ${error?.message || 'An unexpected error occurred'}`)
     },
-    // v5: sendExtraMessageFields removed - handled automatically
   } as any)
 
-  // AI SDK v5 returns sendMessage, not append - and no input management
+  // AI SDK UI manages streaming; Hermes keeps local composer state for custom controls.
   const {
     messages,
     status,
@@ -105,7 +104,6 @@ export function Chat({
   // Create append alias for compatibility with existing code
   const append = sendMessage
   
-  // Manually manage input state (AI SDK v5 doesn't provide this)
   const input = inputValue
   const setInput = setInputValue
   

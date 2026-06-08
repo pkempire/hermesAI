@@ -1,4 +1,13 @@
-import { ModelMessage, streamText } from 'ai'
+import {
+  ModelMessage,
+  ToolLoopAgent,
+  type ToolLoopAgentOnFinishCallback,
+  type ToolLoopAgentOnStepFinishCallback,
+  type ToolSet,
+  hasToolCall,
+  stepCountIs,
+  streamText
+} from 'ai'
 import { createEmailDrafterTool } from '../tools/email-drafter'
 import {
   createRecallMemoryTool,
@@ -72,6 +81,77 @@ Response Style & User Experience
 - Non-Goal: Avoid sensitive personal data and do not fabricate contact information.
 - Tone: Communicative, brilliant, and proactive. Hermes should feel alive and efficient.`
 
+function createHermesToolset(model: string, userId?: string) {
+  logger.tool('search', 'Creating search tool...')
+  const searchTool = createSearchTool(model)
+
+  logger.tool('ask_question', 'Creating ask question tool...')
+  const askQuestionTool = createQuestionTool(model)
+
+  logger.tool('prospect_search', 'Creating prospect search tool...')
+  const prospectSearchTool = createProspectSearchTool(model)
+
+  logger.tool('scrape_site', 'Creating scrape site tool...')
+  const scrapeSiteTool = createScrapeSiteTool()
+
+  logger.tool('email_drafter', 'Creating email drafter tool...')
+  const emailDrafterTool = createEmailDrafterTool()
+
+  const tools: Record<string, any> = {
+    search: searchTool,
+    ask_question: askQuestionTool,
+    prospect_search: prospectSearchTool,
+    scrape_site: scrapeSiteTool,
+    email_drafter: emailDrafterTool
+  }
+
+  if (userId) {
+    tools.remember_fact = createRememberFactTool(userId)
+    tools.recall_memory = createRecallMemoryTool(userId)
+  }
+
+  logger.debug('[researcher] Tools created', {
+    toolNames: Object.keys(tools),
+    memoryEnabled: Boolean(userId)
+  })
+
+  return tools
+}
+
+export function createHermesAgent({
+  model,
+  searchMode,
+  userId,
+  onFinish,
+  onStepFinish
+}: {
+  model: string
+  searchMode: boolean
+  userId?: string
+  onFinish?: ToolLoopAgentOnFinishCallback<ToolSet>
+  onStepFinish?: ToolLoopAgentOnStepFinishCallback<ToolSet>
+}) {
+  try {
+    logger.debug('[researcher] Initializing with model:', model, 'searchMode:', searchMode)
+
+    const currentDate = new Date().toLocaleString()
+    const tools = createHermesToolset(model, userId)
+
+    return new ToolLoopAgent({
+      id: 'hermes-gtm-engineer',
+      model: getModel(model),
+      instructions: `${SYSTEM_PROMPT}\n\nCurrent date and time: ${currentDate}`,
+      tools,
+      stopWhen: [hasToolCall('prospect_search'), stepCountIs(5)],
+      onStepFinish,
+      onFinish
+    })
+  } catch (error) {
+    logger.error('[researcher] Error:', error)
+    throw error
+  }
+}
+
 export function researcher({
   messages,
   model,
@@ -84,48 +164,17 @@ export function researcher({
   userId?: string
 }): ResearcherReturn {
   try {
-    logger.debug('[researcher] Initializing with model:', model, 'searchMode:', searchMode)
+    logger.debug('[researcher] Initializing legacy stream config with model:', model, 'searchMode:', searchMode)
     logger.debug('[researcher] Messages count:', messages.length)
 
     const currentDate = new Date().toLocaleString()
-
-    // Create model-specific tools
-    logger.tool('search', 'Creating search tool...')
-    const searchTool = createSearchTool(model)
-
-    logger.tool('ask_question', 'Creating ask question tool...')
-    const askQuestionTool = createQuestionTool(model)
-
-    logger.tool('prospect_search', 'Creating prospect search tool...')
-    const prospectSearchTool = createProspectSearchTool(model)
-
-    logger.tool('scrape_site', 'Creating scrape site tool...')
-    const scrapeSiteTool = createScrapeSiteTool()
-
-    logger.tool('email_drafter', 'Creating email drafter tool...')
-    const emailDrafterTool = createEmailDrafterTool()
-
-    const baseTools: Record<string, any> = {
-      search: searchTool,
-      ask_question: askQuestionTool,
-      prospect_search: prospectSearchTool,
-      scrape_site: scrapeSiteTool,
-      email_drafter: emailDrafterTool
-    }
-    if (userId) {
-      baseTools.remember_fact = createRememberFactTool(userId)
-      baseTools.recall_memory = createRecallMemoryTool(userId)
-    }
-
-    logger.debug('[researcher] All tools created successfully', {
-      memoryEnabled: Boolean(userId)
-    })
+    const tools = createHermesToolset(model, userId)
 
     return {
       model: getModel(model),
       system: `${SYSTEM_PROMPT}\n\nCurrent date and time: ${currentDate}`,
       messages,
-      tools: baseTools
+      tools
     }
   } catch (error) {
     logger.error('[researcher] Error:', error)

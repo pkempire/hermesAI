@@ -19,8 +19,17 @@ The core agent stack is:
 
 Current agent-infra status:
 
-- The app is on AI SDK v6-era packages and uses `streamText` tool calling.
-- It is not yet using `ToolLoopAgent` or `createAgentUIStreamResponse`.
+- The app is on AI SDK v6-era packages.
+- The main native-tool chat path now runs through `ToolLoopAgent.stream()`,
+  while preserving Hermes custom pipeline events and chat persistence.
+- Incoming UI messages are checked with `safeValidateUIMessages` before falling
+  back to the legacy sanitizer for old saved chats.
+- The deprecated manual tool-call backend path and unused legacy model catalog
+  have been removed from the launch path; Hermes now requires native
+  tool-capable models.
+- It is not yet using `createAgentUIStreamResponse`; the current wrapper still
+  needs a writer so Hermes can emit `data-pipeline` progress and save chat
+  history from `handleStreamFinish`.
 - It is not yet using Vercel Workflow/durable execution for long-running runs.
 - That is acceptable for a launch demo if the app is honest about reviewable
   discovery/drafting. It is not enough for high-volume autonomous GTM execution.

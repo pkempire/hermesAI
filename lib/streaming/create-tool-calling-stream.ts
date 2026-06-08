@@ -1,4 +1,4 @@
-import { researcher } from '@/lib/agents/researcher'
+import { createHermesAgent } from '@/lib/agents/researcher'
 import { logger } from '@/lib/utils/logger'
 import { isReasoningModel } from '../utils/registry'
 import { handleStreamFinish } from './handle-stream-finish'
@@ -6,10 +6,8 @@ import {
   ModelMessage,
   createUIMessageStream,
   createUIMessageStreamResponse,
-  hasToolCall,
-  stepCountIs,
-  streamText,
-  convertToModelMessages
+  convertToModelMessages,
+  safeValidateUIMessages
 } from 'ai'
 import { BaseStreamConfig } from './types'
 
@@ -64,6 +62,58 @@ function containsAskQuestionTool(message: ModelMessage) {
   )
 }
 
+function emitPipelineEventsForStep(step: any, writer: any) {
+  try {
+    const content = step?.content as any[] | undefined
+    if (!Array.isArray(content)) return
+
+    for (const item of content) {
+      if (item?.type === 'tool-call') {
+        if (item.toolName === 'scrape_site') {
+          writer.write({
+            type: 'data-pipeline',
+            data: { scope: 'campaign', stepNumber: 1, totalSteps: 5, percent: 10, label: 'Analyze your website' }
+          })
+        }
+        if (item.toolName === 'ask_question') {
+          writer.write({
+            type: 'data-pipeline',
+            data: { scope: 'campaign', stepNumber: 1, totalSteps: 5, percent: 15, label: 'Confirm targeting' }
+          })
+        }
+        if (item.toolName === 'prospect_search') {
+          writer.write({
+            type: 'data-pipeline',
+            data: {
+              scope: 'campaign',
+              stepNumber: 1,
+              totalSteps: 5,
+              percent: 20,
+              label: 'Configure Prospect Search'
+            }
+          })
+        }
+      }
+      if (item?.type === 'tool-result') {
+        if (item.toolName === 'scrape_site') {
+          writer.write({
+            type: 'data-pipeline',
+            data: { scope: 'campaign', stepNumber: 1, totalSteps: 5, percent: 18, label: 'Website analyzed' }
+          })
+        }
+        if (item.toolName === 'ask_question') {
+          writer.write({
+            type: 'data-pipeline',
+            data: { scope: 'campaign', stepNumber: 1, totalSteps: 5, percent: 22, label: 'Target confirmed' }
+          })
+        }
+      }
+    }
+  } catch (error) {
+    logger.warn('Failed to emit pipeline events:', error)
+  }
+}
+
 export function createToolCallingStreamResponse(config: BaseStreamConfig) {
   return createUIMessageStreamResponse({
     stream: createUIMessageStream({
@@ -108,97 +158,21 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
         })
         
         logger.debug('Valid messages for conversion:', validMessages.length)
-        
-        // Clean UI messages to remove problematic tool states before conversion
-        const cleanUIMessages = (messages: any[]) => {
-          return messages.map((message) => {
-            if (message.parts && Array.isArray(message.parts)) {
-              return {
-                ...message,
-                parts: message.parts
-                  .map((part: any) => summarizeToolPartForModel(part))
-                  .filter(Boolean)
-              }
-            }
-            return message
-          })
-        }
 
-        // Clean UI messages to remove problematic tool states before conversion
-        const cleanedMessages = cleanUIMessages(validMessages).filter((message: any) => {
-          if (Array.isArray(message?.parts)) return message.parts.length > 0
-          if (Array.isArray(message?.content)) return message.content.length > 0
-          return typeof message?.content === 'string' && message.content.trim().length > 0
-        })
-        const modelMessages = await convertToModelMessages(cleanedMessages)
-        
-        logger.debug('Messages converted successfully:', modelMessages.length)
-
-        let researcherConfig = await researcher({
-          messages: modelMessages,
+        const agent = createHermesAgent({
           model: modelId,
           searchMode,
-          userId
-        })
-
-        logger.debug('Calling streamText with tools:', Object.keys(researcherConfig.tools || {}))
-
-        const result = streamText({
-          ...researcherConfig,
-          stopWhen: [hasToolCall('prospect_search'), stepCountIs(5)],
-          // Tool-call and tool-result parts are automatically included in the stream
-          // No need to manually intercept and re-write them
-          // Campaign progress events are emitted via custom data-pipeline parts
-          onStepFinish: (step) => {
-            logger.stream('step_finished')
-            // Emit campaign progress events based on tool calls
-            // Tool parts are automatically in the stream, no manual copying needed
-            try {
-              const content = (step as any)?.content as any[] | undefined
-              if (Array.isArray(content)) {
-                for (const item of content) {
-                  if (item?.type === 'tool-call') {
-                    // Only emit custom pipeline progress events (not tool data)
-                    try {
-                      if (item.toolName === 'scrape_site') {
-                        writer.write({ type: 'data-pipeline', data: { scope: 'campaign', stepNumber: 1, totalSteps: 5, percent: 10, label: 'Analyze your website' } })
-                      }
-                      if (item.toolName === 'ask_question') {
-                        writer.write({ type: 'data-pipeline', data: { scope: 'campaign', stepNumber: 1, totalSteps: 5, percent: 15, label: 'Confirm targeting' } })
-                      }
-                      if (item.toolName === 'prospect_search') {
-                        writer.write({
-                          type: 'data-pipeline',
-                          data: {
-                            scope: 'campaign',
-                            stepNumber: 1,
-                            totalSteps: 5,
-                            percent: 20,
-                            label: 'Configure Prospect Search'
-                          }
-                        })
-                      }
-                    } catch {}
-                  }
-                  if (item?.type === 'tool-result') {
-                    // Advance pipeline for chained flows
-                    try {
-                      if (item.toolName === 'scrape_site') {
-                        writer.write({ type: 'data-pipeline', data: { scope: 'campaign', stepNumber: 1, totalSteps: 5, percent: 18, label: 'Website analyzed' } })
-                      }
-                      if (item.toolName === 'ask_question') {
-                        writer.write({ type: 'data-pipeline', data: { scope: 'campaign', stepNumber: 1, totalSteps: 5, percent: 22, label: 'Target confirmed' } })
-                      }
-                    } catch {}
-                  }
-                }
-              }
-            } catch (e) {
-              logger.warn('Failed to emit pipeline events:', e)
-            }
+          userId,
+          onStepFinish: step => {
+            logger.stream('agent_step_finished', {
+              stepNumber: step.stepNumber,
+              finishReason: step.finishReason,
+              toolCalls: step.toolCalls.length,
+              toolResults: step.toolResults.length
+            })
+            emitPipelineEventsForStep(step, writer)
           },
           onFinish: async result => {
-            // Check if the last message contains an ask_question tool invocation
             const shouldSkipRelatedQuestions =
               isReasoningModel(modelId) ||
               (result.response.messages.length > 0 &&
@@ -218,6 +192,50 @@ export function createToolCallingStreamResponse(config: BaseStreamConfig) {
               skipRelatedQuestions: shouldSkipRelatedQuestions
             })
           }
+        })
+
+        const validatedMessages = await safeValidateUIMessages({
+          messages: validMessages,
+          tools: agent.tools as any
+        })
+        if (!validatedMessages.success) {
+          logger.warn('UI message validation fell back to sanitizer:', validatedMessages.error)
+        }
+
+        // Clean UI messages to remove problematic tool states before conversion
+        const cleanUIMessages = (messages: any[]) => {
+          return messages.map((message) => {
+            if (message.parts && Array.isArray(message.parts)) {
+              return {
+                ...message,
+                parts: message.parts
+                  .map((part: any) => summarizeToolPartForModel(part))
+                  .filter(Boolean)
+              }
+            }
+            return message
+          })
+        }
+
+        // Clean UI messages to remove problematic tool states before conversion
+        const messagesForConversion = validatedMessages.success ? validatedMessages.data : validMessages
+        const cleanedMessages = cleanUIMessages(messagesForConversion).filter((message: any) => {
+          if (Array.isArray(message?.parts)) return message.parts.length > 0
+          if (Array.isArray(message?.content)) return message.content.length > 0
+          return typeof message?.content === 'string' && message.content.trim().length > 0
+        })
+        const modelMessages = await convertToModelMessages(cleanedMessages, {
+          tools: agent.tools as any,
+          ignoreIncompleteToolCalls: true
+        })
+
+        logger.debug('Messages converted successfully:', modelMessages.length)
+
+        logger.debug('Calling ToolLoopAgent with tools:', Object.keys(agent.tools || {}))
+
+        const result = await agent.stream({
+          messages: modelMessages,
+          timeout: { totalMs: 28000 }
         })
 
         writer.merge(result.toUIMessageStream())
