@@ -1,9 +1,8 @@
 'use client'
 
-import { Model } from '@/lib/types/models'
 import { cn } from '@/lib/utils'
 import type { UIMessage as Message } from 'ai'
-import { ArrowUp, ChevronDown, LoaderCircle, Mic, Paperclip, Square } from 'lucide-react'
+import { ArrowUp, ChevronDown, LoaderCircle, Mic, Paperclip } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import Textarea from 'react-textarea-autosize'
@@ -23,11 +22,9 @@ interface ChatPanelProps {
   query?: string
   stop: () => void
   append: (message: any) => void
-  models?: Model[]
   showScrollToBottomButton: boolean
   scrollContainerRef: React.RefObject<HTMLDivElement | null>
   submitTemplateMessage?: (message: string) => void
-  signedIn?: boolean
 }
 
 export function ChatPanel({
@@ -41,13 +38,10 @@ export function ChatPanel({
   query,
   stop,
   append,
-  models,
   showScrollToBottomButton,
   scrollContainerRef,
-  submitTemplateMessage,
-  signedIn = true
+  submitTemplateMessage
 }: ChatPanelProps) {
-  const [showEmptyScreen, setShowEmptyScreen] = useState(false)
   const router = useRouter()
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
@@ -228,7 +222,7 @@ export function ChatPanel({
       <form
         ref={formRef}
         onSubmit={async (e) => { e.preventDefault(); await submitCurrentMessage() }}
-        className={cn('max-w-4xl w-full mx-auto relative group/form', messages.length === 0 ? 'mb-5' : '')}
+        className={cn('mx-auto w-full max-w-5xl relative group/form', messages.length === 0 ? 'mb-6' : '')}
       >
         {showScrollToBottomButton && messages.length > 0 && (
           <Button
@@ -240,9 +234,9 @@ export function ChatPanel({
           </Button>
         )}
 
-        <div className="relative mx-auto w-full max-w-3xl" id="hermes-input">
+        <div className="relative mx-auto w-full max-w-4xl" id="hermes-input">
           <div className={cn(
-            'relative z-[5] flex w-full flex-col rounded-lg border border-[#dfe4ee] bg-white/95 shadow-[0_18px_52px_rgba(5,18,47,0.08)] transition-all duration-150',
+            'relative z-[5] flex w-full flex-col rounded-lg border border-[#dfe4ee] bg-white/95 shadow-[0_20px_58px_rgba(5,18,47,0.09)] transition-all duration-150',
             'focus-within:border-[#bfc9ff] focus-within:ring-2 focus-within:ring-[#315dff]/10'
           )}>
             <Textarea
@@ -253,11 +247,10 @@ export function ChatPanel({
               placeholder="Find 25 Bay Area private college counselors who specialize in STEM/Ivy applications"
               spellCheck={false} value={input}
               disabled={isLoading || isToolInvocationInProgress()}
-              className="min-h-[86px] w-full resize-none border-0 bg-transparent px-5 py-4 text-[15px] leading-relaxed text-[#071329] placeholder:text-[#9aa2b4] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-h-[92px] w-full resize-none border-0 bg-transparent px-5 py-4 text-[15px] leading-relaxed text-[#071329] placeholder:text-[#9aa2b4] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
               onChange={e => {
                 if (handleInputChange) handleInputChange(e)
                 else if (setInput) setInput(e.target.value)
-                setShowEmptyScreen(e.target.value.length === 0)
               }}
               onKeyDown={e => {
                 if (e.key === 'Enter' && !e.shiftKey && !isComposing && !enterDisabled) {
@@ -266,8 +259,6 @@ export function ChatPanel({
                   void submitCurrentMessage()
                 }
               }}
-              onFocus={() => setShowEmptyScreen(true)}
-              onBlur={() => setShowEmptyScreen(false)}
             />
 
             <div className="flex items-center justify-between px-3 pb-3 pt-1">

@@ -6,17 +6,15 @@
 
 import { LandingPage } from '@/components/landing'
 import { HermesAppLoader } from '@/components/hermes-app-loader'
-import { getModels } from '@/lib/config/models'
 import { createClient } from '@/lib/supabase/server'
 
 export default async function Page() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const models = await getModels()
 
   if (!user) {
     return <LandingPage />
   }
 
-  return <HermesAppLoader models={models} />
+  return <HermesAppLoader />
 }

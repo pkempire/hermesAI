@@ -1,6 +1,5 @@
 'use client'
 
-import { Model } from '@/lib/types/models'
 import { useChat } from '@ai-sdk/react'
 import { ChatRequestOptions, DefaultChatTransport, JSONValue, type UIMessage as Message } from 'ai'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -19,15 +18,11 @@ interface ChatSection {
 export function Chat({
   id,
   savedMessages = [],
-  query,
-  models,
-  signedIn = true
+  query
 }: {
   id: string
   savedMessages?: Message[]
   query?: string
-  models?: Model[]
-  signedIn?: boolean
 }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [isAtBottom, setIsAtBottom] = useState(true)
@@ -412,7 +407,7 @@ export function Chat({
 
   return (
     <div
-      className="relative flex min-w-0 min-h-0 flex-1 overflow-hidden bg-gray-50 pt-0 h-full"
+      className="relative flex min-w-0 min-h-0 flex-1 overflow-hidden bg-[#f7f8fb] pt-0 h-full"
       data-testid="full-chat"
     >
       {showProgressTracker ? (
@@ -461,11 +456,9 @@ export function Chat({
               stop={stop}
               query={query}
               append={append}
-              models={models}
               showScrollToBottomButton={!isAtBottom}
               scrollContainerRef={scrollContainerRef}
               submitTemplateMessage={submitTemplateMessage}
-              signedIn={signedIn}
             />
           </div>
         </div>
@@ -502,11 +495,9 @@ export function Chat({
               stop={stop}
               query={query}
               append={append}
-              models={models}
               showScrollToBottomButton={!isAtBottom}
               scrollContainerRef={scrollContainerRef}
               submitTemplateMessage={submitTemplateMessage}
-              signedIn={signedIn}
             />
           </div>
         </div>

@@ -174,9 +174,11 @@ function WorkflowMini({ steps }: { steps: TemplateStep[] }) {
         const Icon = step.icon
         return (
           <div key={`${step.label}-${step.tool}`} className="contents">
-            <div className="min-h-[74px] border border-[hsl(var(--mist))] bg-[hsl(var(--paper))] p-3">
+            <div className="min-h-[78px] rounded-md border border-[hsl(var(--mist))] bg-[hsl(var(--paper))] p-3 shadow-[0_1px_0_rgba(5,18,47,0.03)]">
               <div className="mb-2 flex items-center gap-2">
-                <Icon className="h-3.5 w-3.5 shrink-0 text-[hsl(var(--ink))]" />
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[#dfe4ee] bg-white text-[#315dff]">
+                  <Icon className="h-3.5 w-3.5" />
+                </span>
                 <p className="min-w-0 truncate text-[11px] font-semibold text-[hsl(var(--ink))]">
                   {step.label}
                 </p>
@@ -187,7 +189,7 @@ function WorkflowMini({ steps }: { steps: TemplateStep[] }) {
             </div>
             {index < steps.length - 1 && (
               <div className="hidden items-center justify-center sm:flex">
-                <ArrowRight className="h-3.5 w-3.5 text-[hsl(var(--steel))]" />
+                <ArrowRight className="h-3.5 w-3.5 text-[#8a92a6]" />
               </div>
             )}
           </div>
@@ -214,13 +216,13 @@ export function TemplateMarketplace({
   const selected = templates.find(template => template.id === selectedId) ?? templates[0] ?? TEMPLATES[0]
 
   return (
-    <section className="mx-auto w-full max-w-6xl px-3 pb-10 sm:px-5 md:px-8">
+    <section className="mx-auto w-full max-w-7xl px-3 pb-12 sm:px-5 md:px-8">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-[hsl(var(--steel))]">
             Template marketplace
           </p>
-          <h2 className="text-[1.15rem] font-semibold leading-tight text-[hsl(var(--ink))]">
+          <h2 className="text-[1.25rem] font-semibold leading-tight text-[hsl(var(--ink))]">
             Start from a proven GTM motion.
           </h2>
         </div>
@@ -236,7 +238,7 @@ export function TemplateMarketplace({
                 if (next) setSelectedId(next.id)
               }}
               className={cn(
-                'inline-flex h-8 shrink-0 items-center gap-1.5 border px-3 text-[12px] font-medium transition-colors',
+                'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-3 text-[12px] font-medium transition-colors',
                 activeFilter === filter
                   ? 'border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-white'
                   : 'border-[hsl(var(--mist))] bg-white text-[hsl(var(--steel))] hover:border-[hsl(var(--ink)/0.35)] hover:text-[hsl(var(--ink))]'
@@ -249,23 +251,28 @@ export function TemplateMarketplace({
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="grid gap-2">
+      <div className="grid gap-4 lg:grid-cols-[0.86fr_1.14fr]">
+        <div className="grid self-start gap-2">
           {templates.map(template => (
             <button
               key={template.id}
               type="button"
               onClick={() => setSelectedId(template.id)}
               className={cn(
-                'grid min-h-[92px] w-full grid-cols-[1fr_auto] gap-4 border bg-white p-4 text-left transition-colors',
+                'grid min-h-[96px] w-full grid-cols-[1fr_auto] gap-4 rounded-lg border bg-white p-4 text-left transition-colors',
                 selected.id === template.id
-                  ? 'border-[hsl(var(--ink))] shadow-[0_0_0_1px_hsl(var(--ink))]'
-                  : 'border-[hsl(var(--mist))] hover:border-[hsl(var(--ink)/0.35)]'
+                  ? 'border-[#315dff] bg-[#fbfcff] shadow-[0_0_0_1px_rgba(49,93,255,0.16),0_14px_34px_rgba(5,18,47,0.06)]'
+                  : 'border-[hsl(var(--mist))] hover:border-[#bfc9ff] hover:bg-[#fbfcff]'
               )}
             >
               <span className="min-w-0">
-                <span className="block text-[13px] font-semibold leading-tight text-[hsl(var(--ink))]">
-                  {template.title}
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="text-[13px] font-semibold leading-tight text-[hsl(var(--ink))]">
+                    {template.title}
+                  </span>
+                  <span className="rounded-md border border-[#edf0f6] bg-white px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#6a7283]">
+                    {template.category}
+                  </span>
                 </span>
                 <span className="mt-1 block text-[11px] leading-[1.45] text-[hsl(var(--steel))]">
                   {template.market}
@@ -274,12 +281,14 @@ export function TemplateMarketplace({
                   {template.outcome}
                 </span>
               </span>
-              <ArrowRight className="mt-1 h-4 w-4 text-[hsl(var(--steel))]" />
+              <span className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-md border border-[#edf0f6] bg-white">
+                <ArrowRight className="h-4 w-4 text-[hsl(var(--steel))]" />
+              </span>
             </button>
           ))}
         </div>
 
-        <article className="border border-[hsl(var(--mist))] bg-white p-4 sm:p-5">
+        <article className="rounded-lg border border-[hsl(var(--mist))] bg-white p-4 shadow-[0_18px_48px_rgba(5,18,47,0.05)] sm:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[hsl(var(--steel))]">
@@ -299,7 +308,7 @@ export function TemplateMarketplace({
                 variant="outline"
                 disabled={disabled}
                 onClick={() => onSelectPrompt(selected.prompt)}
-                className="h-9 rounded-none border-[hsl(var(--mist))] px-3 text-[12px]"
+                className="h-9 rounded-md border-[hsl(var(--mist))] px-3 text-[12px]"
               >
                 Load prompt
               </Button>
@@ -307,7 +316,7 @@ export function TemplateMarketplace({
                 type="button"
                 disabled={disabled || !onRunPrompt}
                 onClick={() => onRunPrompt?.(selected.prompt)}
-                className="h-9 rounded-none bg-[hsl(var(--ink))] px-3 text-[12px] text-white hover:bg-[hsl(var(--ink)/0.92)]"
+                className="h-9 rounded-md bg-[hsl(var(--ink))] px-3 text-[12px] text-white hover:bg-[hsl(var(--ink)/0.92)]"
               >
                 Run direct
               </Button>
@@ -318,7 +327,7 @@ export function TemplateMarketplace({
             <WorkflowMini steps={selected.steps} />
           </div>
 
-          <div className="mt-5 border border-[hsl(var(--mist))] bg-[hsl(var(--soft))] p-4">
+          <div className="mt-5 rounded-md border border-[hsl(var(--mist))] bg-[hsl(var(--soft))] p-4">
             <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.12em] text-[hsl(var(--steel))]">
               Prompt
             </p>

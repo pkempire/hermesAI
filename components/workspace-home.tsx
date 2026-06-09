@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowRight, Compass, Mail, Radar, Sparkles } from 'lucide-react'
+import { ArrowRight, BadgeCheck, Compass, Mail, Radar, Sparkles } from 'lucide-react'
 
 const STARTERS = [
   {
@@ -21,9 +21,15 @@ const STARTERS = [
 ]
 
 const SIGNALS = [
-  { icon: Radar, label: 'Live web signals' },
-  { icon: Compass, label: 'Decision-maker path' },
-  { icon: Mail, label: 'Drafts for review' }
+  { icon: Radar, label: 'Live web signals', detail: 'Events, reviews, jobs, directories' },
+  { icon: Compass, label: 'Decision-maker path', detail: 'Owner, operator, buyer, partner' },
+  { icon: Mail, label: 'Drafts for review', detail: 'Evidence-backed, never blind send' }
+]
+
+const RUN_FACTS = [
+  ['1', 'brief'],
+  ['live', 'sources'],
+  ['review', 'gate']
 ]
 
 export function WorkspaceHome({
@@ -32,14 +38,14 @@ export function WorkspaceHome({
   onSelectPrompt?: (prompt: string) => void
 }) {
   return (
-    <section className="mx-auto w-full max-w-[920px] px-4 pb-5 pt-6 sm:px-6 md:pt-8">
-      <div className="grid gap-5 lg:grid-cols-[1fr_280px] lg:items-end">
+    <section className="mx-auto w-full max-w-[1120px] px-4 pb-6 pt-6 sm:px-6 md:pt-8">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
         <div className="text-center lg:text-left">
-          <div className="mb-4 inline-flex items-center gap-2 border border-[#dfe4ee] bg-white/70 px-3 py-1 text-[11px] font-semibold uppercase text-[#315dff]">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-md border border-[#dfe4ee] bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#315dff] shadow-sm">
             <Sparkles className="h-3.5 w-3.5" />
             New GTM motion
           </div>
-          <h1 className="font-serif text-[40px] font-normal leading-[0.98] text-[hsl(var(--ink))] md:text-[56px]">
+          <h1 className="max-w-[760px] font-serif text-[42px] font-normal leading-[0.96] text-[hsl(var(--ink))] md:text-[60px]">
             Build the outbound engine.
           </h1>
           <p className="mx-auto mt-4 max-w-[650px] text-[14.5px] leading-[1.65] text-[hsl(var(--steel))] lg:mx-0">
@@ -49,41 +55,61 @@ export function WorkspaceHome({
           </p>
         </div>
 
-        <div className="hidden border border-[#dfe4ee] bg-white/72 p-4 shadow-[0_18px_48px_rgba(5,18,47,0.05)] lg:block">
-          <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6a7283]">
-            Run shape
-          </p>
-          <div className="space-y-2">
-            {SIGNALS.map(({ icon: Icon, label }, index) => (
-              <div key={label} className="flex items-center gap-3">
-                <span className="flex h-8 w-8 items-center justify-center border border-[#dfe4ee] bg-[#f5f7ff] text-[#315dff]">
+        <div className="hidden rounded-lg border border-[#dfe4ee] bg-white/80 p-4 shadow-[0_18px_48px_rgba(5,18,47,0.06)] lg:block">
+          <div className="mb-4 flex items-center justify-between">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6a7283]">
+              Run shape
+            </p>
+            <BadgeCheck className="h-4 w-4 text-emerald-600" />
+          </div>
+          <div className="space-y-3">
+            {SIGNALS.map(({ icon: Icon, label, detail }, index) => (
+              <div key={label} className="flex items-center gap-3 rounded-md border border-[#edf0f6] bg-[#fbfcff] p-2.5">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-[#dfe4ee] bg-white text-[#315dff]">
                   <Icon className="h-4 w-4" />
                 </span>
-                <span className="text-[12.5px] font-medium text-[#071329]">{label}</span>
+                <span className="min-w-0">
+                  <span className="block text-[12.5px] font-semibold text-[#071329]">{label}</span>
+                  <span className="mt-0.5 block truncate text-[11px] text-[#6a7283]">
+                    {detail}
+                  </span>
+                </span>
                 {index < SIGNALS.length - 1 && (
-                  <span className="ml-auto h-px w-8 bg-[#dfe4ee]" />
+                  <span className="ml-auto hidden h-px w-8 bg-[#dfe4ee] xl:block" />
                 )}
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            {RUN_FACTS.map(([value, label]) => (
+              <div key={label} className="rounded-md border border-[#edf0f6] bg-white px-3 py-2 text-center">
+                <div className="text-[13px] font-semibold text-[#071329]">{value}</div>
+                <div className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#8a92a6]">
+                  {label}
+                </div>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="mt-6 grid gap-2 md:grid-cols-3">
+      <div className="mt-7 grid gap-3 md:grid-cols-3">
         {STARTERS.map(starter => (
           <button
             key={starter.label}
             type="button"
             onClick={() => onSelectPrompt?.(starter.prompt)}
-            className="group border border-[#dfe4ee] bg-white/75 p-3 text-left transition-colors hover:border-[#bfc9ff] hover:bg-white"
+            className="group min-h-[118px] rounded-lg border border-[#dfe4ee] bg-white/80 p-4 text-left shadow-[0_10px_28px_rgba(5,18,47,0.04)] transition-colors hover:border-[#bfc9ff] hover:bg-white"
           >
             <span className="flex items-center justify-between gap-3">
               <span className="text-[12.5px] font-semibold text-[#071329]">
                 {starter.label}
               </span>
-              <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#8a92a6] transition-colors group-hover:text-[#315dff]" />
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[#edf0f6] bg-[#fbfcff] transition-colors group-hover:border-[#bfc9ff]">
+                <ArrowRight className="h-3.5 w-3.5 text-[#8a92a6] transition-colors group-hover:text-[#315dff]" />
+              </span>
             </span>
-            <span className="mt-1 block line-clamp-2 text-[11.5px] leading-[1.45] text-[#6a7283]">
+            <span className="mt-2 block line-clamp-3 text-[11.5px] leading-[1.5] text-[#6a7283]">
               {starter.prompt}
             </span>
           </button>
