@@ -1,5 +1,6 @@
 import { requireAuthUser } from '@/lib/auth/require-auth-user'
 import { enrichPersonData } from '@/lib/clients/orangeslice'
+import { getProspectContactFields, normalizeProspectContact } from '@/lib/prospects/contact-fields'
 import { logger } from '@/lib/utils/logger'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -16,6 +17,26 @@ import { NextRequest, NextResponse } from 'next/server'
  */
 
 const CONCURRENT_LIMIT = 6
+
+function markLookupComplete(prospect: any, failedMessage?: string) {
+  const normalized = normalizeProspectContact(prospect, failedMessage ? 'failed' : undefined)
+  const fields = getProspectContactFields(normalized)
+  const status = failedMessage ? 'failed' : fields.hasAnyContact ? 'found' : 'no_contact'
+
+  return {
+    ...normalized,
+    contactLookupStatus: status,
+    contactLookupCompletedAt: new Date().toISOString(),
+    contactLookupMessage:
+      failedMessage ||
+      normalized.contactLookupMessage ||
+      (status === 'found'
+        ? fields.email
+          ? 'Email resolved'
+          : 'Decision-maker resolved without a verified email'
+        : 'No verified email or person match returned')
+  }
+}
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuthUser()
@@ -54,13 +75,17 @@ export async function POST(req: NextRequest) {
     const chunk = batch.slice(i, i + CONCURRENT_LIMIT)
     const settled = await Promise.allSettled(
       chunk.map(prospect =>
-        enrichPersonData(prospect, context).catch(err => {
+        enrichPersonData(prospect, context).then(markLookupComplete).catch(err => {
           failed++
           logger.warn(
             `enrichPersonData failed for ${prospect.company || prospect.id}:`,
             err instanceof Error ? err.message : err
           )
-          return { ...prospect, reviewReady: true, enrichmentError: err instanceof Error ? err.message : 'Failed' }
+          const message = err instanceof Error ? err.message : 'Failed'
+          return markLookupComplete(
+            { ...prospect, reviewReady: true, enrichmentError: message },
+            message
+          )
         })
       )
     )
@@ -75,16 +100,7 @@ export async function POST(req: NextRequest) {
   }
 
   const enriched = results.filter(Boolean)
-  const found = enriched.filter((p: any) =>
-    p.email ||
-    p.contactEmail ||
-    p.phone ||
-    p.contactPhone ||
-    p.linkedinUrl?.includes?.('linkedin.com/in/') ||
-    p.contactLinkedinUrl?.includes?.('linkedin.com/in/') ||
-    (p.fullName && p.fullName !== 'Unknown Contact') ||
-    p.contactName
-  ).length
+  const found = enriched.filter((p: any) => getProspectContactFields(p).hasAnyContact).length
 
   logger.debug(
     `/api/enrich/people: attempted=${batch.length} found=${found} failed=${failed}`

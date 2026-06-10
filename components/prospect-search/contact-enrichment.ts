@@ -1,6 +1,10 @@
 'use client'
 
 import type { Prospect, ProspectSearchContext } from './types'
+import {
+  getProspectContactFields,
+  normalizeProspectContact
+} from '@/lib/prospects/contact-fields'
 
 type EnrichmentPayload = {
   enriched?: unknown
@@ -12,46 +16,60 @@ type EnrichmentPayload = {
   }
 }
 
-function cleanText(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : undefined
-}
-
 export function normalizeContactProspect(raw: any): Prospect {
-  const fullName =
-    cleanText(raw?.fullName) ||
-    cleanText(raw?.contactName) ||
-    cleanText(raw?.name) ||
-    ''
-
-  return {
-    ...raw,
-    fullName,
-    jobTitle:
-      cleanText(raw?.jobTitle) ||
-      cleanText(raw?.contactTitle) ||
-      cleanText(raw?.title),
-    email:
-      cleanText(raw?.email) ||
-      cleanText(raw?.contactEmail) ||
-      cleanText(raw?.workEmail),
-    linkedinUrl:
-      cleanText(raw?.linkedinUrl) ||
-      cleanText(raw?.contactLinkedinUrl) ||
-      cleanText(raw?.linkedin_url),
-    phone:
-      cleanText(raw?.phone) ||
-      cleanText(raw?.contactPhone) ||
-      cleanText(raw?.mobilePhone)
-  }
+  return normalizeProspectContact(raw, raw?.contactLookupStatus) as Prospect
 }
 
 export function contactResolved(prospect: Prospect) {
-  return Boolean(
-    prospect.email ||
-      prospect.phone ||
-      prospect.linkedinUrl?.includes('linkedin.com/in/') ||
-      (prospect.fullName && prospect.fullName !== 'Unknown Contact')
+  return getProspectContactFields(prospect).hasAnyContact
+}
+
+export function markContactsSearching(prospects: Prospect[], ids: string[]) {
+  const selectedIds = new Set(ids)
+  return prospects.map(prospect =>
+    selectedIds.has(prospect.id)
+      ? {
+          ...prospect,
+          contactLookupStatus: 'searching' as const,
+          contactLookupMessage: 'Resolving decision-maker and verified email'
+        }
+      : prospect
   )
+}
+
+export function markContactsFailed(prospects: Prospect[], ids: string[], message: string) {
+  const selectedIds = new Set(ids)
+  return prospects.map(prospect =>
+    selectedIds.has(prospect.id)
+      ? {
+          ...prospect,
+          contactLookupStatus: 'failed' as const,
+          contactLookupMessage: message,
+          enrichmentError: message
+        }
+      : prospect
+  )
+}
+
+export function mergeContactEnrichmentResults(
+  prospects: Prospect[],
+  ids: string[],
+  enriched: Prospect[]
+) {
+  const selectedIds = new Set(ids)
+  const byId = new Map(enriched.map(prospect => [prospect.id, prospect]))
+
+  return prospects.map(prospect => {
+    if (!selectedIds.has(prospect.id)) return prospect
+    return (
+      byId.get(prospect.id) || {
+        ...prospect,
+        contactLookupStatus: 'failed' as const,
+        contactLookupMessage: 'No enrichment result returned for this prospect',
+        enrichmentError: 'No enrichment result returned'
+      }
+    )
+  })
 }
 
 export async function enrichSelectedContacts(params: {

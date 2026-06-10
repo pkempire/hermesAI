@@ -2,10 +2,13 @@
 
 import { Button } from '@/components/ui/button'
 import {
+  AlertCircle,
   ArrowRight,
   Building,
   ChevronDown,
   ChevronRight,
+  CheckCircle2,
+  CircleDashed,
   ExternalLink,
   Globe,
   Loader2,
@@ -20,6 +23,11 @@ import Image from 'next/image'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { campaignStore } from '@/lib/store/campaign-store'
+import {
+  getContactLookupStatus,
+  getProspectContactFields
+} from '@/lib/prospects/contact-fields'
+import type { ContactLookupStatus } from '@/lib/prospects/contact-fields'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -30,13 +38,22 @@ export interface Prospect {
   jobTitle?: string
   company?: string
   email?: string
+  contactEmail?: string
   linkedinUrl?: string
+  contactLinkedinUrl?: string
+  personLinkedinUrl?: string
+  companyLinkedinUrl?: string
   phone?: string
+  contactPhone?: string
   location?: string
   industry?: string
   companySize?: string
   website?: string
   enrichments?: Record<string, any>
+  contactLookupStatus?: ContactLookupStatus
+  contactLookupMessage?: string
+  contactLookupCompletedAt?: string
+  enrichmentError?: string
   note?: string
   hermesTake?: {
     whyFit: string
@@ -50,6 +67,72 @@ export interface Prospect {
   sourceUrl?: string
   /** Raw text excerpt Exa extracted from the source page */
   exaText?: string
+}
+
+function getContactStatusMeta(prospect: Prospect, isEnriching?: boolean) {
+  const fields = getProspectContactFields(prospect)
+  const status = getContactLookupStatus(prospect, isEnriching)
+
+  if (status === 'searching') {
+    return {
+      label: 'Finding contact',
+      className: 'border-[#cbd4ff] bg-[#edf1ff] text-[#315dff]',
+      icon: Loader2,
+      spinning: true
+    }
+  }
+
+  if (status === 'failed') {
+    return {
+      label: 'Lookup failed',
+      className: 'border-red-100 bg-red-50 text-red-700',
+      icon: AlertCircle,
+      spinning: false
+    }
+  }
+
+  if (fields.email) {
+    return {
+      label: 'Email found',
+      className: 'border-emerald-100 bg-emerald-50 text-emerald-700',
+      icon: CheckCircle2,
+      spinning: false
+    }
+  }
+
+  if (fields.phone) {
+    return {
+      label: 'Phone found',
+      className: 'border-emerald-100 bg-emerald-50 text-emerald-700',
+      icon: Phone,
+      spinning: false
+    }
+  }
+
+  if (fields.personLinkedIn || fields.fullName) {
+    return {
+      label: 'Person found',
+      className: 'border-blue-100 bg-blue-50 text-blue-700',
+      icon: User,
+      spinning: false
+    }
+  }
+
+  if (status === 'no_contact') {
+    return {
+      label: 'No verified contact',
+      className: 'border-[#e4e7ef] bg-[#f7f8fb] text-[#6a7283]',
+      icon: CircleDashed,
+      spinning: false
+    }
+  }
+
+  return {
+    label: 'Not searched',
+    className: 'border-[#e4e7ef] bg-white text-[#8a92a6]',
+    icon: CircleDashed,
+    spinning: false
+  }
 }
 
 export interface ProspectSearchContext {
@@ -68,6 +151,9 @@ function ProspectRowDetail({
   isEnriching?: boolean
 }) {
   const hermesTake = prospect.hermesTake
+  const fields = getProspectContactFields(prospect)
+  const lookupStatus = getContactLookupStatus(prospect, isEnriching)
+  const lookupMessage = prospect.contactLookupMessage || prospect.enrichmentError
   const enrichments = Array.isArray(prospect.enrichments)
     ? prospect.enrichments.filter(
         (e: any) =>
@@ -128,31 +214,43 @@ function ProspectRowDetail({
 
       {/* Contact + Enrichments */}
       <div className="space-y-3">
-        {prospect.email && (
+        {fields.email && (
           <div className="flex items-center gap-2.5 rounded-md border border-[#dfe4ee] bg-white px-3 py-2 shadow-sm">
             <Mail className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
-            <a href={`mailto:${prospect.email}`} className="flex-1 text-[13px] font-medium text-gray-800 hover:text-emerald-700 truncate">
-              {prospect.email}
+            <a href={`mailto:${fields.email}`} className="flex-1 text-[13px] font-medium text-gray-800 hover:text-emerald-700 truncate">
+              {fields.email}
             </a>
             <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600">Verified</span>
           </div>
         )}
-        {prospect.linkedinUrl && !prospect.linkedinUrl.includes('company') && (
+        {fields.personLinkedIn && (
           <div className="flex items-center gap-2.5 rounded-md border border-[#dfe4ee] bg-white px-3 py-2 shadow-sm">
             <User className="h-3.5 w-3.5 shrink-0 text-blue-500" />
-            <a href={prospect.linkedinUrl} target="_blank" rel="noopener noreferrer" className="flex-1 text-[13px] font-medium text-gray-800 hover:text-blue-700 flex items-center gap-1">
+            <a href={fields.personLinkedIn} target="_blank" rel="noopener noreferrer" className="flex-1 text-[13px] font-medium text-gray-800 hover:text-blue-700 flex items-center gap-1">
               LinkedIn Profile <ExternalLink className="h-2.5 w-2.5 opacity-50" />
             </a>
             <span className="rounded bg-[#edf1ff] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#315dff]">Auto-message soon</span>
           </div>
         )}
-        {prospect.phone && (
+        {fields.phone && (
           <div className="flex items-center gap-2.5 rounded-md border border-[#dfe4ee] bg-white px-3 py-2 shadow-sm">
             <Phone className="h-3.5 w-3.5 shrink-0 text-gray-500" />
             <span className="flex-1 text-[13px] font-medium text-gray-800 truncate">
-              {prospect.phone}
+              {fields.phone}
             </span>
             <span className="rounded bg-[#f5f7ff] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#6a7283]">Phone</span>
+          </div>
+        )}
+        {lookupStatus === 'failed' && (
+          <div className="flex items-start gap-2.5 rounded-md border border-red-100 bg-red-50 px-3 py-2 text-[12px] text-red-700">
+            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span className="leading-relaxed">{lookupMessage || 'Contact lookup failed. Try again or narrow the persona.'}</span>
+          </div>
+        )}
+        {lookupStatus === 'no_contact' && !fields.hasAnyContact && (
+          <div className="flex items-start gap-2.5 rounded-md border border-[#e4e7ef] bg-[#f7f8fb] px-3 py-2 text-[12px] text-[#6a7283]">
+            <CircleDashed className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span className="leading-relaxed">No verified email or decision-maker match came back. Try a different persona, broader geography, or manual review.</span>
           </div>
         )}
         {enrichments.slice(0, 4).map((e: any, i: number) => (
@@ -161,8 +259,12 @@ function ProspectRowDetail({
             <span className="flex-1 text-[12px] text-gray-700 leading-snug">{e.result}</span>
           </div>
         ))}
-        {!prospect.email && !isEnriching && (
-          <p className="px-1 text-[12px] italic text-[#8a92a6]">No verified email yet. Select this company and run Find Contacts. Phone enrichment is on the premium roadmap.</p>
+        {!fields.email && lookupStatus !== 'failed' && lookupStatus !== 'no_contact' && !isEnriching && (
+          <p className="px-1 text-[12px] italic text-[#8a92a6]">
+            {fields.hasAnyContact
+              ? 'Decision-maker found. Verified email is still missing for this prospect.'
+              : 'Select this company and run Find Contacts to resolve a decision-maker and verified email.'}
+          </p>
         )}
       </div>
     </div>
@@ -249,7 +351,8 @@ export function ProspectGrid({
   }
 
   const allSelected = selected.size === prospects.length && prospects.length > 0
-  const contactsFound = prospects.filter(p => p.email || (p.fullName && p.fullName !== 'Unknown Contact')).length
+  const contactsFound = prospects.filter(p => getProspectContactFields(p).hasAnyContact).length
+  const lookupFailures = prospects.filter(p => getContactLookupStatus(p) === 'failed').length
   const isFindingContacts = enrichingIds.size > 0
 
   return (
@@ -269,6 +372,11 @@ export function ProspectGrid({
           {contactsFound > 0 && (
             <span className="text-[11px] font-semibold text-emerald-600">
               · {contactsFound} with contacts
+            </span>
+          )}
+          {lookupFailures > 0 && (
+            <span className="text-[11px] font-semibold text-red-600">
+              · {lookupFailures} lookup failed
             </span>
           )}
         </div>
@@ -298,7 +406,7 @@ export function ProspectGrid({
                 >
                   {isFindingContacts ? (
                     <>
-                      Finding
+                      Finding {enrichingIds.size}
                       <Loader2 className="ml-1.5 h-3.5 w-3.5 animate-spin" />
                     </>
                   ) : (
@@ -319,9 +427,12 @@ export function ProspectGrid({
         {prospects.map((prospect) => {
           const isExpanded = expanded.has(prospect.id)
           const isSelected = selected.has(prospect.id)
-          const hasContact = !!prospect.email
-          const hasName = prospect.fullName && prospect.fullName !== 'Unknown Contact'
           const isEnriching = enrichingIds.has(prospect.id)
+          const fields = getProspectContactFields(prospect)
+          const contactStatus = getContactLookupStatus(prospect, isEnriching)
+          const statusMeta = getContactStatusMeta(prospect, isEnriching)
+          const StatusIcon = statusMeta.icon
+          const hasName = Boolean(fields.fullName)
 
           return (
             <div
@@ -381,9 +492,9 @@ export function ProspectGrid({
                 <div className="hidden md:flex flex-col items-start min-w-[140px] max-w-[180px]">
                   {hasName ? (
                     <>
-                      <span className="w-full truncate text-[13px] font-medium text-[#25304a]">{prospect.fullName}</span>
-                      {prospect.jobTitle && (
-                        <span className="w-full truncate text-[11px] text-[#8a92a6]">{prospect.jobTitle}</span>
+                      <span className="w-full truncate text-[13px] font-medium text-[#25304a]">{fields.fullName}</span>
+                      {fields.jobTitle && (
+                        <span className="w-full truncate text-[11px] text-[#8a92a6]">{fields.jobTitle}</span>
                       )}
                     </>
                   ) : isEnriching ? (
@@ -392,27 +503,30 @@ export function ProspectGrid({
                       Finding contact...
                     </span>
                   ) : (
-                    <span className="text-[11px] text-[#b0b6c5]">No contact</span>
+                    <span className="text-[11px] text-[#b0b6c5]">
+                      {contactStatus === 'no_contact' ? 'No verified match' : 'No contact yet'}
+                    </span>
                   )}
                 </div>
 
                 {/* Email badge */}
                 <div className="hidden w-[170px] sm:block">
-                  {hasContact ? (
+                  {fields.email ? (
                     <span
-                      title={prospect.email}
+                      title={fields.email}
                       className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-emerald-100 bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700"
                     >
                       <Mail className="h-3 w-3 shrink-0" />
-                      <span className="truncate">{prospect.email}</span>
-                    </span>
-                  ) : isEnriching ? (
-                    <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[#8a92a6]">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      Resolving
+                      <span className="truncate">{fields.email}</span>
                     </span>
                   ) : (
-                    <span className="text-[11px] text-[#b0b6c5]">—</span>
+                    <span
+                      title={prospect.contactLookupMessage || prospect.enrichmentError || statusMeta.label}
+                      className={`inline-flex max-w-full items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] font-semibold ${statusMeta.className}`}
+                    >
+                      <StatusIcon className={`h-3 w-3 shrink-0 ${statusMeta.spinning ? 'animate-spin' : ''}`} />
+                      <span className="truncate">{statusMeta.label}</span>
+                    </span>
                   )}
                 </div>
 

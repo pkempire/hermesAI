@@ -6,7 +6,12 @@ import { logger } from '@/lib/utils/logger'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { memo } from 'react'
 import { toast } from 'sonner'
-import { enrichSelectedContacts } from './contact-enrichment'
+import {
+  enrichSelectedContacts,
+  markContactsFailed,
+  markContactsSearching,
+  mergeContactEnrichmentResults
+} from './contact-enrichment'
 import type { Prospect, ProspectSearchContext } from './types'
 
 interface ProspectSearchResultsProps {
@@ -65,6 +70,7 @@ function ResultsGrid({
       toast.warning('Select at least one company first')
       return
     }
+    onProspectsUpdate(prev => markContactsSearching(prev, ids))
     const t = toast.loading(`Finding contacts for ${toEnrich.length} ${toEnrich.length === 1 ? 'company' : 'companies'}…`)
     try {
       const result = await enrichSelectedContacts({
@@ -72,14 +78,18 @@ function ResultsGrid({
         ids,
         searchContext
       })
-      onProspectsUpdate(prev => {
-        const byId = new Map(prev.map(p => [p.id, p]))
-        for (const p of result.enriched) byId.set(p.id, p)
-        return Array.from(byId.values())
-      })
-      toast.success(`Found ${result.found} of ${result.attempted} contacts`, { id: t })
+      onProspectsUpdate(prev => mergeContactEnrichmentResults(prev, ids, result.enriched))
+      const message =
+        result.found > 0
+          ? `Resolved ${result.found} of ${result.attempted} contacts`
+          : `No verified contacts found for ${result.attempted} selected ${result.attempted === 1 ? 'company' : 'companies'}`
+      toast[result.found > 0 ? 'success' : 'warning'](
+        result.failed > 0 ? `${message}; ${result.failed} failed` : message,
+        { id: t }
+      )
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error'
+      onProspectsUpdate(prev => markContactsFailed(prev, ids, msg))
       logger.warn('Results find-contacts failed:', err)
       toast.error(msg, { id: t })
     }
