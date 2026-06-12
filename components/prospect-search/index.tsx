@@ -1,7 +1,6 @@
 'use client'
 
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Collapsible,
   CollapsibleContent,
@@ -10,7 +9,7 @@ import {
 import { useProspectStream } from '@/hooks/use-prospect-stream'
 import { campaignStore } from '@/lib/store/campaign-store'
 import { logger } from '@/lib/utils/logger'
-import { AlertCircle, CheckCircle2, ChevronDown, ChevronRight, Database, Search, SlidersHorizontal } from 'lucide-react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { ProspectSearchBuilder } from './builder'
 import { ProspectSearchEmpty } from './empty'
@@ -115,6 +114,39 @@ function persistCampaign(query: string, websetId: string, totalFound: number, en
   }
 }
 
+function StatusMark({ status }: { status: SearchStatus }) {
+  const tone =
+    status === 'completed'
+      ? 'border-emerald-200 bg-emerald-50'
+      : status === 'running'
+      ? 'border-[#cbd4ff] bg-[#edf1ff]'
+      : status === 'failed'
+      ? 'border-red-200 bg-red-50'
+      : 'border-[#dfe4ee] bg-[#fbfcff]'
+
+  const dots =
+    status === 'completed'
+      ? ['bg-[#12b981]', 'bg-[#12b981]', 'bg-[#12b981]', 'bg-[#dfe4ee]']
+      : status === 'running'
+      ? ['bg-[#315dff]', 'bg-[#315dff]', 'bg-[#bfc9ff]', 'bg-[#dfe4ee]']
+      : status === 'failed'
+      ? ['bg-red-500', 'bg-red-300', 'bg-[#dfe4ee]', 'bg-[#dfe4ee]']
+      : ['bg-[#315dff]', 'bg-[#dfe4ee]', 'bg-[#dfe4ee]', 'bg-[#dfe4ee]']
+
+  return (
+    <span className={`grid h-10 w-10 shrink-0 grid-cols-2 gap-1 rounded-lg border p-2 shadow-sm ${tone}`}>
+      {dots.map((dot, index) => (
+        <span
+          key={index}
+          className={`rounded-[3px] ${dot} ${
+            status === 'running' && index === 1 ? 'animate-pulse' : ''
+          }`}
+        />
+      ))}
+    </span>
+  )
+}
+
 export function ProspectSearchSection({
   tool,
   isOpen,
@@ -172,10 +204,10 @@ export function ProspectSearchSection({
       const targetTotal = streamingTarget || streamingCriteria?.targetCount || 25
       const percent = Math.max(0, Math.min(100, Math.round((found / Math.max(1, targetTotal)) * 100)))
       emitPipeline({
-        stepNumber: 1,
+        stepNumber: 2,
         totalSteps: 5,
         percent,
-        label: companyEnriched > 0 ? `Finding companies · ${companyEnriched} enriched` : 'Finding companies'
+        label: companyEnriched > 0 ? `${companyEnriched} enriched` : 'Search'
       })
     },
     onComplete: finalProspects => {
@@ -196,7 +228,7 @@ export function ProspectSearchSection({
           websetId: streamingWebsetId
         })
       })
-      emitPipeline({ stepNumber: 2, totalSteps: 5, percent: 100, label: 'Discovery complete' })
+      emitPipeline({ stepNumber: 3, totalSteps: 5, percent: 100, label: 'Resolved' })
       try {
         sessionStorage.setItem('hermes-latest-prospects', JSON.stringify(list))
         if (searchContext) {
@@ -325,28 +357,17 @@ export function ProspectSearchSection({
     searchStatus === 'completed'
       ? 'Search complete'
       : stream.status === 'running'
-      ? 'Analyzing results in real-time...'
-      : 'Starting search...'
+      ? 'Reading live sources'
+      : 'Starting'
 
-  const statusBadge: { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string } =
+  const statusLabel =
     searchStatus === 'completed'
-      ? { variant: 'default', label: 'Complete' }
+      ? 'Complete'
       : searchStatus === 'running'
-      ? { variant: 'secondary', label: 'Searching' }
+      ? 'Live'
       : searchStatus === 'failed'
-      ? { variant: 'destructive', label: 'Failed' }
-      : { variant: 'outline', label: 'Ready' }
-
-  const statusIcon =
-    searchStatus === 'completed' ? (
-      <CheckCircle2 className="h-5 w-5 text-emerald-600" strokeWidth={1.75} />
-    ) : searchStatus === 'running' ? (
-      <Search className="h-5 w-5 animate-pulse text-[#315dff]" strokeWidth={1.75} />
-    ) : searchStatus === 'failed' ? (
-      <AlertCircle className="h-5 w-5 text-red-500" />
-    ) : (
-      <Search className="h-5 w-5 text-[#6a7283] opacity-70 transition-opacity group-hover:opacity-100" strokeWidth={1.5} />
-    )
+      ? 'Needs fix'
+      : 'Ready'
 
   const statusTone =
     searchStatus === 'completed'
@@ -355,13 +376,16 @@ export function ProspectSearchSection({
       ? 'border-[#cbd4ff] bg-[#edf1ff] text-[#315dff]'
       : searchStatus === 'failed'
       ? 'border-red-200 bg-red-50 text-red-700'
-      : 'border-[#dfe4ee] bg-white text-[#6a7283]'
+      : 'border-[#dfe4ee] bg-[#fbfcff] text-[#6a7283]'
 
-  const summaryItems = [
-    { label: 'Type', value: displayEntityType, icon: SlidersHorizontal },
-    { label: 'Target', value: displayTargetCount, icon: Search },
-    { label: 'Fields', value: displayEnrichmentCount, icon: Database }
-  ]
+  const headerMessage =
+    uiType === 'interactive'
+      ? 'Review filters, then run.'
+      : uiType === 'streaming'
+      ? 'Live search running.'
+      : searchStatus === 'failed' || searchStatus === 'completed'
+      ? searchMessage
+      : ''
 
   // Builder callbacks
   const handleStreamingFlush = useCallback(() => {
@@ -424,82 +448,61 @@ export function ProspectSearchSection({
   }, [])
 
   return (
-    <div className="my-5 w-full overflow-hidden rounded-lg border border-[#dfe4ee] bg-white shadow-[0_18px_50px_rgba(5,18,47,0.06)]">
+    <div className="my-4 w-full overflow-hidden rounded-lg border border-[#dfe4ee] bg-white shadow-[0_18px_50px_rgba(5,18,47,0.06)]">
       <Collapsible open={isOpen !== false} onOpenChange={onOpenChange}>
         <Card className="w-full border-none bg-transparent shadow-none">
           <CollapsibleTrigger asChild>
-            <CardHeader className="cursor-pointer rounded-t-lg px-5 py-5 transition-colors duration-150 hover:bg-[#fbfcff] md:px-6">
-              <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-                <div className="flex items-start gap-4">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[#dfe4ee] bg-[#f5f7ff] shadow-sm">
-                    {statusIcon}
-                  </div>
-                  <div>
-                    <CardTitle className="text-[24px] leading-none text-[#071329] tracking-normal">
-                      Prospect Discovery
-                    </CardTitle>
-                    <Badge
-                      variant={statusBadge.variant}
-                      className={`mt-3 rounded-md px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] shadow-none ${statusTone}`}
-                    >
-                      {searchStatus === 'running' && <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-current" />}
-                      {statusBadge.label}
-                    </Badge>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="hidden gap-2 md:flex">
-                    {summaryItems.map(({ label, value, icon: Icon }) => (
-                      <div key={label} className="min-w-[86px] rounded-md border border-[#dfe4ee] bg-white px-3 py-2">
-                        <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8a92a6]">
-                          <Icon className="h-3 w-3" />
-                          {label}
-                        </div>
-                        <div className="truncate text-[13px] font-semibold capitalize text-[#071329]">
-                          {value}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="rounded-md border border-[#dfe4ee] bg-white p-2.5 shadow-sm transition-colors hover:border-[#bfc9ff]">
-                  {isOpen ? (
-                    <ChevronDown className="h-5 w-5 text-[#8a92a6]" />
-                  ) : (
-                    <ChevronRight className="h-5 w-5 text-[#8a92a6]" />
-                  )}
-                  </div>
-                </div>
-              </div>
-              <div className="mt-5 space-y-3">
-                <CardDescription className="max-w-[720px] text-[14px] leading-relaxed text-[#5f687a] font-medium">
-                  {uiType === 'interactive'
-                    ? 'Edit the filters, keep the strongest fields, then run the search.'
-                    : uiType === 'streaming'
-                    ? 'Hermes is searching and enriching live.'
-                    : searchMessage || 'Ready to configure the search.'}
-                </CardDescription>
-                <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6a7283] md:hidden">
-                  <span className="text-[#315dff]">Type: {displayEntityType}</span>
-                  <span className="text-[#d1d6e2]">/</span>
-                  <span>Target: {displayTargetCount}</span>
-                  {prospects.length > 0 && prospects.length < displayTargetCount && (
-                    <>
-                      <span className="text-[#d1d6e2]">/</span>
-                      <span className="text-emerald-600">
-                        Found: {prospects.length} ({Math.round((prospects.length / displayTargetCount) * 100)}%)
+            <CardHeader className="cursor-pointer rounded-t-lg px-4 py-4 transition-colors duration-150 hover:bg-[#fbfcff] md:px-5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex min-w-0 items-start gap-3">
+                  <StatusMark status={searchStatus} />
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <CardTitle className="text-[20px] leading-none tracking-normal text-[#071329]">
+                        Prospect Discovery
+                      </CardTitle>
+                      <span
+                        className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${statusTone}`}
+                      >
+                        {statusLabel}
                       </span>
-                    </>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8a92a6]">
+                      <span className="capitalize text-[#46506a]">{displayEntityType}</span>
+                      <span className="h-1 w-1 rounded-full bg-[#d1d6e2]" />
+                      <span>{displayTargetCount} targets</span>
+                      <span className="h-1 w-1 rounded-full bg-[#d1d6e2]" />
+                      <span>{displayEnrichmentCount} fields</span>
+                      {prospects.length > 0 && prospects.length < displayTargetCount && (
+                        <>
+                          <span className="h-1 w-1 rounded-full bg-[#d1d6e2]" />
+                          <span className="text-emerald-600">{prospects.length} found</span>
+                        </>
+                      )}
+                    </div>
+                    {headerMessage && (
+                      <p className="mt-2 max-w-[620px] text-[12px] font-medium leading-relaxed text-[#6a7283]">
+                        {headerMessage}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="rounded-full border border-[#dfe4ee] bg-white p-2 shadow-sm transition-colors hover:border-[#bfc9ff]">
+                  {isOpen ? (
+                    <ChevronDown className="h-4 w-4 text-[#8a92a6]" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-[#8a92a6]" />
                   )}
-                  <span className="text-[#d1d6e2]">/</span>
-                  <span>{displayEnrichmentCount} fields</span>
                 </div>
               </div>
             </CardHeader>
           </CollapsibleTrigger>
 
           <CollapsibleContent>
-            <CardContent className="space-y-6 border-t border-[#edf0f6] px-5 pb-6 pt-5 md:px-6">
-              {uiType === 'idle' && tool && <ProspectSearchEmpty />}
+            <CardContent className="space-y-4 border-t border-[#edf0f6] px-4 pb-5 pt-4 md:px-5">
+              {uiType === 'idle' && tool && (
+                <ProspectSearchEmpty ready={searchStatus === 'idle' && tool.state === 'result'} />
+              )}
 
               {uiType === 'interactive' && toolResult?.props && (
                 <ProspectSearchBuilder
@@ -549,9 +552,6 @@ export function ProspectSearchSection({
                 />
               )}
 
-              {searchStatus === 'idle' && tool.state === 'result' && uiType === 'idle' && (
-                <ProspectSearchEmpty ready />
-              )}
             </CardContent>
           </CollapsibleContent>
         </Card>

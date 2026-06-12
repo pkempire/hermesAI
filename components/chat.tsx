@@ -30,14 +30,8 @@ export function Chat({
   const [currentCampaignStep, setCurrentCampaignStep] = useState(1)
   const [campaignPercent, setCampaignPercent] = useState(20)
   const [totalCampaignSteps, setTotalCampaignSteps] = useState(5)
-  const [campaignStepLabel, setCampaignStepLabel] = useState('Configure Prospect Search')
-  const stepsBrief = [
-    'Configure Prospect Search',
-    'Finding companies',
-    'Discovery complete',
-    'Draft emails',
-    'Review & next steps'
-  ]
+  const [campaignStepLabel, setCampaignStepLabel] = useState('Brief')
+  const stepsBrief = ['Brief', 'Search', 'Resolve', 'Draft', 'Review']
   const [inputValue, setInputValue] = useState('')
   const [uiData, setUiData] = useState<JSONValue[]>([])
 
@@ -405,6 +399,16 @@ export function Chat({
     onSubmit(fakeEvent, message)
   }
 
+  const activeCampaignStep = Math.max(
+    0,
+    Math.min(stepsBrief.length - 1, currentCampaignStep - 1)
+  )
+  const visibleCampaignPercent = Math.max(0, Math.min(100, Math.round(campaignPercent)))
+  const visibleCampaignLabel =
+    campaignStepLabel && !campaignStepLabel.toLowerCase().includes('configure')
+      ? campaignStepLabel
+      : stepsBrief[activeCampaignStep]
+
   return (
     <div
       className="relative flex min-w-0 min-h-0 flex-1 overflow-hidden bg-[#f7f8fb] pt-0 h-full"
@@ -416,15 +420,45 @@ export function Chat({
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             {/* Minimal campaign progress indicator */}
             {showProgressTracker && (
-              <div className="border-b border-border/50 px-3 py-1.5 text-[10px] flex items-center justify-between bg-background/40 backdrop-blur-sm">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-medium text-foreground/70 truncate">{stepsBrief[Math.min(currentCampaignStep-1, stepsBrief.length-1)]}</span>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <div className="w-24 h-0.5 bg-muted/50 rounded-full overflow-hidden">
-                    <div className="h-full bg-primary/60 rounded-full transition-all duration-300" style={{ width: `${campaignPercent}%` }} />
+              <div className="border-b border-[#dfe4ee] bg-white/75 px-3 py-2 backdrop-blur-sm">
+                <div className="mx-auto flex max-w-[980px] items-center gap-3">
+                  <div className="flex min-w-0 items-center gap-2 rounded-full border border-[#dfe4ee] bg-[#fbfcff] px-2.5 py-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#315dff]" />
+                    <span className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-[#46506a]">
+                      {visibleCampaignLabel}
+                    </span>
                   </div>
-                  <span className="text-muted-foreground/60 tabular-nums">{Math.round(campaignPercent)}%</span>
+                  <div className="grid min-w-0 flex-1 grid-cols-5 gap-1">
+                    {stepsBrief.map((step, index) => {
+                      const isDone = index < activeCampaignStep
+                      const isActive = index === activeCampaignStep
+                      return (
+                        <div key={step} className="min-w-0">
+                          <div
+                            className={cn(
+                              'h-1.5 rounded-full transition-colors',
+                              isDone
+                                ? 'bg-[#071329]'
+                                : isActive
+                                ? 'bg-[#315dff]'
+                                : 'bg-[#e7eaf1]'
+                            )}
+                          />
+                          <span
+                            className={cn(
+                              'mt-1 hidden truncate text-[9px] font-semibold uppercase tracking-[0.12em] sm:block',
+                              isActive ? 'text-[#315dff]' : 'text-[#9aa1b1]'
+                            )}
+                          >
+                            {step}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="w-10 text-right text-[10px] font-semibold tabular-nums text-[#8a92a6]">
+                    {visibleCampaignPercent}%
+                  </div>
                 </div>
               </div>
             )}

@@ -77,7 +77,6 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
   }, [user])
 
   const trialDays = snapshot.trial_days_remaining
-  const navLinks = user ? APP_NAV_LINKS : LANDING_NAV_LINKS
 
   return (
     <header
@@ -96,28 +95,50 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-9 text-[13px] font-medium text-[#252d42] md:flex">
-          {navLinks.map(([label, href]) => (
-            <Link
-              key={label}
-              href={href}
-              className={cn(
-                'transition-colors hover:text-[#315dff]',
-                user && 'rounded-md border border-[#dfe2eb] bg-white/55 px-3 py-1.5 text-[#46506a] hover:border-[#bfc9ff]'
-              )}
-            >
-              {label}
-            </Link>
-          ))}
-        </nav>
+        {!user && (
+          <nav className="hidden items-center gap-9 text-[13px] font-medium text-[#252d42] md:flex">
+            {LANDING_NAV_LINKS.map(([label, href]) => (
+              <Link
+                key={label}
+                href={href}
+                className="transition-colors hover:text-[#315dff]"
+              >
+                {label}
+              </Link>
+            ))}
+          </nav>
+        )}
 
         <div className="flex items-center gap-3">
+          {user && (
+            <nav
+              className="hidden items-center rounded-full border border-[#dfe2eb] bg-white/75 p-1 shadow-[0_10px_26px_rgba(5,18,47,0.05)] sm:flex"
+              aria-label="Workspace navigation"
+            >
+              {APP_NAV_LINKS.map(([label, href], index) => (
+                <Link
+                  key={label}
+                  href={href}
+                  className="group flex h-8 items-center gap-2 rounded-full px-3 text-[12px] font-semibold text-[#46506a] transition-colors hover:bg-[#f1f4ff] hover:text-[#071329]"
+                >
+                  <span
+                    className={cn(
+                      'h-1.5 w-1.5 rounded-full transition-transform group-hover:scale-125',
+                      index === 0 ? 'bg-[#315dff]' : 'bg-[#d38a00]'
+                    )}
+                  />
+                  {label}
+                </Link>
+              ))}
+            </nav>
+          )}
+
           {user && snapshot.status === 'trialing' && trialDays !== null && (
             <Link
               href="/pricing"
-              className="hidden items-center rounded-full border border-[#d7dbe5] bg-white px-3 py-1 text-[12px] font-medium text-[#46506a] transition-colors hover:border-[#0b1732]/40 hover:text-[#0b1732] sm:inline-flex"
+              className="hidden items-center rounded-full border border-[#d7dbe5] bg-white px-3 py-1 text-[12px] font-medium text-[#46506a] transition-colors hover:border-[#0b1732]/40 hover:text-[#0b1732] lg:inline-flex"
             >
-              {trialDays} {trialDays === 1 ? 'day' : 'days'} left in trial
+              {trialDays} {trialDays === 1 ? 'day' : 'days'} left
             </Link>
           )}
 
