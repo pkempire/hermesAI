@@ -8,18 +8,6 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
-import {
-  Building2,
-  CheckCircle2,
-  Eye,
-  Mail,
-  Paperclip,
-  Send,
-  User,
-  Wand2,
-  Sparkles,
-  Inbox
-} from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Prospect } from './prospect-grid'
 import Image from 'next/image'
@@ -350,16 +338,16 @@ export function InteractiveEmailDrafter({
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
-      <div className="bg-white border border-gray-200 shadow-sm rounded-3xl p-6 md:p-8">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+      <div className="rounded-xl border border-[#dfe4ee] bg-white p-4 shadow-sm md:p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-600/70 mb-4 px-3 py-1 bg-amber-50 self-start rounded-full border border-amber-100/50">
-              Personalization Engine
+            <div className="mb-2 w-fit rounded-full border border-[#dfe4ee] bg-[#fbfcff] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#8a92a6]">
+              Draft queue
             </div>
-            <h2 className="mt-3 text-4xl leading-tight text-gray-900 md:text-[3.5rem] tracking-tight">
+            <h2 className="text-[26px] font-bold leading-tight tracking-tight text-[#071329]">
               Campaign Draft Studio
             </h2>
-            <p className="mt-4 max-w-2xl text-[16px] leading-[1.6] font-medium text-gray-500/80">
+            <p className="mt-2 max-w-2xl text-[13px] font-medium leading-6 text-[#6a7283]">
               Refine your sequence. Tighten the hook, adjust the tone, and verify the signals before Hermes creates the Gmail draft.
             </p>
           </div>
@@ -378,13 +366,13 @@ export function InteractiveEmailDrafter({
         </div>
       </div>
 
-      <div className="grid gap-0 lg:grid-cols-[280px_1fr] xl:grid-cols-[320px_1fr] border border-gray-200 rounded-3xl overflow-hidden bg-white shadow-sm h-[750px]">
+      <div className="grid h-[680px] gap-0 overflow-hidden rounded-xl border border-[#dfe4ee] bg-white shadow-sm lg:grid-cols-[280px_1fr] xl:grid-cols-[320px_1fr]">
         {/* Left Column: Inbox List */}
         <div className="flex flex-col border-r border-gray-200 bg-[#FAFAFA]">
           <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 bg-white">
             <div className="flex space-x-6 text-[12px] font-black uppercase tracking-[0.2em] text-gray-400">
               <span className="text-gray-900 border-b-2 border-gray-900 pb-5 -mb-[21px] flex items-center gap-2">
-                <Inbox className="w-3.5 h-3.5" /> Discovery List
+                Discovery List
               </span>
             </div>
           </div>
@@ -444,7 +432,7 @@ export function InteractiveEmailDrafter({
             </div>
             <div className="flex flex-wrap gap-2">
               <Button onClick={handlePreview} variant="ghost" size="sm" className="hidden sm:flex text-gray-500 hover:text-gray-900 h-8 text-xs font-medium">
-                Preview <Eye className="ml-1.5 h-3.5 w-3.5" />
+                Preview
               </Button>
             </div>
           </div>
@@ -512,7 +500,6 @@ export function InteractiveEmailDrafter({
                     variant="outline"
                     className="h-11 border-gray-100 bg-white text-gray-600 hover:text-gray-900 text-[13px] font-bold rounded-2xl shadow-sm px-6 transition-all hover:border-amber-200"
                   >
-                    <Sparkles className="mr-2 h-4 w-4 text-amber-500" />
                     {isGenerating ? 'Drafting...' : 'Autodraft'}
                   </Button>
                   <Button
@@ -526,7 +513,6 @@ export function InteractiveEmailDrafter({
                     className="h-11 rounded-2xl shadow-lg bg-gray-900 px-8 text-[13px] font-bold tracking-wide text-white hover:bg-amber-600 transition-all active:scale-95"
                   >
                     {isCreatingDraft ? 'Creating draft' : 'Create Gmail Draft'}
-                    <Send className="ml-2 h-3.5 w-3.5" />
                   </Button>
                 </div>
               </div>

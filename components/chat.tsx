@@ -395,8 +395,8 @@ export function Chat({
   
   // Create a wrapper function for template submissions
   const submitTemplateMessage = (message: string) => {
-    const fakeEvent = { preventDefault: () => {} } as React.FormEvent<HTMLFormElement>
-    onSubmit(fakeEvent, message)
+    const syntheticSubmitEvent = { preventDefault: () => {} } as React.FormEvent<HTMLFormElement>
+    onSubmit(syntheticSubmitEvent, message)
   }
 
   const activeCampaignStep = Math.max(

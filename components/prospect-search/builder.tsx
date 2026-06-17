@@ -150,7 +150,10 @@ function ProspectSearchBuilderImpl({
               message: result.message || 'Preview completed',
               context: ctx
             })
-          } else if (result.type === 'prospect_search_progress' && result.event === 'progress') {
+          } else if (
+            result.type === 'prospect_search_start' ||
+            (result.type === 'prospect_search_progress' && result.event === 'progress')
+          ) {
             onPreviewStart({
               websetId: result.websetId,
               criteria: {

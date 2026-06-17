@@ -3,7 +3,6 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Users, Send, TrendingUp, Calendar } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 
@@ -15,6 +14,7 @@ interface Campaign {
   target_count: number
   total_prospects: number
   emails_sent: number
+  websetId?: string
   prospects: Array<{
     id: string
     email: string | null
@@ -47,12 +47,39 @@ export default function CampaignsPage() {
       }
 
       const response = await fetch('/api/campaigns')
+      let serverCampaigns: Campaign[] = []
       if (!response.ok) {
-        setCampaigns([])
-        return
+        serverCampaigns = []
+      } else {
+        const data = await response.json()
+        serverCampaigns = data.campaigns || []
       }
-      const data = await response.json()
-      setCampaigns(data.campaigns || [])
+
+      const localCampaigns = (() => {
+        try {
+          const parsed = JSON.parse(localStorage.getItem('hermes-campaigns') || '[]')
+          if (!Array.isArray(parsed)) return []
+          return parsed.map((campaign: any) => ({
+            id: campaign.id,
+            websetId: campaign.websetId,
+            name: campaign.name || campaign.query || 'Untitled campaign',
+            status: campaign.status || 'completed',
+            created_at: campaign.createdAt || new Date().toISOString(),
+            target_count: campaign.totalFound || 0,
+            total_prospects: campaign.totalFound || 0,
+            emails_sent: 0,
+            prospects: []
+          })) as Campaign[]
+        } catch {
+          return []
+        }
+      })()
+
+      const serverIds = new Set(serverCampaigns.map(campaign => campaign.websetId || campaign.id))
+      setCampaigns([
+        ...serverCampaigns,
+        ...localCampaigns.filter(campaign => !serverIds.has(campaign.websetId || campaign.id))
+      ])
     } catch (error) {
       console.error('Failed to fetch campaigns:', error)
     } finally {
@@ -87,18 +114,17 @@ export default function CampaignsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-      <div className="mb-8 flex flex-col gap-5 rounded-[2rem] border border-black/5 bg-white/70 px-6 py-8 shadow-[0_24px_80px_rgba(62,45,18,0.08)] backdrop-blur-sm md:flex-row md:items-end md:justify-between md:px-8">
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+      <div className="mb-5 flex flex-col gap-4 rounded-xl border border-[#dfe4ee] bg-white px-5 py-5 shadow-sm md:flex-row md:items-end md:justify-between">
         <div>
-          <div className="text-[11px] uppercase tracking-[0.32em] text-black/40">Delivery board</div>
-          <h1 className="mt-3 text-4xl text-gray-950 md:text-5xl">Campaigns</h1>
-          <p className="mt-3 max-w-2xl text-sm leading-7 text-black/60 md:text-base">
-            Track the lists you&apos;ve built, how many contacts are ready, and where each outreach motion stands.
+          <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#8a92a6]">Delivery board</div>
+          <h1 className="mt-2 text-[26px] font-bold text-[#071329]">Campaigns</h1>
+          <p className="mt-1 max-w-2xl text-[13px] leading-6 text-[#6a7283]">
+            Recent prospect runs and saved audiences.
           </p>
         </div>
         <Link href="/">
-          <Button className="bg-black text-white hover:bg-black/90">
-            <Plus className="w-4 h-4 mr-2" />
+          <Button className="h-9 rounded-md bg-[#071329] text-[12px] font-semibold text-white hover:bg-[#102448]">
             {isAuthenticated ? 'New Campaign' : 'Start from Brief'}
           </Button>
         </Link>
@@ -106,17 +132,15 @@ export default function CampaignsPage() {
 
       {campaigns.length === 0 ? (
         <Card className="hermes-surface">
-          <CardContent className="flex flex-col items-center justify-center p-12">
-            <Send className="mb-4 h-12 w-12 text-black/45" />
-            <h3 className="mb-2 text-2xl text-gray-950">No campaigns yet</h3>
-            <p className="mb-4 max-w-md text-center text-black/60">
+          <CardContent className="flex flex-col items-center justify-center p-10 text-center">
+            <h3 className="mb-2 text-[20px] font-bold text-[#071329]">No campaigns yet</h3>
+            <p className="mb-4 max-w-md text-[13px] leading-6 text-[#6a7283]">
               {isAuthenticated
                 ? 'Start your first cold email campaign by finding prospects'
                 : 'Sign in, run a brief, and your campaign queue will show up here.'}
             </p>
             <Link href="/">
-              <Button className="bg-black text-white hover:bg-black/90">
-                <Plus className="w-4 h-4 mr-2" />
+              <Button className="h-9 rounded-md bg-[#071329] text-[12px] font-semibold text-white hover:bg-[#102448]">
                 {isAuthenticated ? 'Create First Campaign' : 'Open Hermes'}
               </Button>
             </Link>
@@ -128,10 +152,9 @@ export default function CampaignsPage() {
             <Card key={campaign.id} className="hermes-surface overflow-hidden">
               <CardHeader>
                 <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-2xl">{campaign.name}</CardTitle>
-                    <CardDescription className="flex items-center gap-2 mt-2">
-                      <Calendar className="w-4 h-4" />
+                  <div className="min-w-0">
+                    <CardTitle className="truncate text-[18px] font-bold">{campaign.name}</CardTitle>
+                    <CardDescription className="mt-1 text-[12px]">
                       Created {new Date(campaign.created_at).toLocaleDateString()}
                     </CardDescription>
                   </div>
@@ -142,29 +165,20 @@ export default function CampaignsPage() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                  <div className="rounded-2xl border border-black/5 bg-white/70 p-4">
-                    <div className="mb-3 flex items-center gap-2">
-                    <Users className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-xs uppercase tracking-[0.2em] text-black/45">Audience</span>
-                    </div>
+                  <div className="rounded-lg border border-[#edf0f6] bg-[#fbfcff] p-3">
+                    <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#8a92a6]">Audience</div>
                     <div className="text-sm font-medium">
                       {campaign.total_prospects || campaign.prospects?.length || 0} prospects
                     </div>
                     <div className="text-xs text-muted-foreground">Target: {campaign.target_count}</div>
                   </div>
-                  <div className="rounded-2xl border border-black/5 bg-white/70 p-4">
-                    <div className="mb-3 flex items-center gap-2">
-                    <Send className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-xs uppercase tracking-[0.2em] text-black/45">Delivery</span>
-                    </div>
+                  <div className="rounded-lg border border-[#edf0f6] bg-[#fbfcff] p-3">
+                    <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#8a92a6]">Delivery</div>
                     <div className="text-sm font-medium">{campaign.emails_sent || 0} sent</div>
                     <div className="text-xs text-muted-foreground">Emails launched</div>
                   </div>
-                  <div className="rounded-2xl border border-black/5 bg-white/70 p-4">
-                    <div className="mb-3 flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-xs uppercase tracking-[0.2em] text-black/45">Coverage</span>
-                    </div>
+                  <div className="rounded-lg border border-[#edf0f6] bg-[#fbfcff] p-3">
+                    <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#8a92a6]">Coverage</div>
                     <div className="text-sm font-medium">
                       {campaign.emails_sent > 0
                         ? `${Math.round((campaign.emails_sent / (campaign.total_prospects || 1)) * 100)}%`
@@ -173,21 +187,21 @@ export default function CampaignsPage() {
                     </div>
                     <div className="text-xs text-muted-foreground">Prospects touched</div>
                   </div>
-                  <div className="flex flex-col justify-between gap-2 rounded-2xl border border-black/5 bg-white/70 p-4">
-                    <div className="text-xs uppercase tracking-[0.2em] text-black/45">Actions</div>
+                  <div className="flex flex-col justify-between gap-2 rounded-lg border border-[#edf0f6] bg-[#fbfcff] p-3">
+                    <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#8a92a6]">Actions</div>
                     <div className="flex gap-2">
                     <Button variant="outline" size="sm" asChild>
-                      <Link href={`/campaigns/${campaign.id}`}>
-                        View Details
+                      <Link href="/studio">
+                        Open Studio
                       </Link>
                     </Button>
-                    {campaign.status === 'draft' && (
+                    {campaign.status === 'draft' || campaign.status === 'completed' ? (
                       <Button size="sm" className="bg-black text-white hover:bg-black/90" asChild>
-                        <Link href={`/campaigns/${campaign.id}/send`}>
-                          Start Campaign
+                        <Link href="/">
+                          Continue
                         </Link>
                       </Button>
-                    )}
+                    ) : null}
                     </div>
                   </div>
                 </div>

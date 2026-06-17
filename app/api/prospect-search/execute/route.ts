@@ -1,13 +1,15 @@
 import { getCurrentUserId } from '@/lib/auth/get-current-user'
 import { createOrReuseWebset } from '@/lib/clients/exa-cache'
-import { createEnrichmentDescriptionMap, createExaWebsetsClient } from '@/lib/clients/exa-websets'
-import { enrichProspectWithOrangeslice } from '@/lib/clients/orangeslice'
+import { createExaWebsetsClient } from '@/lib/clients/exa-websets'
 import { getCachedProspects } from '@/lib/performance/redis-cache'
 import { logger } from '@/lib/utils/logger'
 import { createClient } from '@/lib/supabase/server'
 import { requireQuota } from '@/lib/utils/quota'
 import { NextRequest, NextResponse } from 'next/server'
 import { ProspectSearchStartPayload } from '@/lib/types/prospecting'
+import { upsertCampaignRun } from '@/lib/workflows/prospect-run-store'
+
+export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
   try {
@@ -78,6 +80,8 @@ export async function POST(req: NextRequest) {
 
     let websetId: string
     let isReused = false
+    let websetMeta: any = null
+    let campaignId: string | null = null
 
     {
       logger.debug('Creating or reusing webset...')
@@ -87,9 +91,10 @@ export async function POST(req: NextRequest) {
         entityType: entityType || 'company',
         enrichments: enrichments || [],
         targetCount: preview ? 1 : targetCount
-      }, exa)
+      }, exa, { userId })
       websetId = result.websetId
       isReused = result.isReused
+      websetMeta = result.webset || null
     }
 
     logger.debug(`Webset ${isReused ? 'reused' : 'created'}:`, websetId)
@@ -108,6 +113,10 @@ export async function POST(req: NextRequest) {
           .contains('settings', { exa_webset_id: websetId } as any)
           .maybeSingle()
 
+        if (existing?.id) {
+          campaignId = existing.id
+        }
+
         if (!existing) {
           const { data: campaign } = await supabase
             .from('campaigns')
@@ -122,6 +131,8 @@ export async function POST(req: NextRequest) {
               target_count: targetCount,
               settings: {
                 exa_webset_id: websetId,
+                exa_external_id: websetMeta?.externalId || null,
+                exa_dashboard_url: websetMeta?.dashboardUrl || null,
                 reused: isReused,
                 evidence_mode: Boolean(evidenceMode),
                 target_persona: targetPersona || null,
@@ -132,6 +143,7 @@ export async function POST(req: NextRequest) {
             .select('id')
             .single()
           if (campaign) {
+            campaignId = campaign.id
             logger.debug('Campaign persisted:', campaign.id)
           }
         }
@@ -141,78 +153,51 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ type: 'prospect_search_error', event: 'error', message: 'Unable to persist search ownership record.' }, { status: 500 })
     }
 
-    if (preview) {
-      // For preview, wait for completion and return results immediately
-      logger.debug('Waiting for preview to complete...')
-
-      try {
-        const completedWebset = await exa.waitUntilIdle(websetId, {
-          timeout: 60000, // 1 minute timeout for preview
-          pollInterval: 2000
-        })
-
-        const itemsResponse = await exa.listItems(websetId, { limit: 1 })
-        const enrichmentDescriptions = createEnrichmentDescriptionMap(completedWebset as any)
-        const prospects = await Promise.all(
-          itemsResponse.data.map(item =>
-            enrichProspectWithOrangeslice(exa.convertToProspect(item, enrichmentDescriptions), {
-              originalQuery,
-              targetPersona,
-              offer
-            })
-          )
-        )
-
-        return NextResponse.json({
-          type: 'prospect_search_complete',
-          event: 'complete',
-          websetId: websetId,
-          prospects,
-          message: prospects.length > 0
-            ? 'Preview complete! Here\'s 1 example prospect that matches your criteria.'
-            : 'No prospects found matching your criteria. Consider adjusting your search parameters.',
-          summary: {
-            query: originalQuery,
-            entityType,
-            totalFound: prospects.length,
-            preview: true,
-            criteria: criteria?.length || 0,
-            enrichments: enrichments?.length || 0
-          }
-        })
-      } catch (error) {
-        logger.error('Preview timeout or error:', error)
-        return NextResponse.json({
-          type: 'prospect_search_progress',
-          event: 'progress',
-          websetId: websetId,
-          message: 'Preview is taking longer than expected. You can check the full search results or try again.',
-          error: error instanceof Error ? error.message : 'Preview timeout'
-        })
+    const run = await upsertCampaignRun({
+      userId,
+      campaignId,
+      websetId,
+      exaExternalId: websetMeta?.externalId || null,
+      exaDashboardUrl: websetMeta?.dashboardUrl || null,
+      source: preview ? 'preview' : 'app',
+      status: isReused ? 'running' : 'created',
+      entityType: entityType || 'company',
+      targetCount: preview ? 1 : targetCount || 25,
+      originalQuery,
+      targetPersona,
+      offer,
+      progress: { found: 0, analyzed: 0, completion: 0 },
+      settings: {
+        evidence_mode: Boolean(evidenceMode),
+        reused: isReused
       }
-    } else {
-      // For full search, return streaming configuration
-      const startPayload: ProspectSearchStartPayload = {
-        type: 'prospect_search_start',
-        event: 'start',
-        websetId: websetId,
-        searchCriteria: {
-          query: originalQuery,
-          targetCount,
-          entityType,
-          criteriaCount: criteria?.length || 0,
-          enrichmentsCount: enrichments?.length || 0
-        },
-        status: 'created',
-        message: `Started searching for ${targetCount} prospects. I'll stream progress updates.`,
-        progress: {
-          found: 0,
-          analyzed: 0,
-          completion: 0
-        }
+    })
+
+    const effectiveTargetCount = preview ? 1 : targetCount
+    const startPayload: ProspectSearchStartPayload = {
+      type: 'prospect_search_start',
+      event: 'start',
+      websetId,
+      runId: run?.id,
+      dashboardUrl: websetMeta?.dashboardUrl || null,
+      searchCriteria: {
+        query: originalQuery,
+        targetCount: effectiveTargetCount,
+        entityType,
+        criteriaCount: criteria?.length || 0,
+        enrichmentsCount: enrichments?.length || 0
+      },
+      status: 'created',
+      message: preview
+        ? 'Started preview run. Results stream from durable Exa webhook state.'
+        : `Started searching for ${effectiveTargetCount} prospects. Results stream from durable Exa webhook state.`,
+      progress: {
+        found: 0,
+        analyzed: 0,
+        completion: 0
       }
-      return NextResponse.json(startPayload)
     }
+    return NextResponse.json(startPayload)
 
   } catch (err: any) {
     logger.error('Error:', err)

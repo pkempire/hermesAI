@@ -9,7 +9,6 @@ import {
 import { useProspectStream } from '@/hooks/use-prospect-stream'
 import { campaignStore } from '@/lib/store/campaign-store'
 import { logger } from '@/lib/utils/logger'
-import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { ProspectSearchBuilder } from './builder'
 import { ProspectSearchEmpty } from './empty'
@@ -69,7 +68,12 @@ function parseToolResult(tool: any): ParsedToolResult | null {
     }
   }
   if (result.type === 'prospect_search_start') {
-    return { type: 'streaming', websetId: result.websetId, message: result.message }
+    return {
+      type: 'streaming',
+      websetId: result.websetId,
+      runId: result.runId,
+      message: result.message
+    }
   }
   if (result.type === 'prospect_search_complete') {
     return {
@@ -489,9 +493,9 @@ export function ProspectSearchSection({
                 </div>
                 <div className="rounded-full border border-[#dfe4ee] bg-white p-2 shadow-sm transition-colors hover:border-[#bfc9ff]">
                   {isOpen ? (
-                    <ChevronDown className="h-4 w-4 text-[#8a92a6]" />
+                    <span className="block h-4 w-4 text-center text-[15px] font-bold leading-4 text-[#8a92a6]">−</span>
                   ) : (
-                    <ChevronRight className="h-4 w-4 text-[#8a92a6]" />
+                    <span className="block h-4 w-4 text-center text-[15px] font-bold leading-4 text-[#8a92a6]">+</span>
                   )}
                 </div>
               </div>

@@ -53,7 +53,9 @@ const hermesTakeSchema = z.object({
 function ensureOrangesliceConfigured() {
   if (orangesliceConfigured) return
   const apiKey = process.env.ORANGESLICE_API_KEY
-  if (!apiKey) return
+  if (!apiKey) {
+    throw new Error('ORANGESLICE_API_KEY is required for enrichment.')
+  }
   configure({ apiKey })
   orangesliceConfigured = true
 }
@@ -193,15 +195,7 @@ async function findWebsiteContacts(params: {
 
     if (urls.length === 0) return []
 
-    const pages = await Promise.all(
-      urls.map(async url => {
-        try {
-          return await services.scrape.website({ url })
-        } catch {
-          return null
-        }
-      })
-    )
+    const pages = await Promise.all(urls.map(url => services.scrape.website({ url })))
 
     const pageMarkdown = pages
       .map((page: any) => compact(page?.markdown || page?.content || page?.text, 6000))
@@ -235,8 +229,7 @@ Do not invent emails or LinkedIn URLs.`,
 
     return extraction.output.people
   } catch (error) {
-    logger.warn('Website contact extraction failed:', error)
-    return []
+    throw new Error(`Website contact extraction failed: ${error instanceof Error ? error.message : String(error)}`)
   }
 }
 
@@ -279,18 +272,11 @@ CRITICAL RULES:
 
     return result.output
   } catch (error) {
-    logger.warn('Hermes take generation failed:', error)
-    return {
-      whyFit: summary || `${prospect.company || 'This company'} may be worth reviewing.`,
-      outreachAngle: context?.offer
-        ? `Open with one concrete signal, then connect it to ${compact(context.offer, 110)}.`
-        : 'Open with one concrete signal from their site before pitching.',
-      evidence: signalRows.slice(0, 2).map(signal => `${signal.title}: ${signal.result}`)
-    }
+    throw new Error(`Hermes take generation failed: ${error instanceof Error ? error.message : String(error)}`)
   }
 }
 
-async function applyApolloContactFallback(params: {
+async function applyApolloContactEnrichment(params: {
   prospect: Prospect
   domain?: string
   personLinkedinUrl?: string
@@ -347,11 +333,11 @@ async function applyApolloContactFallback(params: {
       toSignal('Apollo LinkedIn', person.linkedin_url)
     ])
   } catch (error) {
-    logger.warn('Apollo contact fallback failed:', error)
+    throw new Error(`Apollo contact enrichment failed: ${error instanceof Error ? error.message : String(error)}`)
   }
 }
 
-async function applyHunterEmailFallback(prospect: Prospect, domain?: string) {
+async function applyHunterEmailEnrichment(prospect: Prospect, domain?: string) {
   if (!process.env.HUNTER_API_KEY || !domain) return
 
   try {
@@ -378,7 +364,7 @@ async function applyHunterEmailFallback(prospect: Prospect, domain?: string) {
       toSignal('Hunter Verified Email', `${found.email} (${found.score})`)
     ])
   } catch (error) {
-    logger.warn('Hunter email fallback failed:', error)
+    throw new Error(`Hunter email enrichment failed: ${error instanceof Error ? error.message : String(error)}`)
   }
 }
 
@@ -387,9 +373,6 @@ export async function enrichProspectWithOrangeslice(
   context?: ProspectSearchContext
 ): Promise<Prospect> {
   ensureOrangesliceConfigured()
-  if (!process.env.ORANGESLICE_API_KEY) {
-    return { ...prospect, reviewReady: true }
-  }
 
   const enriched: Prospect = {
     ...prospect,
@@ -420,7 +403,7 @@ export async function enrichProspectWithOrangeslice(
       }
     }
   } catch (error) {
-    logger.warn('Orangeslice company enrichment failed:', error)
+    throw new Error(`Orangeslice company enrichment failed: ${error instanceof Error ? error.message : String(error)}`)
   }
 
   if (companyData) {
@@ -489,7 +472,7 @@ export async function enrichProspectWithOrangeslice(
       }
     }
   } catch (error) {
-    logger.warn('Orangeslice employee enrichment failed:', error)
+    throw new Error(`Orangeslice employee enrichment failed: ${error instanceof Error ? error.message : String(error)}`)
   }
 
   if (!enriched.fullName) {
@@ -525,7 +508,7 @@ export async function enrichProspectWithOrangeslice(
       }
     }
   } catch (error) {
-    logger.warn('Orangeslice person enrichment failed:', error)
+    throw new Error(`Orangeslice person enrichment failed: ${error instanceof Error ? error.message : String(error)}`)
   }
 
   enriched.linkedinUrl = personLinkedinUrl || companyLinkedinUrl || enriched.linkedinUrl
@@ -534,17 +517,14 @@ export async function enrichProspectWithOrangeslice(
     try {
       const firstName = enriched.fullName?.split(/\s+/)[0]
       const lastName = enriched.fullName?.split(/\s+/).slice(1).join(' ')
-      const contactInfo = await Promise.race([
-        services.person.contact.get({
-          linkedinUrl: personLinkedinUrl,
-          firstName,
-          lastName,
-          company: enriched.company,
-          domain,
-          required: ['work_email']
-        }),
-        new Promise<null>(resolve => setTimeout(() => resolve(null), 8000))
-      ])
+      const contactInfo = await services.person.contact.get({
+        linkedinUrl: personLinkedinUrl,
+        firstName,
+        lastName,
+        company: enriched.company,
+        domain,
+        required: ['work_email']
+      })
 
       const email =
         contactInfo && 'work_emails' in contactInfo
@@ -556,16 +536,16 @@ export async function enrichProspectWithOrangeslice(
         mergeEnrichments(enriched, [toSignal('Decision Maker Email', email)])
       }
     } catch (error) {
-      logger.warn('Orangeslice contact waterfall failed:', error)
+      throw new Error(`Orangeslice contact enrichment failed: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
 
-  await applyApolloContactFallback({
+  await applyApolloContactEnrichment({
     prospect: enriched,
     domain,
     personLinkedinUrl
   })
-  await applyHunterEmailFallback(enriched, domain)
+  await applyHunterEmailEnrichment(enriched, domain)
 
   const signalRows = (Array.isArray(enriched.enrichments) ? enriched.enrichments : [])
     .map((entry: any) => ({
@@ -597,7 +577,6 @@ export async function enrichCompanyData(
   context?: ProspectSearchContext
 ): Promise<Prospect> {
   ensureOrangesliceConfigured()
-  if (!process.env.ORANGESLICE_API_KEY) return { ...prospect, reviewReady: true }
 
   const enriched: Prospect = {
     ...prospect,
@@ -662,7 +641,7 @@ export async function enrichCompanyData(
       ])
     }
   } catch (error) {
-    logger.warn('enrichCompanyData failed:', error)
+    throw new Error(`Company enrichment failed: ${error instanceof Error ? error.message : String(error)}`)
   }
 
   ;(enriched as any).companyEnrichmentDone = true
@@ -680,7 +659,6 @@ export async function enrichPersonData(
   context?: ProspectSearchContext
 ): Promise<Prospect> {
   ensureOrangesliceConfigured()
-  if (!process.env.ORANGESLICE_API_KEY) return { ...prospect, reviewReady: true }
 
   const enriched: Prospect = {
     ...prospect,
@@ -719,7 +697,7 @@ export async function enrichPersonData(
       }
     }
   } catch (error) {
-    logger.warn('enrichPersonData: employee lookup failed:', error)
+    throw new Error(`Employee lookup failed: ${error instanceof Error ? error.message : String(error)}`)
   }
 
   if (!enriched.fullName) {
@@ -754,7 +732,7 @@ export async function enrichPersonData(
       }
     }
   } catch (error) {
-    logger.warn('enrichPersonData: person LinkedIn enrichment failed:', error)
+    throw new Error(`Person LinkedIn enrichment failed: ${error instanceof Error ? error.message : String(error)}`)
   }
 
   enriched.linkedinUrl = personLinkedinUrl || enriched.linkedinUrl
@@ -763,17 +741,14 @@ export async function enrichPersonData(
     try {
       const firstName = enriched.fullName?.split(/\s+/)[0]
       const lastName = enriched.fullName?.split(/\s+/).slice(1).join(' ')
-      const contactInfo = await Promise.race([
-        services.person.contact.get({
-          linkedinUrl: personLinkedinUrl,
-          firstName,
-          lastName,
-          company: enriched.company,
-          domain,
-          required: ['work_email']
-        }),
-        new Promise<null>(resolve => setTimeout(() => resolve(null), 8000))
-      ])
+      const contactInfo = await services.person.contact.get({
+        linkedinUrl: personLinkedinUrl,
+        firstName,
+        lastName,
+        company: enriched.company,
+        domain,
+        required: ['work_email']
+      })
       const email =
         contactInfo && 'work_emails' in contactInfo
           ? contactInfo.work_emails?.[0] || contactInfo.personal_emails?.[0]
@@ -783,16 +758,16 @@ export async function enrichPersonData(
         mergeEnrichments(enriched, [toSignal('Decision Maker Email', email)])
       }
     } catch (error) {
-      logger.warn('enrichPersonData: contact waterfall failed:', error)
+      throw new Error(`Person contact enrichment failed: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
 
-  await applyApolloContactFallback({
+  await applyApolloContactEnrichment({
     prospect: enriched,
     domain,
     personLinkedinUrl
   })
-  await applyHunterEmailFallback(enriched, domain)
+  await applyHunterEmailEnrichment(enriched, domain)
 
   const signalRows = (Array.isArray(enriched.enrichments) ? enriched.enrichments : [])
     .map((entry: any) => ({

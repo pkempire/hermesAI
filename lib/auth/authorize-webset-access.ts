@@ -14,5 +14,18 @@ export async function canAccessWebset(userId: string, websetId: string): Promise
     return false
   }
 
-  return Boolean(data && data.length > 0)
+  if (data && data.length > 0) return true
+
+  const { data: runData, error: runError } = await supabase
+    .from('campaign_runs')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('webset_id', websetId)
+    .limit(1)
+
+  if (runError) {
+    return false
+  }
+
+  return Boolean(runData && runData.length > 0)
 }

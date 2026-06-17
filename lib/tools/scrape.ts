@@ -23,12 +23,12 @@ const snapshotSchema = z.object({
 
 type Snapshot = z.infer<typeof snapshotSchema>
 
-function cleanFallback(
+function cleanValue(
   value: string | null | undefined,
-  fallback: string | null | undefined = ''
+  defaultValue: string | null | undefined = ''
 ) {
   const normalized = value?.replace(/\s+/g, ' ').trim()
-  return normalized && normalized.length > 0 ? normalized : fallback
+  return normalized && normalized.length > 0 ? normalized : defaultValue
 }
 
 const genericSnapshotPattern =
@@ -39,15 +39,15 @@ function isGenericSnapshotValue(value: string | null | undefined) {
   return !normalized || genericSnapshotPattern.test(normalized)
 }
 
-function specificFallback(
+function specificValue(
   value: string | null | undefined,
-  fallback: string | null | undefined = ''
+  defaultValue: string | null | undefined = ''
 ) {
   const normalized = value?.replace(/\s+/g, ' ').trim()
   if (normalized && !isGenericSnapshotValue(normalized)) {
     return normalized
   }
-  return cleanFallback(fallback)
+  return cleanValue(defaultValue)
 }
 
 function visibleTextFromHtml(html: string, host: string) {
@@ -57,17 +57,17 @@ function visibleTextFromHtml(html: string, host: string) {
     node.remove()
   }
 
-  const title = cleanFallback(doc.querySelector('title')?.textContent, host)
-  const description = cleanFallback(
+  const title = cleanValue(doc.querySelector('title')?.textContent, host)
+  const description = cleanValue(
     doc.querySelector('meta[name="description"]')?.getAttribute('content') ||
       doc.querySelector('meta[property="og:description"]')?.getAttribute('content')
   )
   const headings = Array.from(doc.querySelectorAll('h1, h2, h3'))
-    .map(el => cleanFallback(el.textContent))
+    .map(el => cleanValue(el.textContent))
     .filter(Boolean)
     .slice(0, 30)
   const paragraphs = Array.from(doc.querySelectorAll('p, li, a[href]'))
-    .map(el => cleanFallback(el.textContent))
+    .map(el => cleanValue(el.textContent))
     .filter(text => text && text.length > 8)
     .slice(0, 90)
 
@@ -165,13 +165,13 @@ function buildScrapeResult(params: {
 
   return {
     site: fullUrl,
-    companyName: specificFallback(snapshot.companyName, host.replace(/^www\./, '')),
-    offer: specificFallback(snapshot.offer, inferred.offer),
-    targetAudience: specificFallback(snapshot.targetAudience, inferred.targetAudience),
-    businessModel: specificFallback(snapshot.businessModel, inferred.businessModel),
-    whyItMatters: specificFallback(snapshot.whyItMatters, inferred.whyItMatters),
-    referralHook: specificFallback(snapshot.referralHook, inferred.referralHook),
-    searchPlanningNotes: specificFallback(snapshot.searchPlanningNotes, inferred.searchPlanningNotes),
+    companyName: specificValue(snapshot.companyName, host.replace(/^www\./, '')),
+    offer: specificValue(snapshot.offer, inferred.offer),
+    targetAudience: specificValue(snapshot.targetAudience, inferred.targetAudience),
+    businessModel: specificValue(snapshot.businessModel, inferred.businessModel),
+    whyItMatters: specificValue(snapshot.whyItMatters, inferred.whyItMatters),
+    referralHook: specificValue(snapshot.referralHook, inferred.referralHook),
+    searchPlanningNotes: specificValue(snapshot.searchPlanningNotes, inferred.searchPlanningNotes),
     proofPoints:
       (Array.isArray(snapshot.proofPoints) && snapshot.proofPoints.length
         ? snapshot.proofPoints
@@ -186,11 +186,14 @@ function buildScrapeResult(params: {
 
 export function createScrapeSiteTool() {
   return tool({
-    description: 'Analyze a known company website and return a compact GTM offer snapshot using Exa content with direct-fetch fallback. Use before prospect_search when the user asks Hermes to understand their offer or ICP.',
+    description: 'Analyze a known company website and return a compact GTM offer snapshot using Exa and direct homepage content. Use before prospect_search when the user asks Hermes to understand their offer or ICP.',
     inputSchema: scrapeSchema,
     execute: async ({ url }) => {
       const apiKey = process.env.EXA_API_KEY
-      const exa = apiKey ? new Exa(apiKey) : null
+      if (!apiKey) {
+        throw new Error('EXA_API_KEY is required for scrape_site.')
+      }
+      const exa = new Exa(apiKey)
 
       const fullUrl = url.startsWith('http') ? url : `https://${url}`
       const urlObj = new URL(fullUrl)
@@ -199,110 +202,76 @@ export function createScrapeSiteTool() {
       let summary = ''
       const refs: Array<{ title: string; url: string }> = []
 
-      try {
-        const direct = await fetchDirectSiteContent(fullUrl, host)
-        if (direct.text) {
-          summary += `DIRECT HOMEPAGE CRAWL:\n${direct.text}\n\n`
-          refs.push({ title: direct.title || 'Homepage', url: direct.url })
-
-          const directInferred = inferSnapshotFromSignals({ host, summary, refs })
-          if (
-            (directInferred.confidence ?? 0) >= 0.55 &&
-            directInferred.offer &&
-            directInferred.targetAudience
-          ) {
-            return buildScrapeResult({
-              fullUrl,
-              host,
-              inferred: directInferred,
-              refs
-            })
-          }
-        }
-      } catch (fetchErr) {
-        logger.warn('[scrape_site] Direct homepage fetch failed:', fetchErr)
+      const direct = await fetchDirectSiteContent(fullUrl, host)
+      if (direct.text) {
+        summary += `DIRECT HOMEPAGE CRAWL:\n${direct.text}\n\n`
+        refs.push({ title: direct.title || 'Homepage', url: direct.url })
       }
 
-      try {
-        if (!exa) {
-          throw new Error('EXA_API_KEY is not set')
+      logger.info(`[scrape_site] Exa extraction for: ${fullUrl}`)
+
+      const directPromise = exa.getContents([fullUrl], {
+        text: true,
+        livecrawl: 'preferred',
+        livecrawlTimeout: 10000
+      } as any)
+
+      const discoveryPromise = exa.search(
+        `site:${host} (about OR program OR programs OR product OR services OR admissions OR research OR coaching OR pricing OR testimonials)`,
+        {
+          numResults: 5,
+          useAutoprompt: false
         }
+      )
 
-        logger.info(`[scrape_site] Exa extraction for: ${fullUrl}`)
-        
-        // 1. Exa content fetch of primary URL content.
-        const directPromise = exa.getContents([fullUrl], {
-          text: true, 
-          livecrawl: 'preferred',
-          livecrawlTimeout: 10000
-        } as any)
+      const [directRes, discoveryRes] = await Promise.race([
+        Promise.all([directPromise, discoveryPromise]),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Exa operation timeout')), 16000))
+      ]) as [any, any]
 
-        // 2. Parallel discovery of key pages likely to explain the offer.
-        const discoveryPromise = exa.search(
-          `site:${host} (about OR program OR programs OR product OR services OR admissions OR research OR coaching OR pricing OR testimonials)`,
-          {
-            numResults: 5,
-            useAutoprompt: false
-          }
-        )
-
-        const [directRes, discoveryRes] = await Promise.race([
-          Promise.all([directPromise, discoveryPromise]),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Exa operation timeout')), 16000))
-        ]) as [any, any]
-
-        const mainContent = directRes.results?.[0]
-        if (mainContent) {
-          summary += `HOMEPAGE:\n${mainContent.text || mainContent.highlight || ''}\n\n`
-          refs.push({ title: mainContent.title || 'Homepage', url: mainContent.url })
-        }
-
-        // Add context from key pages found, including page text where possible.
-        const discoveryItems = discoveryRes.results || []
-        if (discoveryItems.length > 0) {
-          summary += `ADDITIONAL CONTEXT (from subpages):\n`
-          discoveryItems.forEach((r: any) => {
-            summary += `- ${r.title}: ${r.url}\n`
-            refs.push({ title: r.title, url: r.url })
-          })
-          const urls = discoveryItems
-            .map((r: any) => r?.url)
-            .filter((value: any): value is string => typeof value === 'string')
-            .slice(0, 3)
-          if (urls.length > 0) {
-            try {
-              const pageContent = await exa.getContents(urls, {
-                text: true,
-                livecrawl: 'preferred',
-                livecrawlTimeout: 8000
-              } as any)
-              for (const page of pageContent.results || []) {
-                const pageResult = page as any
-                const text = cleanFallback(pageResult.text || pageResult.highlight)
-                if (!text) continue
-                summary += `\nPAGE: ${pageResult.title || pageResult.url}\n${text.slice(0, 2600)}\n`
-              }
-            } catch (pageErr) {
-              logger.warn('[scrape_site] Subpage content fetch failed:', pageErr)
-            }
-          }
-        }
-
-        summary = summary.slice(0, 10000) // Cap for LLM
-      } catch (e) {
-        logger.warn('[scrape_site] Exa extraction skipped or failed; using direct crawl if available:', e)
+      const mainContent = directRes.results?.[0]
+      if (mainContent) {
+        summary += `HOMEPAGE:\n${mainContent.text || mainContent.highlight || ''}\n\n`
+        refs.push({ title: mainContent.title || 'Homepage', url: mainContent.url })
       }
+
+      const discoveryItems = discoveryRes.results || []
+      if (discoveryItems.length > 0) {
+        summary += `ADDITIONAL CONTEXT (from subpages):\n`
+        discoveryItems.forEach((r: any) => {
+          summary += `- ${r.title}: ${r.url}\n`
+          refs.push({ title: r.title, url: r.url })
+        })
+        const urls = discoveryItems
+          .map((r: any) => r?.url)
+          .filter((value: any): value is string => typeof value === 'string')
+          .slice(0, 3)
+        if (urls.length > 0) {
+          const pageContent = await exa.getContents(urls, {
+            text: true,
+            livecrawl: 'preferred',
+            livecrawlTimeout: 8000
+          } as any)
+          for (const page of pageContent.results || []) {
+            const pageResult = page as any
+            const text = cleanValue(pageResult.text || pageResult.highlight)
+            if (!text) continue
+            summary += `\nPAGE: ${pageResult.title || pageResult.url}\n${text.slice(0, 2600)}\n`
+          }
+        }
+      }
+
+      summary = summary.slice(0, 10000)
 
       let snapshot: Partial<Snapshot> = {}
-      try {
-        if (summary) {
-          const controller = new AbortController()
-          const timeout = setTimeout(() => controller.abort(), 12000)
-          const extractionPromise = generateText({
-            model: getToolCallModel(),
-            abortSignal: controller.signal,
-            output: Output.object({ schema: snapshotSchema }),
-            system: `You extract GTM planning facts from a website.
+      if (summary) {
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 12000)
+        const extractionPromise = generateText({
+          model: getToolCallModel(),
+          abortSignal: controller.signal,
+          output: Output.object({ schema: snapshotSchema }),
+          system: `You extract GTM planning facts from a website.
 
 Rules:
 - Be literal and specific. Do not output generic categories like "Consulting/B2B Services", "B2B Companies", or "General business interest" unless the site explicitly says that.
@@ -311,19 +280,15 @@ Rules:
 - The user may use this snapshot to find partners or prospects, so include who would care and why.
 - If a field is unclear, return null instead of inventing.
 - Keep every field concise and operational.`,
-            prompt: JSON.stringify({
-              url: fullUrl,
-              host,
-              content: summary
-            })
+          prompt: JSON.stringify({
+            url: fullUrl,
+            host,
+            content: summary
           })
+        })
 
-          const extraction = await extractionPromise.finally(() => clearTimeout(timeout)) as any
-          
-          snapshot = extraction.output
-        }
-      } catch (e) {
-        logger.warn('[scrape_site] LLM extraction unavailable, using extracted signals:', e)
+        const extraction = await extractionPromise.finally(() => clearTimeout(timeout)) as any
+        snapshot = extraction.output
       }
 
       const inferred = inferSnapshotFromSignals({ host, summary, refs })

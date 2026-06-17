@@ -1,30 +1,26 @@
 'use client'
 
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
-import {
-  AlertCircle,
-  Building,
-  CheckCircle2,
-  Eye,
-  MapPin,
-  Search,
-  Target,
-  User,
-  Users,
-  Zap
-} from 'lucide-react'
 import { useMemo, useState } from 'react'
+
+type CriterionType =
+  | 'job_title'
+  | 'company_type'
+  | 'industry'
+  | 'location'
+  | 'technology'
+  | 'activity'
+  | 'company_criteria'
+  | 'other'
 
 interface SearchCriterion {
   label: string
   value: string
-  type: 'job_title' | 'company_type' | 'industry' | 'location' | 'technology' | 'activity' | 'company_criteria'
+  type: CriterionType
   enabled: boolean
 }
 
@@ -34,6 +30,7 @@ interface EnrichmentField {
   required: boolean
   enabled: boolean
   description?: string
+  source: 'core' | 'signal'
 }
 
 type BuilderEnrichmentInput =
@@ -54,6 +51,14 @@ interface EnhancedProspectSearchBuilderProps {
   onPreviewExecute?: (params: any) => void
 }
 
+function criterionLabel(type: CriterionType) {
+  return type.replace(/_/g, ' ')
+}
+
+function normalizeCount(value: number) {
+  return Math.max(1, Math.min(1000, value || 25))
+}
+
 export function EnhancedProspectSearchBuilder({
   initialCriteria = [],
   initialEnrichments = [],
@@ -64,34 +69,43 @@ export function EnhancedProspectSearchBuilder({
   onSearchExecute,
   onPreviewExecute
 }: EnhancedProspectSearchBuilderProps) {
-  const mergedInitialEnrichments = useMemo<BuilderEnrichmentInput[]>(
-    () => [...initialEnrichments, ...initialCustomEnrichments].slice(0, 10),
-    [initialCustomEnrichments, initialEnrichments]
-  )
+  const mergedInitialEnrichments = useMemo<EnrichmentField[]>(() => {
+    const core = initialEnrichments.map(enrichment => ({
+      ...enrichment,
+      source: 'core' as const
+    }))
+    const signals = initialCustomEnrichments.map(enrichment => ({
+      ...enrichment,
+      required: false,
+      source: 'signal' as const
+    }))
+
+    return [...core, ...signals].slice(0, 10).map(enrichment => ({
+      ...enrichment,
+      enabled: true,
+      required: Boolean('required' in enrichment ? enrichment.required : false),
+      description: enrichment.description
+    }))
+  }, [initialCustomEnrichments, initialEnrichments])
 
   const [criteria, setCriteria] = useState<SearchCriterion[]>(
     initialCriteria.map(criterion => ({
       ...criterion,
-      type: criterion.type as SearchCriterion['type'],
+      type: criterion.type as CriterionType,
       enabled: true
     }))
   )
-
-  const [enrichments, setEnrichments] = useState<EnrichmentField[]>(
-    mergedInitialEnrichments.map(enrichment => ({
-        ...enrichment,
-        enabled: true,
-        required: 'required' in enrichment ? Boolean(enrichment.required) : false,
-        description: enrichment.description
-      }))
-  )
-
+  const [enrichments, setEnrichments] = useState<EnrichmentField[]>(mergedInitialEnrichments)
   const [entityType, setEntityType] = useState<'person' | 'company'>(initialEntityType)
-  const [targetCount, setTargetCount] = useState(initialCount)
+  const [targetCount, setTargetCount] = useState(normalizeCount(initialCount))
   const [evidenceMode, setEvidenceMode] = useState(false)
 
   const enabledCriteria = useMemo(() => criteria.filter(criterion => criterion.enabled), [criteria])
-  const enabledEnrichments = useMemo(() => enrichments.filter(enrichment => enrichment.enabled), [enrichments])
+  const enabledEnrichments = useMemo(
+    () => enrichments.filter(enrichment => enrichment.enabled),
+    [enrichments]
+  )
+  const signalCount = enrichments.filter(enrichment => enrichment.source === 'signal').length
   const canEnableMore = enabledEnrichments.length < 10
 
   const toggleCriterion = (index: number) => {
@@ -128,29 +142,31 @@ export function EnhancedProspectSearchBuilder({
     )
   }
 
-  const addCriterion = () => setCriteria(prev => [...prev, { label: '', value: '', type: 'company_criteria', enabled: true }])
-  const removeCriterion = (index: number) => setCriteria(prev => prev.filter((_, i) => i !== index))
+  const addCriterion = () => {
+    setCriteria(previous => [
+      ...previous,
+      { label: '', value: '', type: 'company_criteria', enabled: true }
+    ])
+  }
+  const removeCriterion = (index: number) => {
+    setCriteria(previous => previous.filter((_, currentIndex) => currentIndex !== index))
+  }
 
-  const addEnrichment = () => setEnrichments(prev => [...prev, { label: '', value: '', required: false, enabled: true, description: '' }])
-  const removeEnrichment = (index: number) => setEnrichments(prev => prev.filter((_, i) => i !== index))
-
-  const getTypeIcon = (type: SearchCriterion['type']) => {
-    switch (type) {
-      case 'job_title':
-        return <User className="h-3.5 w-3.5" />
-      case 'company_type':
-        return <Building className="h-3.5 w-3.5" />
-      case 'industry':
-        return <Target className="h-3.5 w-3.5" />
-      case 'location':
-        return <MapPin className="h-3.5 w-3.5" />
-      case 'technology':
-        return <Zap className="h-3.5 w-3.5" />
-      case 'activity':
-        return <Users className="h-3.5 w-3.5" />
-      default:
-        return <Search className="h-3.5 w-3.5" />
-    }
+  const addEnrichment = () => {
+    setEnrichments(previous => [
+      ...previous,
+      {
+        label: '',
+        value: '',
+        required: false,
+        enabled: true,
+        description: '',
+        source: 'signal'
+      }
+    ])
+  }
+  const removeEnrichment = (index: number) => {
+    setEnrichments(previous => previous.filter((_, currentIndex) => currentIndex !== index))
   }
 
   const buildParams = (preview: boolean) => ({
@@ -160,216 +176,251 @@ export function EnhancedProspectSearchBuilder({
         : [{ label: originalQuery, value: originalQuery, type: 'company_criteria' as const, enabled: true }],
     enrichments: enabledEnrichments,
     entityType,
-    targetCount: preview ? 1 : Math.max(1, Math.min(1000, targetCount)),
+    targetCount: preview ? 1 : normalizeCount(targetCount),
     originalQuery: originalQuery || enabledCriteria.map(criterion => criterion.label).join(' '),
     evidenceMode
   })
 
   const handlePreview = () => {
     if (enabledCriteria.length === 0 && !originalQuery.trim()) {
-      alert('Please add at least one search criterion or provide a query.')
+      alert('Add at least one search criterion.')
       return
     }
-
     onPreviewExecute?.(buildParams(true))
   }
 
   const handleSearch = () => {
     if (enabledCriteria.length === 0 && !originalQuery.trim()) {
-      alert('Please add at least one search criterion or provide a query.')
+      alert('Add at least one search criterion.')
       return
     }
-
     onSearchExecute?.(buildParams(false))
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <Card className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm ring-1 ring-gray-100/50">
-        <CardHeader className="p-0 mb-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <CardTitle className="font-serif text-[2.2rem] text-gray-900 tracking-tight">Search Focus</CardTitle>
-              <CardDescription className="text-[14px] font-medium text-gray-500 mt-2">
-                Keep this tight. Strong Websets runs usually use a few clear filters.
-              </CardDescription>
+    <div className="mx-auto w-full max-w-5xl space-y-3">
+      <div className="rounded-xl border border-[#dfe4ee] bg-white px-4 py-3 shadow-sm">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-[#cbd4ff] bg-[#edf1ff] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#315dff]">
+                Run plan
+              </span>
+              <span className="text-[12px] font-semibold text-[#6a7283]">
+                {entityType} search · {targetCount} targets · {enabledEnrichments.length} fields
+              </span>
             </div>
-            <Badge variant="outline" className="border-[hsl(var(--hermes-gold))]/20 bg-[hsl(var(--hermes-gold))]/10 text-[hsl(var(--hermes-gold-dark))] shadow-none px-3 py-1 font-semibold">
-              {enabledCriteria.length} active
-            </Badge>
+            <p className="mt-2 truncate text-[13px] text-[#071329]">
+              {originalQuery || 'Review the generated criteria before launch.'}
+            </p>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-3 p-0">
-          {criteria.length === 0 ? (
-            <div className="py-12 flex flex-col items-center justify-center text-center bg-gray-50 rounded-2xl border border-gray-100">
-              <AlertCircle className="mx-auto mb-4 h-12 w-12 text-gray-400" />
-              <p className="font-medium text-gray-900 text-lg">No structured criteria extracted from your brief.</p>
-              <p className="text-[14px] text-gray-500 mt-1">Hermes will use the original request as the search query.</p>
-              <Button onClick={addCriterion} variant="outline" className="mt-4 rounded-full border-gray-200">Add Field</Button>
-            </div>
-          ) : (
-            <>
-            {criteria.map((criterion, index) => (
-              <div
-                key={`criterion-${index}`}
-                className={`flex items-start gap-4 rounded-2xl border px-5 py-4 transition-colors ${
-                  criterion.enabled ? 'border-[hsl(var(--hermes-gold))]/30 bg-[hsl(var(--hermes-gold))]/5 shadow-sm' : 'border-gray-200 bg-white'
-                }`}
-              >
-                <Checkbox
-                  checked={criterion.enabled}
-                  onCheckedChange={() => toggleCriterion(index)}
-                  className="mt-1 border-gray-300"
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="mb-1.5 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-gray-400">
-                    {getTypeIcon(criterion.type)}
-                    <span>{criterion.type.replace('_', ' ')}</span>
-                  </div>
-                  <input
-                    value={criterion.label}
-                    onChange={event => updateCriterionLabel(index, event.target.value)}
-                    className="w-full border-b border-transparent bg-transparent text-[16px] font-medium leading-6 text-gray-900 outline-none transition-colors focus:border-gray-300"
-                    placeholder="Enter search criterion..."
-                  />
+          <div className="flex min-w-0 flex-wrap gap-1 rounded-lg border border-[#edf0f6] bg-[#fbfcff] p-1 text-center">
+            {[
+              ['criteria', enabledCriteria.length],
+              ['signals', signalCount],
+              ['selected', enabledEnrichments.length]
+            ].map(([label, value]) => (
+              <div key={label} className="min-w-[96px] flex-1 rounded-md bg-white px-3 py-1.5 shadow-sm">
+                <div className="text-[13px] font-bold text-[#071329]">{value}</div>
+                <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#8a92a6]">
+                  {label}
                 </div>
-                <button onClick={() => removeCriterion(index)} className="mt-1 ml-2 text-gray-400 hover:text-red-500 transition-colors">
-                  <span className="sr-only">Remove</span>
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
               </div>
             ))}
-            <div className="flex justify-start mt-2">
-              <Button onClick={addCriterion} variant="outline" size="sm" className="rounded-full text-xs font-semibold text-gray-600">
-                + Add Criterion
-              </Button>
-            </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="rounded-3xl border border-gray-200 bg-gray-50 p-6 shadow-sm">
-        <CardHeader className="p-0 mb-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <CardTitle className="font-serif text-[2.2rem] text-gray-900 tracking-tight flex items-center gap-2">
-                Enrichments
-                <span className="text-[14px] font-medium text-gray-500 mt-1 tracking-normal font-sans">Core fields used for prospect review and outreach.</span>
-              </CardTitle>
-            </div>
-            <Badge variant="outline" className="border-sky-200 bg-sky-50 text-sky-700 font-semibold px-3 py-1 shadow-none">
-              {enabledEnrichments.length}/10 selected
-            </Badge>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-3 p-0">
-          {enrichments.map((enrichment, index) => (
-            <div
+        </div>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,.95fr)]">
+        <section className="rounded-xl border border-[#dfe4ee] bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-[15px] font-bold text-[#071329]">Search criteria</h3>
+              <p className="text-[12px] text-[#6a7283]">Keep only the filters that should change the result set.</p>
+            </div>
+            <Button
+              onClick={addCriterion}
+              variant="outline"
+              size="sm"
+              className="h-8 rounded-md border-[#dfe4ee] text-[12px] font-semibold"
+            >
+              Add
+            </Button>
+          </div>
+
+          {criteria.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-[#dfe4ee] bg-[#fbfcff] px-4 py-5 text-[13px] text-[#6a7283]">
+              Hermes will use the original brief as the query.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {criteria.map((criterion, index) => (
+                <div
+                  key={`criterion-${index}`}
+                  className={`flex min-h-12 items-start gap-2 rounded-lg border px-3 py-2 transition-colors ${
+                    criterion.enabled
+                      ? 'border-[#cbd4ff] bg-[#f7f9ff]'
+                      : 'border-[#edf0f6] bg-white opacity-60'
+                  }`}
+                >
+                  <Checkbox
+                    checked={criterion.enabled}
+                    onCheckedChange={() => toggleCriterion(index)}
+                    className="mt-0.5 border-[#cfd6e4]"
+                    aria-label={`Use criterion ${index + 1}`}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-0.5 text-[9px] font-bold uppercase tracking-[0.16em] text-[#8a92a6]">
+                      {criterionLabel(criterion.type)}
+                    </div>
+                    <input
+                      value={criterion.label}
+                      onChange={event => updateCriterionLabel(index, event.target.value)}
+                      className="w-full border-0 bg-transparent p-0 text-[13px] font-semibold leading-5 text-[#071329] outline-none placeholder:text-[#b0b6c5]"
+                      placeholder="Search criterion"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeCriterion(index)}
+                    className="rounded px-1.5 py-0.5 text-[16px] leading-none text-[#9aa2b4] hover:bg-white hover:text-red-600"
+                    aria-label="Remove criterion"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="rounded-xl border border-[#dfe4ee] bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-[15px] font-bold text-[#071329]">Enrichment fields</h3>
+              <p className="text-[12px] text-[#6a7283]">Core identity plus campaign-specific proof.</p>
+            </div>
+            <Button
+              onClick={addEnrichment}
+              disabled={!canEnableMore}
+              variant="outline"
+              size="sm"
+              className="h-8 rounded-md border-[#dfe4ee] text-[12px] font-semibold"
+            >
+              Add
+            </Button>
+          </div>
+
+          <div className="grid gap-2 xl:grid-cols-2">
+            {enrichments.map((enrichment, index) => (
+              <div
                 key={`enrichment-${index}`}
-                className={`flex items-start gap-4 rounded-2xl border px-5 py-4 transition-colors ${
-                  enrichment.enabled ? 'border-sky-200 bg-white shadow-sm' : 'border-gray-200 bg-white/50 opacity-60'
+                className={`min-h-[58px] min-w-0 rounded-lg border px-3 py-2 transition-colors ${
+                  enrichment.enabled
+                    ? enrichment.source === 'signal'
+                      ? 'border-[#cbd4ff] bg-[#f7f9ff]'
+                      : 'border-[#edf0f6] bg-[#fbfcff]'
+                    : 'border-[#edf0f6] bg-white opacity-55'
                 }`}
               >
-              <Checkbox
-                checked={enrichment.enabled}
-                onCheckedChange={() => toggleEnrichment(index)}
-                disabled={!enrichment.enabled && !canEnableMore}
-                className="mt-1 border-gray-300"
-              />
-              <div className="min-w-0 flex-1 flex items-center">
-                  <input
-                  className="w-full border-b border-transparent bg-transparent text-[16px] font-medium leading-6 text-gray-900 outline-none transition-colors focus:border-gray-300"
-                  value={enrichment.label}
-                  placeholder="E.g. Recent News, Tech Stack..."
-                  onChange={event => updateEnrichmentLabel(index, event.target.value)}
-                />
+                <div className="flex items-start gap-2">
+                  <Checkbox
+                    checked={enrichment.enabled}
+                    onCheckedChange={() => toggleEnrichment(index)}
+                    disabled={!enrichment.enabled && !canEnableMore}
+                    className="mt-0.5 border-[#cfd6e4]"
+                    aria-label={`Use enrichment ${enrichment.label || index + 1}`}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[13px] font-semibold leading-5 text-[#071329] outline-none placeholder:text-[#b0b6c5]"
+                        value={enrichment.label}
+                        placeholder="Enrichment field"
+                        onChange={event => updateEnrichmentLabel(index, event.target.value)}
+                      />
+                      <span className="shrink-0 rounded bg-white px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-[#8a92a6]">
+                        {enrichment.source === 'signal' ? 'signal' : enrichment.required ? 'core' : 'field'}
+                      </span>
+                    </div>
+                    {enrichment.description ? (
+                      <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-[#6a7283]">
+                        {enrichment.description}
+                      </p>
+                    ) : null}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeEnrichment(index)}
+                    className="rounded px-1.5 py-0.5 text-[16px] leading-none text-[#9aa2b4] hover:bg-white hover:text-red-600"
+                    aria-label="Remove enrichment"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
-              <button onClick={() => removeEnrichment(index)} className="mt-1 ml-2 text-gray-400 hover:text-red-500 transition-colors">
-                <span className="sr-only">Remove</span>
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-          ))}
-
-          <div className="flex justify-between items-center mt-2">
-            <Button onClick={addEnrichment} disabled={!canEnableMore} variant="outline" size="sm" className="rounded-full text-xs font-semibold text-gray-600">
-              + Add Enrichment
-            </Button>
-            {!canEnableMore && (
-              <div className="text-[13px] font-medium text-gray-400">
-                Limit: 10 enrichments per run.
-              </div>
-            )}
+            ))}
           </div>
-        </CardContent>
-      </Card>
+          {!canEnableMore ? (
+            <p className="mt-2 text-[11px] font-medium text-[#8a92a6]">10 fields max for this run.</p>
+          ) : null}
+        </section>
+      </div>
 
-      <Card className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-        <CardHeader className="p-0 mb-6">
-          <CardTitle className="font-serif text-[2.2rem] text-gray-900 tracking-tight">Run Settings</CardTitle>
-          <CardDescription className="text-[14px] font-medium text-gray-500 mt-2">Preview one result first, or launch the full pull.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-6 md:grid-cols-2 p-0">
-          <div className="space-y-3">
-            <Label className="text-[13px] font-bold text-gray-500 uppercase tracking-wider">Entity Type</Label>
-            <Select value={entityType} onValueChange={(value: 'person' | 'company') => setEntityType(value)}>
-              <SelectTrigger className="border-gray-200 bg-gray-50 text-gray-900 h-12 rounded-2xl">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="company">Companies</SelectItem>
-                <SelectItem value="person">People</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-3">
-            <Label className="text-[13px] font-bold text-gray-500 uppercase tracking-wider">Target Count</Label>
-            <div className="space-y-4 rounded-2xl border border-gray-200 bg-gray-50 p-5">
-              <Slider
-                value={[targetCount]}
-                onValueChange={([value]) => setTargetCount(Math.max(1, Math.min(1000, value)))}
-                max={1000}
-                min={1}
-                step={1}
-                className="[&_.relative]:bg-gray-200 [&_[role=slider]]:bg-white [&_[role=slider]]:border-gray-300 [&_[role=slider]]:shadow-sm"
-              />
-              <div className="flex items-center justify-between text-[14px] font-medium text-gray-500">
-                <span><strong className="text-gray-900">{targetCount}</strong> prospects</span>
-                <span>Max 1000</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-3 md:col-span-2">
-            <Label className="text-[13px] font-bold text-gray-500 uppercase tracking-wider">Evidence Mode</Label>
-            <div className="flex items-center justify-between rounded-2xl border border-gray-200 bg-gray-50 p-5">
-              <p className="pr-4 text-[14px] font-medium text-gray-600">
-                Keep source-backed evidence attached before drafting or sending outreach.
-              </p>
-              <Checkbox checked={evidenceMode} onCheckedChange={value => setEvidenceMode(Boolean(value))} className="border-gray-300 data-[state=checked]:bg-[hsl(var(--hermes-gold))] data-[state=checked]:text-white data-[state=checked]:border-[hsl(var(--hermes-gold))]" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="flex items-center justify-between rounded-3xl border border-gray-200 bg-white shadow-sm ring-1 ring-gray-100/50 p-4 pl-6">
-        <div className="text-[14px] font-medium text-gray-500 flex gap-4">
-          <span><strong className="text-gray-900">{enabledCriteria.length}</strong> criteria</span>
-          <span className="text-gray-300">•</span>
-          <span><strong className="text-gray-900">{enabledEnrichments.length}</strong> enrichments</span>
-          <span className="text-gray-300">•</span>
-          <span><strong className="text-gray-900">{targetCount}</strong> prospects</span>
+      <div className="grid gap-3 rounded-xl border border-[#dfe4ee] bg-white p-4 shadow-sm md:grid-cols-[180px_minmax(240px,1fr)_minmax(180px,220px)_auto] md:items-end">
+        <div className="space-y-1.5">
+          <Label className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#8a92a6]">
+            Entity
+          </Label>
+          <Select value={entityType} onValueChange={(value: 'person' | 'company') => setEntityType(value)}>
+            <SelectTrigger className="h-9 rounded-md border-[#dfe4ee] bg-[#fbfcff] text-[13px] font-semibold">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="company">Companies</SelectItem>
+              <SelectItem value="person">People</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={handlePreview} className="border-gray-200 bg-white text-gray-700 hover:bg-gray-50 shadow-sm rounded-full px-6 text-[14px] font-medium">
-            <Eye className="mr-2 h-4 w-4" />
-            Preview 1 Result
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#8a92a6]">
+              Target count
+            </Label>
+            <span className="text-[12px] font-bold text-[#071329]">{targetCount}</span>
+          </div>
+          <Slider
+            value={[targetCount]}
+            onValueChange={([value]) => setTargetCount(normalizeCount(value))}
+            max={1000}
+            min={1}
+            step={1}
+          />
+        </div>
+
+        <label className="flex h-9 cursor-pointer items-center justify-between rounded-md border border-[#dfe4ee] bg-[#fbfcff] px-3">
+          <span className="text-[12px] font-semibold text-[#46506a]">Evidence mode</span>
+          <Checkbox
+            checked={evidenceMode}
+            onCheckedChange={value => setEvidenceMode(Boolean(value))}
+            className="border-[#cfd6e4]"
+          />
+        </label>
+
+        <div className="flex gap-2 md:justify-end">
+          <Button
+            variant="outline"
+            onClick={handlePreview}
+            className="h-9 rounded-md border-[#dfe4ee] px-4 text-[12px] font-semibold"
+          >
+            Preview
           </Button>
-          <Button onClick={handleSearch} className="border border-transparent bg-[hsl(var(--hermes-gold))] text-white font-semibold hover:bg-[hsl(var(--hermes-gold-dark))] shadow-[0_4px_14px_rgba(214,157,74,0.25)] rounded-full px-6 text-[14px]">
-            <Search className="mr-2 h-4 w-4" />
-            Start Full Search
+          <Button
+            onClick={handleSearch}
+            className="h-9 rounded-md bg-[#071329] px-4 text-[12px] font-semibold text-white hover:bg-[#102448]"
+          >
+            Run search
           </Button>
         </div>
       </div>
