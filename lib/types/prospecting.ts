@@ -40,6 +40,8 @@ export interface ProspectSearchStartPayload {
   type: 'prospect_search_start'
   event: 'start'
   websetId: string
+  runId?: string
+  dashboardUrl?: string | null
   status: 'created'
   message: string
   searchCriteria: {

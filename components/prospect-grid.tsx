@@ -1,35 +1,17 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import {
-  AlertCircle,
-  ArrowRight,
-  Building,
-  ChevronDown,
-  ChevronRight,
-  CheckCircle2,
-  CircleDashed,
-  ExternalLink,
-  Globe,
-  Loader2,
-  Mail,
-  MapPin,
-  Phone,
-  Sparkles,
-  User,
-  Users
-} from 'lucide-react'
-import Image from 'next/image'
-import { useState } from 'react'
-import { toast } from 'sonner'
 import { campaignStore } from '@/lib/store/campaign-store'
 import {
   getContactLookupStatus,
   getProspectContactFields
 } from '@/lib/prospects/contact-fields'
 import type { ContactLookupStatus } from '@/lib/prospects/contact-fields'
-
-// ─── Types ───────────────────────────────────────────────────────────────────
+import { cn } from '@/lib/utils'
+import Image from 'next/image'
+import Link from 'next/link'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 
 export interface Prospect {
   id: string
@@ -63,76 +45,8 @@ export interface Prospect {
   reviewReady?: boolean
   avatarUrl?: string
   companyLogoUrl?: string
-  /** URL of the page Exa found/indexed to surface this prospect */
   sourceUrl?: string
-  /** Raw text excerpt Exa extracted from the source page */
   exaText?: string
-}
-
-function getContactStatusMeta(prospect: Prospect, isEnriching?: boolean) {
-  const fields = getProspectContactFields(prospect)
-  const status = getContactLookupStatus(prospect, isEnriching)
-
-  if (status === 'searching') {
-    return {
-      label: 'Finding contact',
-      className: 'border-[#cbd4ff] bg-[#edf1ff] text-[#315dff]',
-      icon: Loader2,
-      spinning: true
-    }
-  }
-
-  if (status === 'failed') {
-    return {
-      label: 'Lookup failed',
-      className: 'border-red-100 bg-red-50 text-red-700',
-      icon: AlertCircle,
-      spinning: false
-    }
-  }
-
-  if (fields.email) {
-    return {
-      label: 'Email found',
-      className: 'border-emerald-100 bg-emerald-50 text-emerald-700',
-      icon: CheckCircle2,
-      spinning: false
-    }
-  }
-
-  if (fields.phone) {
-    return {
-      label: 'Phone found',
-      className: 'border-emerald-100 bg-emerald-50 text-emerald-700',
-      icon: Phone,
-      spinning: false
-    }
-  }
-
-  if (fields.personLinkedIn || fields.fullName) {
-    return {
-      label: 'Person found',
-      className: 'border-blue-100 bg-blue-50 text-blue-700',
-      icon: User,
-      spinning: false
-    }
-  }
-
-  if (status === 'no_contact') {
-    return {
-      label: 'No verified contact',
-      className: 'border-[#e4e7ef] bg-[#f7f8fb] text-[#6a7283]',
-      icon: CircleDashed,
-      spinning: false
-    }
-  }
-
-  return {
-    label: 'Not searched',
-    className: 'border-[#e4e7ef] bg-white text-[#8a92a6]',
-    icon: CircleDashed,
-    spinning: false
-  }
 }
 
 export interface ProspectSearchContext {
@@ -141,177 +55,301 @@ export interface ProspectSearchContext {
   originalQuery?: string
 }
 
-// ─── Row detail expand ────────────────────────────────────────────────────────
+const CORE_SIGNAL_PATTERNS = [
+  /company name/i,
+  /company domain/i,
+  /company linkedin/i,
+  /decision maker linkedin/i,
+  /decision maker email/i,
+  /decision maker name/i,
+  /decision maker title/i,
+  /email$/i,
+  /linkedin profile/i,
+  /^url$/i,
+  /^content$/i
+]
 
-function ProspectRowDetail({
-  prospect,
-  isEnriching
-}: {
-  prospect: Prospect
-  isEnriching?: boolean
-}) {
-  const hermesTake = prospect.hermesTake
-  const fields = getProspectContactFields(prospect)
-  const lookupStatus = getContactLookupStatus(prospect, isEnriching)
-  const lookupMessage = prospect.contactLookupMessage || prospect.enrichmentError
-  const enrichments = Array.isArray(prospect.enrichments)
-    ? prospect.enrichments.filter(
-        (e: any) =>
-          e?.title &&
-          e?.result &&
-          !e.title.match(/Name|Email|Summary|Title|LinkedIn Profile/i) &&
-          e.result !== 'null' &&
-          e.result !== 'undefined'
-      )
-    : []
-
-  return (
-    <div className="grid grid-cols-1 gap-5 px-6 pb-6 pt-2 lg:grid-cols-2">
-      {/* Take */}
-      {hermesTake ? (
-        <div className="rounded-lg border border-[#dfe4ee] bg-[#fbfcff] p-4">
-          <div className="mb-2.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[hsl(var(--steel))]">
-            <Sparkles className="h-3.5 w-3.5 text-[#315dff]" strokeWidth={1.75} />
-            Hermes take
-          </div>
-          <p className="text-[13px] leading-relaxed text-gray-700">
-            <span className="font-semibold text-gray-900">Why fit: </span>
-            {hermesTake.whyFit}
-          </p>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-gray-700">
-            <span className="font-semibold text-gray-900">Angle: </span>
-            {hermesTake.outreachAngle}
-          </p>
-          {hermesTake.evidence && hermesTake.evidence.length > 0 && (
-            <ul className="mt-3 space-y-1.5">
-              {hermesTake.evidence.map((item: string, i: number) => (
-                <li key={i} className="flex items-start gap-2 text-[12px] text-gray-600">
-                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-[#315dff]" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          )}
-          {(prospect as any).sourceUrl && (
-            <a
-              href={(prospect as any).sourceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-3 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[#315dff]/70 transition-colors hover:text-[#315dff]"
-            >
-              <Globe className="h-2.5 w-2.5" />
-              View Exa source
-              <ExternalLink className="h-2 w-2" />
-            </a>
-          )}
-        </div>
-      ) : isEnriching ? (
-        <div className="flex items-center gap-2.5 rounded-xl border border-gray-100 bg-gray-50 p-4 text-[13px] text-gray-400">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          Enriching with Take...
-        </div>
-      ) : null}
-
-      {/* Contact + Enrichments */}
-      <div className="space-y-3">
-        {fields.email && (
-          <div className="flex items-center gap-2.5 rounded-md border border-[#dfe4ee] bg-white px-3 py-2 shadow-sm">
-            <Mail className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
-            <a href={`mailto:${fields.email}`} className="flex-1 text-[13px] font-medium text-gray-800 hover:text-emerald-700 truncate">
-              {fields.email}
-            </a>
-            <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600">Verified</span>
-          </div>
-        )}
-        {fields.personLinkedIn && (
-          <div className="flex items-center gap-2.5 rounded-md border border-[#dfe4ee] bg-white px-3 py-2 shadow-sm">
-            <User className="h-3.5 w-3.5 shrink-0 text-blue-500" />
-            <a href={fields.personLinkedIn} target="_blank" rel="noopener noreferrer" className="flex-1 text-[13px] font-medium text-gray-800 hover:text-blue-700 flex items-center gap-1">
-              LinkedIn Profile <ExternalLink className="h-2.5 w-2.5 opacity-50" />
-            </a>
-            <span className="rounded bg-[#edf1ff] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#315dff]">Auto-message soon</span>
-          </div>
-        )}
-        {fields.phone && (
-          <div className="flex items-center gap-2.5 rounded-md border border-[#dfe4ee] bg-white px-3 py-2 shadow-sm">
-            <Phone className="h-3.5 w-3.5 shrink-0 text-gray-500" />
-            <span className="flex-1 text-[13px] font-medium text-gray-800 truncate">
-              {fields.phone}
-            </span>
-            <span className="rounded bg-[#f5f7ff] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#6a7283]">Phone</span>
-          </div>
-        )}
-        {lookupStatus === 'failed' && (
-          <div className="flex items-start gap-2.5 rounded-md border border-red-100 bg-red-50 px-3 py-2 text-[12px] text-red-700">
-            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <span className="leading-relaxed">{lookupMessage || 'Contact lookup failed. Try again or narrow the persona.'}</span>
-          </div>
-        )}
-        {lookupStatus === 'no_contact' && !fields.hasAnyContact && (
-          <div className="flex items-start gap-2.5 rounded-md border border-[#e4e7ef] bg-[#f7f8fb] px-3 py-2 text-[12px] text-[#6a7283]">
-            <CircleDashed className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <span className="leading-relaxed">No verified email or decision-maker match came back. Try a different persona, broader geography, or manual review.</span>
-          </div>
-        )}
-        {enrichments.slice(0, 4).map((e: any, i: number) => (
-          <div key={i} className="flex items-start gap-2.5 rounded-md border border-[#dfe4ee] bg-white px-3 py-2 shadow-sm">
-            <span className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 w-24 shrink-0">{e.title}</span>
-            <span className="flex-1 text-[12px] text-gray-700 leading-snug">{e.result}</span>
-          </div>
-        ))}
-        {!fields.email && lookupStatus !== 'failed' && lookupStatus !== 'no_contact' && !isEnriching && (
-          <p className="px-1 text-[12px] italic text-[#8a92a6]">
-            {fields.hasAnyContact
-              ? 'Decision-maker found. Verified email is still missing for this prospect.'
-              : 'Select this company and run Find Contacts to resolve a decision-maker and verified email.'}
-          </p>
-        )}
-      </div>
-    </div>
-  )
+function cleanText(value?: string | null, fallback = '') {
+  return typeof value === 'string' && value.trim() ? value.trim() : fallback
 }
 
-// ─── Main table ───────────────────────────────────────────────────────────────
+function getHost(value?: string) {
+  const clean = cleanText(value)
+  if (!clean) return ''
+  try {
+    return new URL(clean.startsWith('http') ? clean : `https://${clean}`).hostname.replace(/^www\./, '')
+  } catch {
+    return clean.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0]
+  }
+}
+
+function initials(value?: string) {
+  const clean = cleanText(value, 'H')
+  return clean
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0]?.toUpperCase())
+    .join('') || 'H'
+}
+
+function displayCompany(prospect: Prospect) {
+  const company = cleanText(prospect.company)
+  if (company && !/^unknown/i.test(company)) return company
+  const host = getHost(prospect.website)
+  if (host) {
+    return host
+      .split('.')
+      .slice(0, -1)
+      .join(' ')
+      .replace(/[-_]+/g, ' ')
+      .replace(/\b\w/g, char => char.toUpperCase())
+  }
+  return cleanText(prospect.fullName, 'Unknown company')
+}
+
+function statusLabel(prospect: Prospect, isEnriching?: boolean) {
+  const fields = getProspectContactFields(prospect)
+  const status = getContactLookupStatus(prospect, isEnriching)
+
+  if (status === 'searching') {
+    return { label: 'Resolving', tone: 'border-[#cbd4ff] bg-[#edf1ff] text-[#315dff]' }
+  }
+  if (status === 'failed') {
+    return { label: 'Failed', tone: 'border-red-100 bg-red-50 text-red-700' }
+  }
+  if (fields.email) {
+    return { label: 'Email ready', tone: 'border-emerald-100 bg-emerald-50 text-emerald-700' }
+  }
+  if (fields.phone) {
+    return { label: 'Phone ready', tone: 'border-emerald-100 bg-emerald-50 text-emerald-700' }
+  }
+  if (fields.fullName || fields.personLinkedIn) {
+    return { label: 'Person found', tone: 'border-blue-100 bg-blue-50 text-blue-700' }
+  }
+  if (status === 'no_contact') {
+    return { label: 'No match', tone: 'border-[#e4e7ef] bg-[#f7f8fb] text-[#6a7283]' }
+  }
+  return { label: 'Queued', tone: 'border-[#e4e7ef] bg-white text-[#8a92a6]' }
+}
+
+function signalRows(prospect: Prospect) {
+  const rows = Array.isArray(prospect.enrichments) ? prospect.enrichments : []
+  return rows
+    .map((entry: any) => ({
+      title: cleanText(entry?.title),
+      value: cleanText(entry?.result) || cleanText(entry?.value)
+    }))
+    .filter(entry => {
+      if (!entry.title || !entry.value) return false
+      return !CORE_SIGNAL_PATTERNS.some(pattern => pattern.test(entry.title))
+    })
+    .slice(0, 8)
+}
+
+function fitScore(prospect: Prospect) {
+  const explicit = (prospect as any).fitScore
+  if (typeof explicit === 'number' && explicit > 0) return Math.round(explicit)
+  const fields = getProspectContactFields(prospect)
+  return [
+    prospect.company ? 18 : 0,
+    prospect.website ? 14 : 0,
+    prospect.industry ? 12 : 0,
+    prospect.companySize ? 10 : 0,
+    fields.fullName ? 16 : 0,
+    fields.email ? 22 : 0,
+    fields.personLinkedIn || fields.companyLinkedIn ? 8 : 0
+  ].reduce((sum, value) => sum + value, 0)
+}
+
+function RowDetail({ prospect, isEnriching }: { prospect: Prospect; isEnriching?: boolean }) {
+  const fields = getProspectContactFields(prospect)
+  const lookupStatus = getContactLookupStatus(prospect, isEnriching)
+  const signals = signalRows(prospect)
+  const source = (prospect as any).sourceUrl || prospect.website
+
+  return (
+    <tr className="border-b border-[#edf0f6] bg-[#fbfcff]">
+      <td colSpan={7} className="px-4 pb-4 pt-1">
+        <div className="grid gap-3 lg:grid-cols-[minmax(220px,.9fr)_minmax(260px,1fr)_minmax(260px,1fr)]">
+          <div className="rounded-lg border border-[#edf0f6] bg-white p-3">
+            <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#8a92a6]">
+              Contact
+            </div>
+            <div className="space-y-2 text-[12px]">
+              {fields.email ? (
+                <a href={`mailto:${fields.email}`} className="block truncate font-semibold text-emerald-700">
+                  {fields.email}
+                </a>
+              ) : (
+                <div className="text-[#8a92a6]">
+                  {isEnriching ? 'Resolving verified email...' : 'No verified email yet'}
+                </div>
+              )}
+              {fields.personLinkedIn ? (
+                <a
+                  href={fields.personLinkedIn}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block truncate font-semibold text-[#315dff]"
+                >
+                  LinkedIn profile
+                </a>
+              ) : null}
+              {fields.phone ? (
+                <div className="truncate font-semibold text-[#071329]">{fields.phone}</div>
+              ) : null}
+              {lookupStatus === 'failed' ? (
+                <div className="rounded-md border border-red-100 bg-red-50 px-2 py-1.5 text-red-700">
+                  {prospect.contactLookupMessage || prospect.enrichmentError || 'Lookup failed'}
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-[#edf0f6] bg-white p-3">
+            <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#8a92a6]">
+              Hermes take
+            </div>
+            {prospect.hermesTake ? (
+              <div className="space-y-2 text-[12px] leading-5 text-[#46506a]">
+                <p>
+                  <span className="font-bold text-[#071329]">Fit: </span>
+                  {prospect.hermesTake.whyFit}
+                </p>
+                <p>
+                  <span className="font-bold text-[#071329]">Angle: </span>
+                  {prospect.hermesTake.outreachAngle}
+                </p>
+              </div>
+            ) : (
+              <p className="text-[12px] text-[#8a92a6]">
+                {isEnriching ? 'Generating take after contact resolution...' : (prospect as any).summary || 'No take yet.'}
+              </p>
+            )}
+          </div>
+
+          <div className="rounded-lg border border-[#edf0f6] bg-white p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#8a92a6]">
+                Signals
+              </span>
+              {source ? (
+                <a
+                  href={String(source).startsWith('http') ? String(source) : `https://${source}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[11px] font-semibold text-[#315dff]"
+                >
+                  {getHost(String(source))}
+                </a>
+              ) : null}
+            </div>
+            {signals.length > 0 ? (
+              <div className="grid gap-2">
+                {signals.map((signal, index) => (
+                  <div key={`${prospect.id}-signal-${index}`} className="text-[12px] leading-5">
+                    <span className="font-bold text-[#071329]">{signal.title}: </span>
+                    <span className="text-[#6a7283]">{signal.value}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[12px] text-[#8a92a6]">Custom enrichments and source proof will appear here.</p>
+            )}
+          </div>
+        </div>
+      </td>
+    </tr>
+  )
+}
 
 export function ProspectGrid({
   prospects,
   searchContext,
   onSelectionChange,
-  onFindContacts
+  onFindContacts,
+  autoFindContacts = false,
+  autoFindLimit = 25
 }: {
   prospects: Prospect[]
   searchContext?: ProspectSearchContext
   onSelectionChange?: (ids: string[]) => void
   onReviewComplete?: () => void
-  /** Called with selected prospect IDs to trigger person enrichment */
   onFindContacts?: (ids: string[]) => void | Promise<void>
+  autoFindContacts?: boolean
+  autoFindLimit?: number
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [saved, setSaved] = useState<Set<string>>(new Set())
+  const [saved, setSaved] = useState<Set<string>>(
+    () => new Set(campaignStore.getState().savedProspects.map((prospect: Prospect) => prospect.id))
+  )
   const [enrichingIds, setEnrichingIds] = useState<Set<string>>(new Set())
+  const autoStartedRef = useRef(false)
+
+  const rows = useMemo(
+    () =>
+      prospects.map(prospect => ({
+        ...prospect,
+        displayCompany: displayCompany(prospect),
+        fields: getProspectContactFields(prospect),
+        score: fitScore(prospect)
+      })),
+    [prospects]
+  )
+
+  useEffect(() => {
+    setSaved(new Set(campaignStore.getState().savedProspects.map((prospect: Prospect) => prospect.id)))
+  }, [])
+
+  const runContactLookup = async (ids: string[]) => {
+    if (ids.length === 0 || !onFindContacts) return
+    setEnrichingIds(new Set(ids))
+    try {
+      await onFindContacts(ids)
+    } finally {
+      setEnrichingIds(new Set())
+    }
+  }
+
+  useEffect(() => {
+    if (!autoFindContacts || !onFindContacts || autoStartedRef.current || rows.length === 0) return
+    const ids = rows
+      .filter(row => {
+        const status = getContactLookupStatus(row)
+        return !row.fields.email && status !== 'searching' && status !== 'failed'
+      })
+      .slice(0, autoFindLimit)
+      .map(row => row.id)
+
+    if (ids.length === 0) return
+    autoStartedRef.current = true
+    runContactLookup(ids)
+  // runContactLookup intentionally omitted to keep this one-shot.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoFindContacts, autoFindLimit, onFindContacts, rows.length])
 
   if (!prospects || prospects.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-lg border border-[#dfe4ee] bg-[#fbfcff] py-12">
-        <Users className="mb-3 h-8 w-8 text-gray-300" />
-        <p className="text-[14px] font-medium text-[#6a7283]">No prospects yet</p>
-        <p className="mt-0.5 text-[13px] text-[#8a92a6]">Results will appear here as Hermes finds them.</p>
+      <div className="rounded-lg border border-[#dfe4ee] bg-[#fbfcff] px-4 py-8 text-center">
+        <p className="text-[14px] font-semibold text-[#071329]">No prospects yet</p>
+        <p className="mt-1 text-[12px] text-[#6a7283]">Results stream here as Hermes finds matches.</p>
       </div>
     )
   }
 
   const toggleExpand = (id: string) => {
-    setExpanded(prev => {
-      const next = new Set(prev)
+    setExpanded(previous => {
+      const next = new Set(previous)
       next.has(id) ? next.delete(id) : next.add(id)
       return next
     })
   }
 
   const toggleSelect = (id: string) => {
-    setSelected(prev => {
-      const next = new Set(prev)
+    setSelected(previous => {
+      const next = new Set(previous)
       next.has(id) ? next.delete(id) : next.add(id)
       onSelectionChange?.(Array.from(next))
       return next
@@ -322,258 +360,257 @@ export function ProspectGrid({
     if (selected.size === prospects.length) {
       setSelected(new Set())
       onSelectionChange?.([])
-    } else {
-      const all = new Set(prospects.map(p => p.id))
-      setSelected(all)
-      onSelectionChange?.(Array.from(all))
+      return
     }
+
+    const all = new Set(prospects.map(prospect => prospect.id))
+    setSelected(all)
+    onSelectionChange?.(Array.from(all))
   }
 
-  const handleSave = (prospect: Prospect) => {
-    if (saved.has(prospect.id)) return
-    setSaved(prev => new Set(prev).add(prospect.id))
+  const saveProspects = (items: Prospect[]) => {
+    if (items.length === 0) return
     const currentSaved = campaignStore.getState().savedProspects
-    if (!currentSaved.find((p: Prospect) => p.id === prospect.id)) {
-      campaignStore.setState({ savedProspects: [...currentSaved, prospect] })
-    }
-    toast.success(`${prospect.company || prospect.fullName} added to Draft Studio`)
-  }
-
-  const handleFindContacts = async () => {
-    if (selected.size === 0) return
-    const selectedIds = Array.from(selected)
-    setEnrichingIds(new Set(selectedIds))
+    const byId = new Map(currentSaved.map((prospect: Prospect) => [prospect.id, prospect]))
+    for (const item of items) byId.set(item.id, item)
+    const savedProspects = Array.from(byId.values())
+    campaignStore.setState({
+      savedProspects,
+      summary: searchContext?.originalQuery || campaignStore.getState().summary,
+      offer: searchContext?.offer || campaignStore.getState().offer,
+      motionIcp: searchContext?.targetPersona || campaignStore.getState().motionIcp
+    })
     try {
-      await onFindContacts?.(selectedIds)
-    } finally {
-      setEnrichingIds(new Set())
-    }
+      window.localStorage.setItem('hermes-studio-prospects', JSON.stringify(savedProspects))
+      window.sessionStorage.setItem('hermes-latest-prospects', JSON.stringify(savedProspects))
+    } catch {}
+    setSaved(new Set(Array.from(byId.keys())))
+    toast.success(`${items.length} prospect${items.length === 1 ? '' : 's'} saved to Draft Studio`)
   }
 
-  const allSelected = selected.size === prospects.length && prospects.length > 0
-  const contactsFound = prospects.filter(p => getProspectContactFields(p).hasAnyContact).length
-  const lookupFailures = prospects.filter(p => getContactLookupStatus(p) === 'failed').length
+  const selectedIds = Array.from(selected)
+  const selectedRows = rows.filter(row => selected.has(row.id))
+  const emailCount = rows.filter(row => row.fields.email).length
+  const peopleCount = rows.filter(row => row.fields.fullName || row.fields.personLinkedIn).length
+  const failedCount = rows.filter(row => getContactLookupStatus(row) === 'failed').length
   const isFindingContacts = enrichingIds.size > 0
 
   return (
-    <div className="overflow-hidden rounded-lg border border-[#dfe4ee] bg-white shadow-sm">
-      {/* Table toolbar */}
-      <div className="flex items-center justify-between gap-3 border-b border-[#edf0f6] bg-[#fbfcff] px-4 py-3">
-        <div className="flex items-center gap-3">
-          <input
-            type="checkbox"
-            checked={allSelected}
-            onChange={toggleSelectAll}
-            className="h-4 w-4 cursor-pointer rounded border-[#cfd6e4] accent-[#315dff]"
-          />
-          <span className="text-[12px] font-semibold text-[#5f687a]">
+    <div className="min-w-0 overflow-hidden rounded-lg border border-[#dfe4ee] bg-white shadow-sm">
+      <div className="flex flex-col gap-3 border-b border-[#edf0f6] bg-[#fbfcff] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-[12px] font-semibold text-[#46506a]">
+            <input
+              type="checkbox"
+              checked={selected.size === prospects.length && prospects.length > 0}
+              onChange={toggleSelectAll}
+              className="h-4 w-4 cursor-pointer rounded border-[#cfd6e4] accent-[#315dff]"
+            />
             {selected.size > 0 ? `${selected.size} selected` : `${prospects.length} prospects`}
-          </span>
-          {contactsFound > 0 && (
-            <span className="text-[11px] font-semibold text-emerald-600">
-              · {contactsFound} with contacts
-            </span>
-          )}
-          {lookupFailures > 0 && (
-            <span className="text-[11px] font-semibold text-red-600">
-              · {lookupFailures} lookup failed
-            </span>
-          )}
+          </label>
+          <span className="text-[12px] font-semibold text-emerald-700">{emailCount} emails</span>
+          <span className="text-[12px] font-semibold text-blue-700">{peopleCount} people</span>
+          {failedCount > 0 ? (
+            <span className="text-[12px] font-semibold text-red-700">{failedCount} failed</span>
+          ) : null}
         </div>
 
-        <div className="flex items-center gap-2">
-          {selected.size > 0 && (
-            <>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 rounded-md border-[#dfe4ee] text-[12px] font-semibold text-[#46506a] hover:border-[#bfc9ff]"
-                onClick={() => {
-                  selected.forEach(id => {
-                    const p = prospects.find(p => p.id === id)
-                    if (p) handleSave(p)
-                  })
-                }}
-              >
-                Save to Studio
-              </Button>
-              {onFindContacts && (
-                <Button
-                  size="sm"
-                  className="h-8 rounded-md bg-[#071329] text-[12px] font-semibold text-white hover:bg-[#102448]"
-                  onClick={handleFindContacts}
-                  disabled={isFindingContacts}
-                >
-                  {isFindingContacts ? (
-                    <>
-                      Finding {enrichingIds.size}
-                      <Loader2 className="ml-1.5 h-3.5 w-3.5 animate-spin" />
-                    </>
-                  ) : (
-                    <>
-                      Find Contacts
-                      <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-                    </>
-                  )}
-                </Button>
-              )}
-            </>
-          )}
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 rounded-md border-[#dfe4ee] text-[12px] font-semibold"
+            disabled={selectedRows.length === 0}
+            onClick={() => saveProspects(selectedRows as Prospect[])}
+          >
+            Save selected
+          </Button>
+          {onFindContacts ? (
+            <Button
+              size="sm"
+              className="h-8 rounded-md bg-[#071329] text-[12px] font-semibold text-white hover:bg-[#102448]"
+              onClick={() => runContactLookup(selectedIds)}
+              disabled={selectedIds.length === 0 || isFindingContacts}
+            >
+              {isFindingContacts ? `Resolving ${enrichingIds.size}` : 'Find selected contacts'}
+            </Button>
+          ) : null}
+          <Button asChild size="sm" variant="outline" className="h-8 rounded-md border-[#dfe4ee] text-[12px] font-semibold">
+            <Link href="/studio">Draft Studio</Link>
+          </Button>
         </div>
       </div>
 
-      {/* Rows */}
-      <div className="divide-y divide-[#edf0f6]">
-        {prospects.map((prospect) => {
-          const isExpanded = expanded.has(prospect.id)
-          const isSelected = selected.has(prospect.id)
-          const isEnriching = enrichingIds.has(prospect.id)
-          const fields = getProspectContactFields(prospect)
-          const contactStatus = getContactLookupStatus(prospect, isEnriching)
-          const statusMeta = getContactStatusMeta(prospect, isEnriching)
-          const StatusIcon = statusMeta.icon
-          const hasName = Boolean(fields.fullName)
+      <div className="w-full max-w-full overflow-x-auto">
+        <table className="w-full min-w-[760px] table-fixed border-collapse text-left">
+          <thead className="bg-white">
+            <tr className="border-b border-[#edf0f6] text-[10px] font-bold uppercase tracking-[0.16em] text-[#8a92a6]">
+              <th className="w-10 px-4 py-2"> </th>
+              <th className="w-[30%] px-2 py-2">Company</th>
+              <th className="w-[19%] px-2 py-2">Decision maker</th>
+              <th className="w-[24%] px-2 py-2">Email / contact</th>
+              <th className="w-[8%] px-2 py-2">Fit</th>
+              <th className="w-[12%] px-2 py-2">Actions</th>
+              <th className="w-[7%] px-2 py-2"> </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(row => {
+              const isExpanded = expanded.has(row.id)
+              const isSelected = selected.has(row.id)
+              const isEnriching = enrichingIds.has(row.id)
+              const status = statusLabel(row, isEnriching)
+              const website = row.website
+              const linkedin = row.fields.personLinkedIn || row.fields.companyLinkedIn
 
-          return (
-            <div
-              key={prospect.id}
-              className={`transition-colors duration-100 ${isSelected ? 'bg-[#eef3ff]' : 'hover:bg-[#fbfcff]'}`}
-            >
-              {/* Main row */}
-              <div className="flex items-center gap-3 px-4 py-3">
-                {/* Select */}
-                <input
-                  type="checkbox"
-                  checked={isSelected}
-                  onChange={() => toggleSelect(prospect.id)}
-                  className="h-4 w-4 shrink-0 cursor-pointer rounded border-[#cfd6e4] accent-[#315dff]"
-                />
-
-                {/* Company logo */}
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md border border-[#cbd4ff] bg-[#edf1ff]">
-                  {prospect.companyLogoUrl ? (
-                    <Image
-                      src={prospect.companyLogoUrl}
-                      alt=""
-                      width={32}
-                      height={32}
-                      className="h-full w-full object-cover"
-                      unoptimized
-                    />
-                  ) : (
-                    <Building className="h-3.5 w-3.5 text-[#315dff]" strokeWidth={1.9} />
-                  )}
-                </div>
-
-                {/* Company + location */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-2">
-                    <span className="truncate text-[14px] font-semibold text-[#071329]">
-                      {prospect.company || 'Unknown Company'}
-                    </span>
-                    {prospect.companySize && (
-                      <span className="shrink-0 text-[11px] text-[#8a92a6]">{prospect.companySize}</span>
+              return (
+                <Fragment key={row.id}>
+                  <tr
+                    className={cn(
+                      'border-b border-[#edf0f6] transition-colors hover:bg-[#fbfcff]',
+                      isSelected && 'bg-[#eef3ff]'
                     )}
-                  </div>
-                  <div className="mt-0.5 flex items-center gap-2 text-[12px] text-[#8a92a6]">
-                    {prospect.location && (
-                      <span className="flex items-center gap-0.5">
-                        <MapPin className="h-2.5 w-2.5" />
-                        {prospect.location}
-                      </span>
-                    )}
-                    {prospect.industry && (
-                      <span className="hidden sm:block truncate max-w-[120px]">{prospect.industry}</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Contact person */}
-                <div className="hidden md:flex flex-col items-start min-w-[140px] max-w-[180px]">
-                  {hasName ? (
-                    <>
-                      <span className="w-full truncate text-[13px] font-medium text-[#25304a]">{fields.fullName}</span>
-                      {fields.jobTitle && (
-                        <span className="w-full truncate text-[11px] text-[#8a92a6]">{fields.jobTitle}</span>
-                      )}
-                    </>
-                  ) : isEnriching ? (
-                    <span className="flex items-center gap-1.5 text-[11px] text-[#8a92a6]">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      Finding contact...
-                    </span>
-                  ) : (
-                    <span className="text-[11px] text-[#b0b6c5]">
-                      {contactStatus === 'no_contact' ? 'No verified match' : 'No contact yet'}
-                    </span>
-                  )}
-                </div>
-
-                {/* Email badge */}
-                <div className="hidden w-[170px] sm:block">
-                  {fields.email ? (
-                    <span
-                      title={fields.email}
-                      className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-emerald-100 bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700"
-                    >
-                      <Mail className="h-3 w-3 shrink-0" />
-                      <span className="truncate">{fields.email}</span>
-                    </span>
-                  ) : (
-                    <span
-                      title={prospect.contactLookupMessage || prospect.enrichmentError || statusMeta.label}
-                      className={`inline-flex max-w-full items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] font-semibold ${statusMeta.className}`}
-                    >
-                      <StatusIcon className={`h-3 w-3 shrink-0 ${statusMeta.spinning ? 'animate-spin' : ''}`} />
-                      <span className="truncate">{statusMeta.label}</span>
-                    </span>
-                  )}
-                </div>
-
-                {/* Fit score */}
-                {(prospect as any).fitScore > 0 && (
-                  <div className="hidden items-center gap-1 text-[11px] font-bold text-[#071329] lg:flex">
-                    <Sparkles className="h-2.5 w-2.5 text-[#315dff]" />
-                    {Math.round((prospect as any).fitScore)}
-                  </div>
-                )}
-
-                {/* Save button */}
-                <button
-                  onClick={() => handleSave(prospect)}
-                  className={`hidden rounded-md px-2 py-1 text-[11px] font-semibold transition-colors sm:block ${
-                    saved.has(prospect.id)
-                      ? 'bg-emerald-50 text-emerald-600'
-                      : 'text-[#8a92a6] hover:bg-[#f5f7ff] hover:text-[#315dff]'
-                  }`}
-                >
-                  {saved.has(prospect.id) ? 'Saved' : 'Save'}
-                </button>
-
-                {/* Expand toggle */}
-                <button
-                  onClick={() => toggleExpand(prospect.id)}
-                  className="rounded-md p-1 text-[#b0b6c5] transition-colors hover:bg-[#f5f7ff] hover:text-[#315dff]"
-                  aria-label={isExpanded ? 'Collapse prospect details' : 'Expand prospect details'}
-                >
+                  >
+                    <td className="px-4 py-3 align-middle">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(row.id)}
+                        className="h-4 w-4 cursor-pointer rounded border-[#cfd6e4] accent-[#315dff]"
+                        aria-label={`Select ${row.displayCompany}`}
+                      />
+                    </td>
+                    <td className="px-2 py-3 align-middle">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[#dfe4ee] bg-[#f7f8fb] text-[11px] font-bold text-[#46506a]">
+                          {row.companyLogoUrl ? (
+                            <Image
+                              src={row.companyLogoUrl}
+                              alt=""
+                              width={36}
+                              height={36}
+                              className="h-full w-full object-cover"
+                              unoptimized
+                            />
+                          ) : (
+                            initials(row.displayCompany)
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="truncate text-[14px] font-bold text-[#071329]">
+                            {row.displayCompany}
+                          </div>
+                          <div className="mt-0.5 flex min-w-0 flex-wrap gap-x-2 gap-y-0.5 text-[11px] text-[#8a92a6]">
+                            {row.location ? <span className="truncate">{row.location}</span> : null}
+                            {row.companySize ? <span className="truncate">{row.companySize}</span> : null}
+                            {website ? (
+                              <a
+                                href={website.startsWith('http') ? website : `https://${website}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="truncate font-semibold text-[#315dff]"
+                              >
+                                {getHost(website)}
+                              </a>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-2 py-3 align-middle">
+                      <div className="max-w-[210px]">
+                        <div className="truncate text-[13px] font-semibold text-[#25304a]">
+                          {row.fields.fullName || 'Resolving'}
+                        </div>
+                        <div className="mt-0.5 truncate text-[11px] text-[#8a92a6]">
+                          {row.fields.jobTitle || row.jobTitle || 'Role pending'}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-2 py-3 align-middle">
+                      <div className="flex max-w-[230px] flex-col gap-1">
+                        {row.fields.email ? (
+                          <a
+                            href={`mailto:${row.fields.email}`}
+                            className="truncate text-[12px] font-bold text-emerald-700"
+                            title={row.fields.email}
+                          >
+                            {row.fields.email}
+                          </a>
+                        ) : (
+                          <span
+                            className={cn(
+                              'inline-flex w-fit max-w-full rounded-md border px-2 py-1 text-[11px] font-bold',
+                              status.tone
+                            )}
+                            title={row.contactLookupMessage || row.enrichmentError || status.label}
+                          >
+                            {status.label}
+                          </span>
+                        )}
+                        {linkedin ? (
+                          <a
+                            href={linkedin}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="truncate text-[11px] font-semibold text-[#315dff]"
+                          >
+                            LinkedIn
+                          </a>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td className="px-2 py-3 align-middle">
+                      <div className="w-16">
+                        <div className="mb-1 text-[12px] font-bold text-[#071329]">{row.score}</div>
+                        <div className="h-1.5 overflow-hidden rounded-full bg-[#e8ebf2]">
+                          <div
+                            className="h-full rounded-full bg-[#315dff]"
+                            style={{ width: `${Math.min(100, row.score)}%` }}
+                          />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-2 py-3 align-middle">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => saveProspects([row as Prospect])}
+                          className={cn(
+                            'rounded-md px-2 py-1 text-[11px] font-bold transition-colors',
+                            saved.has(row.id)
+                              ? 'bg-emerald-50 text-emerald-700'
+                              : 'text-[#6a7283] hover:bg-[#f5f7ff] hover:text-[#315dff]'
+                          )}
+                        >
+                          {saved.has(row.id) ? 'Saved' : 'Save'}
+                        </button>
+                      </div>
+                    </td>
+                    <td className="px-2 py-3 align-middle">
+                      <button
+                        type="button"
+                        onClick={() => toggleExpand(row.id)}
+                        className="rounded-md px-2 py-1 text-[12px] font-bold text-[#8a92a6] hover:bg-[#f5f7ff] hover:text-[#315dff]"
+                        aria-expanded={isExpanded}
+                        aria-label={isExpanded ? 'Hide prospect details' : 'Show prospect details'}
+                      >
+                        {isExpanded ? 'Less' : 'More'}
+                      </button>
+                    </td>
+                  </tr>
                   {isExpanded ? (
-                    <ChevronDown className="h-4 w-4" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-
-              {/* Expanded detail */}
-              {isExpanded && (
-                <ProspectRowDetail
-                  prospect={prospect}
-                  isEnriching={isEnriching}
-                />
-              )}
-            </div>
-          )
-        })}
+                    <RowDetail
+                      key={`${row.id}-detail`}
+                      prospect={row as Prospect}
+                      isEnriching={isEnriching}
+                    />
+                  ) : null}
+                </Fragment>
+              )
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   )

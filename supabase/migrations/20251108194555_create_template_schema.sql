@@ -11,7 +11,7 @@ create table if not exists prospect_templates (
   category varchar(100), -- e.g., "Partnership", "Sales", "Recruiting"
   params jsonb, -- Array of parameter definitions
 
-  -- Usage stats (fake social proof for now)
+  -- Usage stats
   save_count integer default 0,
   use_count integer default 0,
 
@@ -160,6 +160,5 @@ $$ language plpgsql;
 create trigger trg_update_prospect_templates_updated_at
 before update on prospect_templates
 for each row execute function update_prospect_templates_updated_at();
-
 
 

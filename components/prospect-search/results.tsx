@@ -3,7 +3,6 @@
 import { ProspectGrid } from '@/components/prospect-grid'
 import { ProspectPreviewCard } from '@/components/prospect-preview-card'
 import { logger } from '@/lib/utils/logger'
-import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { memo } from 'react'
 import { toast } from 'sonner'
 import {
@@ -100,26 +99,19 @@ function ResultsGrid({
     'https://buy.stripe.com/cNi00i7UMc0xgLCfk56sw03'
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3 rounded-lg border border-[#dfe4ee] bg-[#fbfcff] px-4 py-3">
-        <div className="flex h-8 w-8 items-center justify-center rounded-md border border-emerald-100 bg-white shadow-sm">
-          <CheckCircle2 className="h-4 w-4 text-emerald-600" strokeWidth={1.75} />
-        </div>
-        <div>
-          <p className="text-[14px] font-semibold text-[#071329]">
-            {prospects.length} prospects found
-          </p>
-          <p className="mt-0.5 text-[12px] text-[#6a7283]">
-            Select companies and click <span className="font-semibold">Find Contacts</span>{' '}
-            to resolve decision-makers and email addresses.
-          </p>
-        </div>
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#dfe4ee] bg-[#fbfcff] px-4 py-2.5">
+        <p className="text-[13px] font-bold text-[#071329]">{prospects.length} prospects found</p>
+        <p className="text-[12px] font-semibold text-[#6a7283]">
+          Contacts resolve automatically; select rows for retries or saving.
+        </p>
       </div>
 
       <ProspectGrid
         prospects={prospects}
         searchContext={searchContext}
         onFindContacts={handleFindContacts}
+        autoFindContacts
       />
 
       <div className="flex justify-end">
@@ -148,14 +140,11 @@ function ProspectSearchResultsImpl({
 }: ProspectSearchResultsProps) {
   if (isError) {
     return (
-      <div className="rounded-lg border border-red-100 bg-red-50 p-5 shadow-sm">
+      <div className="rounded-lg border border-red-100 bg-red-50 p-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="rounded-md border border-red-100 bg-white p-2 shadow-sm">
-              <AlertCircle className="h-5 w-5 text-red-500" />
-            </div>
             <div>
-              <p className="text-[15px] font-bold text-[#071329]">Search failed</p>
+              <p className="text-[14px] font-bold text-[#071329]">Search failed</p>
               <p className="mt-0.5 text-[13px] font-medium text-red-700">
                 {errorMessage || 'An error occurred during the search'}
               </p>

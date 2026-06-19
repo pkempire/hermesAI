@@ -13,11 +13,10 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 
-import { createEnrichmentDescriptionMap, createExaWebsetsClient } from '@/lib/clients/exa-websets'
-import { enrichProspectWithOrangeslice } from '@/lib/clients/orangeslice'
 import { createEmailDrafterTool } from '@/lib/tools/email-drafter'
 import { createProspectSearchTool } from '@/lib/tools/prospect-search'
 import { createScrapeSiteTool } from '@/lib/tools/scrape'
+import { getRunByWebsetId, getRunSnapshot } from '@/lib/workflows/prospect-run-store'
 
 export interface HermesMcpOptions {
   /**
@@ -93,7 +92,7 @@ export function registerHermesTools(server: McpServer, opts: HermesMcpOptions = 
         waitForResults: z
           .boolean()
           .optional()
-          .describe('Wait for Exa to finish and return enriched prospects in the MCP response. Best for deterministic automations.'),
+          .describe('Deprecated compatibility flag. Hermes now returns a durable run handle; call hermes.get_run to read results.'),
         timeoutMs: z
           .number()
           .int()
@@ -118,54 +117,72 @@ export function registerHermesTools(server: McpServer, opts: HermesMcpOptions = 
         toolCtx
       )
 
-      if (
-        args.waitForResults &&
-        result &&
-        typeof result === 'object' &&
-        (result as any).type === 'prospect_search_start' &&
-        typeof (result as any).websetId === 'string'
-      ) {
-        const exa = createExaWebsetsClient()
-        const webset = await exa.waitUntilIdle((result as any).websetId, {
-          timeout: args.timeoutMs ?? 45_000,
-          pollInterval: 2_000
-        })
-        const items = await exa.listItems((result as any).websetId, {
-          limit: Math.min(targetCount, 100)
-        })
-        const enrichmentDescriptions = createEnrichmentDescriptionMap(webset as any)
-        const prospects = await Promise.all(
-          (items.data || []).map(item =>
-            enrichProspectWithOrangeslice(exa.convertToProspect(item, enrichmentDescriptions), {
-              originalQuery: args.query,
-              targetPersona: args.targetPersona,
-              offer: args.offer
-            })
-          )
-        )
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            ...result,
+            nonBlocking: true,
+            resultMode: 'durable_run_handle',
+            next: 'Call hermes.get_run with the returned websetId to read status and prospects.'
+          }, null, 2)
+        }]
+      }
+    }
+  )
 
+  // ---------------------------------------------------------------------------
+  // hermes.get_run
+  // ---------------------------------------------------------------------------
+  server.registerTool(
+    'hermes.get_run',
+    {
+      title: 'Read campaign run state',
+      description:
+        'Return the current durable state for a Hermes prospecting run, including streamed prospects.',
+      inputSchema: {
+        websetId: z.string().min(3).describe('Exa Webset id returned by hermes.prospect_search.'),
+        userId: z.string().optional().describe('Hermes user id for server-to-server MCP callers.')
+      }
+    },
+    async args => {
+      const run = await getRunByWebsetId({
+        userId: args.userId,
+        websetId: args.websetId,
+        preferAdmin: Boolean(args.userId)
+      })
+
+      if (!run) {
         return {
           content: [{
             type: 'text',
             text: JSON.stringify({
-              ...result,
-              type: 'prospect_search_complete',
-              event: 'complete',
-              prospects,
-              summary: {
-                query: args.query,
-                entityType: 'company',
-                totalFound: prospects.length,
-                websetId: (result as any).websetId,
-                preview: Boolean(args.previewOnly)
-              }
+              error: 'run_not_found',
+              websetId: args.websetId
             }, null, 2)
           }]
         }
       }
 
+      const snapshot = await getRunSnapshot({
+        userId: run.user_id,
+        websetId: args.websetId,
+        preferAdmin: Boolean(args.userId)
+      })
+
       return {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }]
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            run: snapshot.run,
+            prospects: snapshot.prospects,
+            summary: {
+              websetId: args.websetId,
+              status: snapshot.run?.status,
+              totalFound: snapshot.prospects.length
+            }
+          }, null, 2)
+        }]
       }
     }
   )

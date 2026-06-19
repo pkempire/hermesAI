@@ -4,7 +4,6 @@ import {
   type ToolLoopAgentOnFinishCallback,
   type ToolLoopAgentOnStepFinishCallback,
   type ToolSet,
-  hasToolCall,
   stepCountIs,
   streamText
 } from 'ai'
@@ -142,7 +141,7 @@ export function createHermesAgent({
       model: getModel(model),
       instructions: `${SYSTEM_PROMPT}\n\nCurrent date and time: ${currentDate}`,
       tools,
-      stopWhen: [hasToolCall('prospect_search'), stepCountIs(5)],
+      stopWhen: stepCountIs(5),
       onStepFinish,
       onFinish
     })

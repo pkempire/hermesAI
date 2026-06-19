@@ -598,16 +598,10 @@ async function fetchHtmlWithTimeout(
   url: string,
   timeoutMs: number
 ): Promise<string> {
-  try {
-    return await Promise.race([
-      fetchHtml(url),
-      timeout(timeoutMs, `Fetching ${url} timed out after ${timeoutMs}ms`)
-    ])
-  } catch (error) {
-    console.error(`Error fetching ${url}:`, error)
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    return `<html><body>Error fetching content: ${errorMessage}</body></html>`
-  }
+  return Promise.race([
+    fetchHtml(url),
+    timeout(timeoutMs, `Fetching ${url} timed out after ${timeoutMs}ms`)
+  ])
 }
 
 function fetchHtml(url: string): Promise<string> {

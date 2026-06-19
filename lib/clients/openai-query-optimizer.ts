@@ -6,9 +6,21 @@
 import { ProspectCriteria } from '@/lib/types/prospecting'
 import OpenAI from 'openai'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+let openaiClient: OpenAI | null = null
+
+function getOpenAIClient(): OpenAI {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY is required for OpenAI-powered generation')
+  }
+
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    })
+  }
+
+  return openaiClient
+}
 
 /**
  * Optimize a search query for prospect research using OpenAI
@@ -41,28 +53,28 @@ Create a single, well-crafted search query that will find ${criteria.entityType 
 
 Return ONLY the optimized search query, nothing else.`
 
-  try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-5-mini',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an expert at B2B prospect research and creating effective search queries for lead generation. Always return concise, effective search queries.'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      max_tokens: 150,
-      temperature: 0.3
-    })
+  const response = await getOpenAIClient().chat.completions.create({
+    model: 'gpt-5-mini',
+    messages: [
+      {
+        role: 'system',
+        content: 'You are an expert at B2B prospect research and creating effective search queries for lead generation. Always return concise, effective search queries.'
+      },
+      {
+        role: 'user',
+        content: prompt
+      }
+    ],
+    max_tokens: 150,
+    temperature: 0.3
+  })
 
-    return response.choices[0]?.message?.content?.trim() || criteria.query
-  } catch (error) {
-    console.error('Error optimizing search query:', error)
-    return criteria.query // Fallback to original query
+  const query = response.choices[0]?.message?.content?.trim()
+  if (!query) {
+    throw new Error('OpenAI returned an empty optimized search query')
   }
+
+  return query
 }
 
 /**
@@ -98,28 +110,28 @@ Instructions:
 
 Return the personalized email content only.`
 
-  try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-5-mini',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an expert at writing personalized B2B cold emails that get responses. Focus on being helpful, concise, and relevant.'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      max_tokens: 500,
-      temperature: 0.7
-    })
+  const response = await getOpenAIClient().chat.completions.create({
+    model: 'gpt-5-mini',
+    messages: [
+      {
+        role: 'system',
+        content: 'You are an expert at writing personalized B2B cold emails that get responses. Focus on being helpful, concise, and relevant.'
+      },
+      {
+        role: 'user',
+        content: prompt
+      }
+    ],
+    max_tokens: 500,
+    temperature: 0.7
+  })
 
-    return response.choices[0]?.message?.content?.trim() || template
-  } catch (error) {
-    console.error('Error generating personalized email:', error)
-    return template // Fallback to template
+  const draft = response.choices[0]?.message?.content?.trim()
+  if (!draft) {
+    throw new Error('OpenAI returned an empty personalized email draft')
   }
+
+  return draft
 }
 
 /**
@@ -156,48 +168,30 @@ Format your response as JSON:
   "improvedTemplate": "improved email template"
 }`
 
-  try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-5-mini',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an expert email marketing strategist specializing in B2B cold outreach. Provide actionable, specific feedback.'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      max_tokens: 800,
-      temperature: 0.3
-    })
-
-    const content = response.choices[0]?.message?.content?.trim()
-    if (content) {
-      try {
-        return JSON.parse(content)
-      } catch {
-        // If JSON parsing fails, return default response
-        return {
-          score: 7,
-          suggestions: ['Consider adding more personalization', 'Clarify the value proposition', 'Improve the call-to-action'],
-          improvedTemplate: template
-        }
+  const response = await getOpenAIClient().chat.completions.create({
+    model: 'gpt-5-mini',
+    messages: [
+      {
+        role: 'system',
+        content: 'You are an expert email marketing strategist specializing in B2B cold outreach. Provide actionable, specific feedback.'
+      },
+      {
+        role: 'user',
+        content: prompt
       }
-    }
-    
-    return {
-      score: 7,
-      suggestions: ['Template analysis unavailable'],
-      improvedTemplate: template
-    }
-  } catch (error) {
-    console.error('Error analyzing email template:', error)
-    return {
-      score: 7,
-      suggestions: ['Analysis temporarily unavailable'],
-      improvedTemplate: template
-    }
+    ],
+    max_tokens: 800,
+    temperature: 0.3
+  })
+
+  const content = response.choices[0]?.message?.content?.trim()
+  if (!content) {
+    throw new Error('OpenAI returned an empty email-template analysis')
   }
-} 
+
+  try {
+    return JSON.parse(content)
+  } catch (error) {
+    throw new Error(`OpenAI email-template analysis returned invalid JSON: ${error instanceof Error ? error.message : String(error)}`)
+  }
+}

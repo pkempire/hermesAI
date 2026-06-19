@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS prospect_templates (
   category VARCHAR(100), -- e.g., "Partnership", "Sales", "Recruiting"
   params JSONB, -- Array of parameter definitions
 
-  -- Usage stats (fake social proof for now)
+  -- Usage stats
   save_count INTEGER DEFAULT 0,
   use_count INTEGER DEFAULT 0,
 
@@ -77,7 +77,7 @@ BEGIN
 END;
 $$;
 
--- Insert some featured templates with fake social proof
+-- Insert featured starter templates with zeroed usage counters
 INSERT INTO prospect_templates (
   name, description, message, category, params,
   save_count, use_count, is_public, is_featured, tags
@@ -88,7 +88,7 @@ INSERT INTO prospect_templates (
   'Use my website {{url}} to infer our ICP/offer and find channel partners and directories that could list us. Start with top 20 high-fit partners and pull contacts to reach out.',
   'Partnerships',
   '[{"key": "url", "label": "Business URL", "placeholder": "https://your-company.com"}]'::jsonb,
-  1247, 3891, true, true,
+  0, 0, true, true,
   ARRAY['partnerships', 'business development', 'channels']
 ),
 (
@@ -97,7 +97,7 @@ INSERT INTO prospect_templates (
   'Find {{niche}} companies in {{city}}. Start with 25 and enrich email + LinkedIn.',
   'Sales',
   '[{"key": "niche", "label": "Niche", "placeholder": "real estate brokerages"}, {"key": "city", "label": "City/Region", "placeholder": "Miami, FL"}]'::jsonb,
-  987, 2456, true, true,
+  0, 0, true, true,
   ARRAY['local', 'geographic', 'sales']
 ),
 (
@@ -106,7 +106,7 @@ INSERT INTO prospect_templates (
   'Find {{role}} at {{company_type}} companies in {{location}} who recently posted about {{topic}} on LinkedIn. Pitch {{your_offer}}.',
   'Recruiting',
   '[{"key": "role", "label": "Role", "placeholder": "VP of Engineering"}, {"key": "company_type", "label": "Company Type", "placeholder": "Series A-B SaaS"}, {"key": "location", "label": "Location", "placeholder": "San Francisco"}, {"key": "topic", "label": "Topic", "placeholder": "hiring challenges"}, {"key": "your_offer", "label": "Your Offer", "placeholder": "AI developer assessment platform"}]'::jsonb,
-  756, 1923, true, true,
+  0, 0, true, true,
   ARRAY['recruiting', 'technical', 'hiring']
 ),
 (
@@ -115,7 +115,7 @@ INSERT INTO prospect_templates (
   'Find {{role}} at companies using {{tech_stack}} who mentioned {{pain_point}}. Pitch {{solution}}.',
   'Sales',
   '[{"key": "role", "label": "Role", "placeholder": "CTO"}, {"key": "tech_stack", "label": "Tech Stack", "placeholder": "Postgres + Kubernetes"}, {"key": "pain_point", "label": "Pain Point", "placeholder": "database performance issues"}, {"key": "solution", "label": "Your Solution", "placeholder": "automated query optimization tool"}]'::jsonb,
-  642, 1567, true, true,
+  0, 0, true, true,
   ARRAY['saas', 'technical sales', 'B2B']
 ),
 (
@@ -124,7 +124,7 @@ INSERT INTO prospect_templates (
   'From {{event}} speakers and sponsors in {{topic}} track, find contacts and draft tailored follow-ups.',
   'Networking',
   '[{"key": "event", "label": "Event Name", "placeholder": "SaaStr Annual 2025"}, {"key": "topic", "label": "Topic/Track", "placeholder": "AI & Automation"}]'::jsonb,
-  423, 891, true, true,
+  0, 0, true, true,
   ARRAY['events', 'networking', 'follow-up']
 ),
 (
@@ -133,6 +133,6 @@ INSERT INTO prospect_templates (
   'Find companies mentioning {{competitor}} on LinkedIn or Twitter who fit {{icp}}. Draft switch pitch emphasizing {{differentiator}}.',
   'Sales',
   '[{"key": "competitor", "label": "Competitor", "placeholder": "HubSpot"}, {"key": "icp", "label": "Target Profile", "placeholder": "B2B SaaS companies 10-50 employees"}, {"key": "differentiator", "label": "Your Edge", "placeholder": "better pricing and native AI features"}]'::jsonb,
-  334, 723, true, false,
+  0, 0, true, false,
   ARRAY['competitive', 'research', 'positioning']
 );

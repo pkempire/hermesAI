@@ -1,45 +1,19 @@
 import { canAccessWebset } from '@/lib/auth/authorize-webset-access'
 import { requireAuthUser } from '@/lib/auth/require-auth-user'
-import { convertToProspect, createEnrichmentDescriptionMap } from '@/lib/clients/exa-websets'
-import { enrichCompanyData } from '@/lib/clients/orangeslice'
-import { createClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/utils/logger'
-import Exa from 'exa-js'
+import {
+  getRunSnapshot,
+  updateCampaignRunProgress
+} from '@/lib/workflows/prospect-run-store'
 import { NextRequest } from 'next/server'
 
-let cachedExa: Exa | null = null
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+export const maxDuration = 60
 
-async function getStoredSearchContext(userId: string, websetId: string) {
-  try {
-    const supabase = await createClient()
-    const { data } = await supabase
-      .from('campaigns')
-      .select('prospect_query, settings')
-      .eq('user_id', userId)
-      .contains('settings', { exa_webset_id: websetId } as any)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    return {
-      originalQuery:
-        data?.prospect_query?.query ||
-        data?.settings?.original_query ||
-        undefined,
-      targetPersona:
-        data?.prospect_query?.targetPersona ||
-        data?.settings?.target_persona ||
-        undefined,
-      offer:
-        data?.prospect_query?.offer ||
-        data?.settings?.offer ||
-        undefined
-    }
-  } catch (error) {
-    logger.warn('Unable to load stored search context:', error)
-    return undefined
-  }
-}
+const STREAM_INTERVAL_MS = 2000
+const EXA_EVENT_STALE_MS = 20000
+const MAX_TICKS = 38
 
 export async function GET(req: NextRequest) {
   const auth = await requireAuthUser()
@@ -61,50 +35,22 @@ export async function GET(req: NextRequest) {
     return new Response('Forbidden', { status: 403 })
   }
 
-  if (!cachedExa) {
-    cachedExa = new Exa(process.env.EXA_API_KEY!)
-  }
-  const exa = cachedExa
   let cleanupStream = () => {}
-  const storedSearchContext = await getStoredSearchContext(auth.userId, websetId)
 
   const stream = new ReadableStream({
     async start(controller) {
       const encoder = new TextEncoder()
-      let pollCount = 0
       let isClosed = false
       let timeoutId: NodeJS.Timeout | null = null
-      const maxPolls = 600
+      let tickCount = 0
       const seenProspectSignatures = new Map<string, string>()
-      const enrichmentPromises = new Map<string, Promise<void>>()
-      const enrichedProspects = new Map<string, any>()
-      const enrichmentKeys = new Map<string, string>()
-      let allProspects: any[] = []
-
-      const asQueuedProspect = (prospect: any) => ({
-        ...prospect,
-        reviewReady: false,
-        companyEnrichmentStatus: 'queued'
-      })
-
-      const getCompanyEnrichmentCounts = (prospects: any[]) => {
-        const companyEnriched = prospects.filter(
-          (prospect: any) => prospect.companyEnrichmentStatus === 'completed'
-        ).length
-        const companyEnrichmentPending = prospects.filter((prospect: any) => {
-          const status = prospect.companyEnrichmentStatus
-          return status !== 'completed' && status !== 'failed'
-        }).length
-
-        return { companyEnriched, companyEnrichmentPending }
-      }
 
       const send = (data: Record<string, any>) => {
         if (isClosed) return
         try {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
         } catch (error) {
-          logger.error('Error sending stream message:', error)
+          logger.error('Error sending prospect stream message:', error)
         }
       }
 
@@ -120,142 +66,109 @@ export async function GET(req: NextRequest) {
       }
       cleanupStream = cleanup
 
-      send({
-        type: 'prospect_search_start',
-        event: 'start',
-        websetId,
-        status: 'running',
-        message: 'Streaming search progress started.'
-      })
-
-      const poll = async () => {
+      const emitSnapshot = async () => {
         if (isClosed) return
+        tickCount += 1
 
         try {
-          pollCount += 1
-          const webset = await exa.websets.get(websetId)
-          const enrichmentDescriptions = createEnrichmentDescriptionMap(webset as any)
+          const snapshot = await getRunSnapshot({
+            userId: auth.userId,
+            websetId
+          })
+          const { run, prospects } = snapshot
 
-          const search = webset.searches?.[0]
-          const analyzed = search?.progress?.analyzed || 0
-          const found = search?.progress?.found || 0
-          const completion = search?.progress?.completion || 0
-
-          let prospects: any[] = allProspects
-          let changedProspects: any[] = []
-          try {
-            const itemsResponse = await exa.websets.items.list(websetId, {
-              limit: Math.max(targetCount || 25, 25)
+          if (!run) {
+            send({
+              type: 'prospect_search_error',
+              event: 'error',
+              websetId,
+              status: 'failed',
+              message: 'The research run could not be found. Please start a new campaign.'
             })
-            const rawItems = itemsResponse.data || []
-            const latestProspects = rawItems
-              .map((item: any) => ({
-                prospect: convertToProspect(item, enrichmentDescriptions)
-              }))
-              .filter(({ prospect }: any) => prospect.fullName || prospect.company || prospect.website)
-
-            for (const { prospect } of latestProspects) {
-              const enrichmentKey = JSON.stringify({
-                company: prospect.company,
-                website: prospect.website,
-                linkedinUrl: prospect.linkedinUrl,
-                summary: (prospect as any).summary,
-                targetPersona: storedSearchContext?.targetPersona,
-                offer: storedSearchContext?.offer
-              })
-
-              const hasChanged = enrichmentKeys.get(prospect.id) !== enrichmentKey
-              if (hasChanged) {
-                enrichmentKeys.set(prospect.id, enrichmentKey)
-                enrichedProspects.set(prospect.id, asQueuedProspect(prospect))
-              }
-
-              if (!enrichmentPromises.has(prospect.id)) {
-                enrichmentPromises.set(
-                  prospect.id,
-                  enrichCompanyData(prospect, storedSearchContext)
-                    .then(enriched => {
-                      enrichedProspects.set(prospect.id, {
-                        ...enriched,
-                        reviewReady: true,
-                        companyEnrichmentStatus: 'completed'
-                      })
-                    })
-                    .catch(error => {
-                      logger.warn('Company enrichment failed:', error)
-                      enrichedProspects.set(prospect.id, {
-                        ...prospect,
-                        reviewReady: true,
-                        companyEnrichmentStatus: 'failed',
-                        companyEnrichmentError: error instanceof Error ? error.message : 'Failed'
-                      })
-                    })
-                    .finally(() => {
-                      enrichmentPromises.delete(prospect.id)
-                    })
-                )
-              }
-            }
-
-            const streamableProspects = latestProspects
-              .map(({ prospect }) => enrichedProspects.get(prospect.id) || asQueuedProspect(prospect))
-              .filter((prospect: any): prospect is any => Boolean(prospect) && Boolean(prospect.id))
-
-            changedProspects = streamableProspects
-              .filter((prospect: any) => {
-                const signature = JSON.stringify(prospect)
-                if (seenProspectSignatures.get(prospect.id) === signature) return false
-                seenProspectSignatures.set(prospect.id, signature)
-                return true
-              })
-
-            allProspects = streamableProspects
-            prospects = allProspects
-          } catch (itemsError) {
-            logger.error('Error listing stream items:', itemsError)
+            cleanup()
+            return
           }
 
-          const { companyEnriched, companyEnrichmentPending } = getCompanyEnrichmentCounts(prospects)
+          const targetTotal = Math.max(1, targetCount || run.target_count || 25)
+          const progress = run.progress || {}
+          const found = Math.max(
+            prospects.length,
+            typeof progress.found === 'number' ? progress.found : 0
+          )
+          const analyzed = typeof progress.analyzed === 'number' ? progress.analyzed : 0
+          const completion =
+            run.status === 'idle' || run.status === 'completed'
+              ? 100
+              : Math.max(
+                  typeof progress.completion === 'number' ? progress.completion : 0,
+                  Math.min(99, Math.round((found / targetTotal) * 100))
+                )
 
-          send({
-            type: 'prospect_search_progress',
-            event: 'progress',
-            websetId,
-            status: webset.status,
-            analyzed,
-            found: Math.max(found, prospects.length),
-            completion,
-            totalProspects: prospects.length,
-            companyEnriched,
-            companyEnrichmentPending,
-            prospects: changedProspects,
-            message: `Analyzed ${analyzed} records and found ${Math.max(found, prospects.length)} matches.`
+          const changedProspects = prospects.filter((prospect: any) => {
+            const signature = JSON.stringify(prospect)
+            if (seenProspectSignatures.get(prospect.id) === signature) return false
+            seenProspectSignatures.set(prospect.id, signature)
+            return true
           })
 
-          const status = String(webset.status)
-          if (
-            status === 'idle' ||
-            status === 'completed' ||
-            status === 'failed' ||
-            status === 'cancelled' ||
-            status === 'canceled'
-          ) {
-            if (enrichmentPromises.size > 0) {
-              await Promise.race([
-                Promise.allSettled(Array.from(enrichmentPromises.values())),
-                // Discovery should never feel blocked by auxiliary company enrichment.
-                new Promise(resolve => setTimeout(resolve, 12000))
-              ])
-              prospects = allProspects.map(prospect => enrichedProspects.get(prospect.id) || prospect)
-            }
+          const companyEnriched = prospects.filter(
+            (prospect: any) =>
+              prospect.companyEnrichmentStatus === 'completed' ||
+              prospect.companyEnrichmentStatus === 'company_enriched'
+          ).length
+          const companyEnrichmentPending = Math.max(0, prospects.length - companyEnriched)
 
-            const { companyEnriched, companyEnrichmentPending } = getCompanyEnrichmentCounts(prospects)
+          const terminalStatus =
+            run.status === 'idle' ||
+            run.status === 'completed' ||
+            run.status === 'failed' ||
+            run.status === 'cancelled'
 
+          const lastEventAt = run.last_event_at ? Date.parse(run.last_event_at) : 0
+          const hasReceivedExaEvent = Number.isFinite(lastEventAt) && lastEventAt > 0
+          const noWebhookEventsYet =
+            !terminalStatus &&
+            !hasReceivedExaEvent &&
+            Date.now() - Date.parse(run.created_at) > EXA_EVENT_STALE_MS
+
+          if (noWebhookEventsYet) {
+            send({
+              type: 'prospect_search_error',
+              event: 'error',
+              websetId,
+              runId: run.id,
+              status: 'failed',
+              source: 'durable',
+              message:
+                'No Exa webhook events have reached Hermes for this run. Configure the Exa webhook and EXA_WEBHOOK_SECRET, then start a new campaign.'
+            })
+            cleanup()
+            return
+          }
+
+          if (targetCount && prospects.length >= targetCount && !terminalStatus) {
+            await updateCampaignRunProgress({
+              userId: auth.userId,
+              websetId,
+              status: 'completed',
+              progress: {
+                ...progress,
+                found: prospects.length,
+                completion: 100,
+                reason: 'target_reached'
+              },
+              completedAt: new Date().toISOString()
+            })
+          }
+
+          if (terminalStatus || (targetCount && prospects.length >= targetCount)) {
             send({
               type: 'prospect_search_complete',
               event: 'complete',
               websetId,
-              status: status === 'idle' ? 'completed' : status,
+              runId: run.id,
+              dashboardUrl: run.exa_dashboard_url,
+              status: run.status === 'idle' ? 'completed' : run.status,
               analyzed,
               found: prospects.length,
               completion: 100,
@@ -263,74 +176,84 @@ export async function GET(req: NextRequest) {
               companyEnriched,
               companyEnrichmentPending,
               prospects,
+              source: 'durable',
               message: `Search completed with ${prospects.length} prospects.`
             })
             cleanup()
             return
           }
 
-          if (targetCount && prospects.length >= targetCount) {
-            try {
-              await exa.websets.cancel(websetId)
-            } catch (cancelError) {
-              logger.warn('Failed to cancel webset after target reached:', cancelError)
-            }
+          send({
+            type: 'prospect_search_progress',
+            event: 'progress',
+            websetId,
+            runId: run.id,
+            dashboardUrl: run.exa_dashboard_url,
+            status: run.status,
+            analyzed,
+            found,
+            completion,
+            totalProspects: prospects.length,
+            companyEnriched,
+            companyEnrichmentPending,
+            prospects: changedProspects,
+            source: 'durable',
+            message:
+              prospects.length > 0
+                ? `${prospects.length} matches found so far.`
+                : 'Waiting for Exa to publish matching prospects.'
+          })
 
-            const { companyEnriched, companyEnrichmentPending } = getCompanyEnrichmentCounts(prospects)
-
+          if (tickCount < MAX_TICKS && !isClosed) {
+            timeoutId = setTimeout(emitSnapshot, STREAM_INTERVAL_MS)
+          } else {
             send({
-              type: 'prospect_search_complete',
-              event: 'complete',
+              type: 'prospect_search_progress',
+              event: 'progress',
               websetId,
-              status: 'completed',
+              runId: run.id,
+              status: 'running',
               analyzed,
-              found: prospects.length,
-              completion: 100,
+              found,
+              completion,
               totalProspects: prospects.length,
               companyEnriched,
               companyEnrichmentPending,
               prospects,
-              reason: 'target_reached',
-              message: 'Target reached. Search stopped.'
-            })
-            cleanup()
-            return
-          }
-
-          if (pollCount < maxPolls && !isClosed) {
-            timeoutId = setTimeout(poll, 1500)
-          } else if (!isClosed) {
-            send({
-              type: 'prospect_search_error',
-              event: 'error',
-              websetId,
-              status: 'timeout',
-              message: 'Search stream timed out.'
+              source: 'durable',
+              message: 'Search is still running. Reopen the campaign to refresh live results.'
             })
             cleanup()
           }
         } catch (error: any) {
-          logger.error('Error while polling prospect stream:', error)
+          logger.error('Error while streaming durable prospect run:', error)
           if (!isClosed) {
             const message = error instanceof Error ? error.message : String(error)
-            const displayMessage = 
-              (message.includes('rs_') || message.includes('not found') || message.includes('websetId'))
-                ? 'The research session for this campaign has expired. Please start a new brief.'
-                : message
-
             send({
               type: 'prospect_search_error',
               event: 'error',
               websetId,
               status: 'failed',
-              message: displayMessage
+              message:
+                message.includes('rs_') || message.includes('not found') || message.includes('websetId')
+                  ? 'The research session for this campaign has expired. Please start a new brief.'
+                  : message
             })
             cleanup()
           }
         }
       }
 
-      poll()
+      send({
+        type: 'prospect_search_start',
+        event: 'start',
+        websetId,
+        status: 'running',
+        source: 'durable',
+        message: 'Streaming durable campaign state.'
+      })
+
+      emitSnapshot()
     },
     cancel() {
       cleanupStream()
@@ -340,7 +263,7 @@ export async function GET(req: NextRequest) {
   return new Response(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive'
     }
   })

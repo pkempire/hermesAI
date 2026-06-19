@@ -27,6 +27,7 @@ export interface InteractiveProps {
 export interface ParsedToolResult {
   type: SearchUIType
   websetId?: string
+  runId?: string
   prospects?: Prospect[]
   message?: string
   summary?: any

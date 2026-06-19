@@ -7,6 +7,7 @@ import {
 import { createClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/utils/logger'
 import { getModel, getToolCallModel, isToolCallSupported } from '@/lib/utils/registry'
+import { upsertCampaignRun } from '@/lib/workflows/prospect-run-store'
 import { generateText, Output } from 'ai'
 import { tool } from 'ai'
 import { z } from 'zod'
@@ -110,31 +111,27 @@ Rules:
 
 function assembleInteractiveEnrichments(params: {
   targetPersona?: string
-  contextualEnrichments: Array<{ label: string; value: string; description: string }>
+  contextualEnrichments?: Array<{ label: string; value: string; description: string }>
 }) {
   const canonical = buildCanonicalProspectEnrichments(params.targetPersona).map(enrichment => ({
     ...enrichment,
     description: undefined as string | undefined
   }))
-  const contextual = params.contextualEnrichments.map(enrichment => ({
-    ...enrichment,
-    required: false
-  }))
-
-  const merged = [...canonical, ...contextual]
   const seen = new Set<string>()
 
-  return merged
+  return canonical
     .filter(enrichment => {
       if (!enrichment?.value || seen.has(enrichment.value)) return false
       seen.add(enrichment.value)
       return true
     })
-    .slice(0, 10)
+    .slice(0, 8)
 }
 
-async function persistImmediateSearchOwnership(params: {
+ async function persistImmediateSearchOwnership(params: {
   websetId: string
+  exaExternalId?: string | null
+  exaDashboardUrl?: string | null
   query: string
   targetPersona?: string
   offer?: string
@@ -180,6 +177,8 @@ async function persistImmediateSearchOwnership(params: {
       settings: {
         source: 'chat_tool_immediate',
         exa_webset_id: params.websetId,
+        exa_external_id: params.exaExternalId || null,
+        exa_dashboard_url: params.exaDashboardUrl || null,
         original_query: params.query,
         target_persona: params.targetPersona || null,
         offer: params.offer || null,
@@ -262,8 +261,7 @@ export function createProspectSearchTool(model: string) {
         }
 
         initialEnrichments = assembleInteractiveEnrichments({
-          targetPersona,
-          contextualEnrichments: initialCustomEnrichments
+          targetPersona
         })
 
         const result = {
@@ -272,7 +270,7 @@ export function createProspectSearchTool(model: string) {
           props: {
             initialCriteria,
             initialEnrichments,
-            initialCustomEnrichments: [],
+            initialCustomEnrichments,
             initialEntityType,
             initialCount: targetCount,
             previewMode: previewOnly,
@@ -320,9 +318,9 @@ export function createProspectSearchTool(model: string) {
 
         const websetEnrichments = buildWebsetEnrichments([
           ...assembleInteractiveEnrichments({
-            targetPersona,
-            contextualEnrichments
-          })
+            targetPersona
+          }),
+          ...contextualEnrichments.map(enrichment => ({ ...enrichment, required: false }))
         ])
 
         const webset = await exaClient.createWebset({
@@ -332,8 +330,10 @@ export function createProspectSearchTool(model: string) {
         
         logger.debug('Webset created:', webset.id)
 
-        await persistImmediateSearchOwnership({
+        const campaignId = await persistImmediateSearchOwnership({
           websetId: webset.id,
+          exaExternalId: (webset as any).externalId || null,
+          exaDashboardUrl: (webset as any).dashboardUrl || null,
           query,
           targetPersona,
           offer,
@@ -342,14 +342,39 @@ export function createProspectSearchTool(model: string) {
           enrichments: websetEnrichments
         })
         
-        // Return streaming configuration for real-time updates
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        const run = user
+          ? await upsertCampaignRun({
+              userId: user.id,
+              campaignId,
+              websetId: webset.id,
+              exaExternalId: (webset as any).externalId || null,
+              exaDashboardUrl: (webset as any).dashboardUrl || null,
+              source: 'chat_tool_immediate',
+              status: 'created',
+              entityType: 'company',
+              targetCount,
+              originalQuery: query,
+              targetPersona,
+              offer,
+              progress: { found: 0, analyzed: 0, completion: 0 },
+              settings: {
+                interactive: false
+              }
+            })
+          : null
+
+        // Return durable streaming configuration for real-time updates
         return {
           type: 'prospect_search_start',
           event: 'start',
           websetId: webset.id,
+          runId: run?.id,
+          dashboardUrl: (webset as any).dashboardUrl || null,
           searchCriteria: { query, targetCount },
           status: 'created',
-          message: `Started searching for prospects matching "${query}". I'll show you results as they come in.`,
+          message: `Started a durable prospecting run for "${query}". Results will stream as Exa publishes matches.`,
           progress: {
             found: 0,
             analyzed: 0,

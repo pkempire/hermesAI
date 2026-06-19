@@ -97,6 +97,7 @@ async function getHandler() {
     transport: 'streamable-http',
     tools: [
       'hermes.prospect_search',
+      'hermes.get_run',
       'hermes.email_draft',
       'hermes.scrape_site'
     ]

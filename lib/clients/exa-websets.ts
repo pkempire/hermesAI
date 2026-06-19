@@ -781,23 +781,6 @@ export class ExaWebsetsClient {
   }
 
   /**
-   * Wait until Webset completes processing
-   */
-  async waitUntilIdle(websetId: string, options?: {
-    timeout?: number
-    pollInterval?: number
-    onPoll?: (status: string) => void
-  }): Promise<Webset> {
-    try {
-      const result = await this.exa.websets.waitUntilIdle(websetId, options) as any
-      return result
-    } catch (error) {
-      logger.error('[ExaWebsetsClient] Error waiting for webset to be idle:', error)
-      throw error
-    }
-  }
-
-  /**
    * List items in a Webset
    */
   async listItems(websetId: string, options?: {

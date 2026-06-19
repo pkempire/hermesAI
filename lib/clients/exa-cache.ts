@@ -1,20 +1,6 @@
-/**
- * Exa Webset Caching and Reuse System
- * Optimizes speed by reusing existing websets instead of creating new ones
- */
-
+import { createAdminClient, hasSupabaseAdminCredentials } from '@/lib/supabase/admin'
 import { logger } from '@/lib/utils/logger'
 import { ExaWebsetsClient } from './exa-websets'
-
-interface CachedWebset {
-  websetId: string
-  criteria: string[] // Normalized criteria for matching
-  entityType: 'person' | 'company'
-  enrichments: string[]
-  createdAt: number
-  lastUsed: number
-  status: 'active' | 'completed' | 'failed'
-}
 
 interface WebsetSearchParams {
   query: string
@@ -24,194 +10,171 @@ interface WebsetSearchParams {
   targetCount: number
 }
 
-class ExaWebsetCache {
-  private cache = new Map<string, CachedWebset>()
-  private readonly CACHE_TTL = 1000 * 60 * 60 * 2 // 2 hours
-  private readonly MAX_CACHE_SIZE = 50
+interface CreateOrReuseOptions {
+  userId?: string
+}
 
-  /**
-   * Generate cache key from search parameters
-   */
-  private generateCacheKey(params: WebsetSearchParams): string {
-    const normalizedCriteria = params.criteria
-      .map(c => `${c.type}:${c.value.toLowerCase()}`)
-      .sort()
-      .join('|')
-
-    const normalizedEnrichments = params.enrichments
-      .map(e => e.value.toLowerCase())
-      .sort()
-      .join('|')
-
-    return `${params.entityType}:${normalizedCriteria}:${normalizedEnrichments}`
+function assertDurableCacheConfig(userId?: string) {
+  if (!userId) {
+    throw new Error('Cannot create Exa Webset without an authenticated user id.')
   }
 
-  /**
-   * Check if we can reuse an existing webset
-   */
-  async findReusableWebset(params: WebsetSearchParams, exa: ExaWebsetsClient): Promise<string | null> {
-    const cacheKey = this.generateCacheKey(params)
-    const cached = this.cache.get(cacheKey)
-
-    if (!cached) return null
-
-    // Check if cache entry is still valid
-    const now = Date.now()
-    if (now - cached.createdAt > this.CACHE_TTL) {
-      this.cache.delete(cacheKey)
-      return null
-    }
-
-    // Verify webset still exists and is usable
-    try {
-      const webset = await exa.getWebset(cached.websetId)
-
-      // If webset is completed, we can potentially extend it
-      if (webset.status === 'idle' || webset.status === 'completed') {
-        // Check if we already have enough results
-        const items = await exa.listItems(cached.websetId, { limit: params.targetCount })
-
-        if (items.data.length >= params.targetCount) {
-          logger.debug('[ExaCache] Reusing completed webset', { websetId: cached.websetId, results: items.data.length })
-          cached.lastUsed = now
-          return cached.websetId
-        }
-
-        // TODO: Could extend the webset with more results here
-        // For now, create new webset if we need more results
-        logger.debug('[ExaCache] Cached webset is short on results', {
-          websetId: cached.websetId,
-          currentResults: items.data.length,
-          requestedResults: params.targetCount
-        })
-      }
-
-      // If webset is still running, reuse it
-      if (webset.status === 'running' || webset.status === 'processing') {
-        logger.debug('[ExaCache] Reusing running webset', { websetId: cached.websetId })
-        cached.lastUsed = now
-        return cached.websetId
-      }
-
-    } catch (error) {
-      logger.warn(`[ExaCache] Cached webset ${cached.websetId} is no longer accessible`, error)
-      this.cache.delete(cacheKey)
-    }
-
-    return null
-  }
-
-  /**
-   * Cache a new webset
-   */
-  cacheWebset(params: WebsetSearchParams, websetId: string): void {
-    const cacheKey = this.generateCacheKey(params)
-    const now = Date.now()
-
-    // Clean old entries if cache is full
-    if (this.cache.size >= this.MAX_CACHE_SIZE) {
-      this.cleanOldEntries()
-    }
-
-    this.cache.set(cacheKey, {
-      websetId,
-      criteria: params.criteria.map(c => `${c.type}:${c.value}`),
-      entityType: params.entityType,
-      enrichments: params.enrichments.map(e => e.value),
-      createdAt: now,
-      lastUsed: now,
-      status: 'active'
-    })
-
-    logger.debug('[ExaCache] Cached webset', { websetId, cacheKey })
-  }
-
-  /**
-   * Update webset status
-   */
-  updateWebsetStatus(websetId: string, status: 'active' | 'completed' | 'failed'): void {
-    for (const [key, cached] of this.cache.entries()) {
-      if (cached.websetId === websetId) {
-        cached.status = status
-        cached.lastUsed = Date.now()
-        logger.debug('[ExaCache] Updated cached webset status', { websetId, status })
-        break
-      }
-    }
-  }
-
-  /**
-   * Clean old cache entries
-   */
-  private cleanOldEntries(): void {
-    const now = Date.now()
-    const entriesToDelete: string[] = []
-
-    // Find expired entries
-    for (const [key, cached] of this.cache.entries()) {
-      if (now - cached.createdAt > this.CACHE_TTL) {
-        entriesToDelete.push(key)
-      }
-    }
-
-    // If no expired entries, remove least recently used
-    if (entriesToDelete.length === 0) {
-      const sortedEntries = Array.from(this.cache.entries())
-        .sort(([, a], [, b]) => a.lastUsed - b.lastUsed)
-
-      entriesToDelete.push(sortedEntries[0][0])
-    }
-
-    // Delete entries
-    entriesToDelete.forEach(key => {
-      this.cache.delete(key)
-      logger.debug('[ExaCache] Removed cache entry', { key })
-    })
-  }
-
-  /**
-   * Get cache statistics
-   */
-  getStats() {
-    return {
-      size: this.cache.size,
-      maxSize: this.MAX_CACHE_SIZE,
-      entries: Array.from(this.cache.values()).map(cached => ({
-        websetId: cached.websetId,
-        entityType: cached.entityType,
-        status: cached.status,
-        age: Date.now() - cached.createdAt,
-        criteriaCount: cached.criteria.length
-      }))
-    }
+  if (!hasSupabaseAdminCredentials()) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for durable Exa Webset cache.')
   }
 }
 
-// Global cache instance
-export const exaWebsetCache = new ExaWebsetCache()
+function generateCacheKey(params: WebsetSearchParams): string {
+  const normalizedQuery = params.query.toLowerCase().replace(/\s+/g, ' ').trim()
+  const normalizedCriteria = params.criteria
+    .map(c => `${c.type}:${c.value.toLowerCase()}`)
+    .sort()
+    .join('|')
 
-/**
- * Optimized webset creation that reuses existing websets when possible
- */
-export async function createOrReuseWebset(
+  const normalizedEnrichments = params.enrichments
+    .map(e => e.value.toLowerCase())
+    .sort()
+    .join('|')
+
+  return `${params.entityType}:${normalizedQuery}:${normalizedCriteria}:${normalizedEnrichments}:${params.targetCount}`
+}
+
+function deterministicExternalId(params: WebsetSearchParams) {
+  const key = generateCacheKey(params)
+  let hash = 0
+  for (let i = 0; i < key.length; i++) {
+    hash = ((hash << 5) - hash) + key.charCodeAt(i)
+    hash |= 0
+  }
+  return `hermes:webset:${Math.abs(hash).toString(36)}`
+}
+
+async function findDurableReusableWebset(
   params: WebsetSearchParams,
-  exa: ExaWebsetsClient
-): Promise<{ websetId: string; isReused: boolean }> {
-  logger.debug('[ExaCache] Checking for reusable webset')
+  exa: ExaWebsetsClient,
+  userId: string
+): Promise<{ websetId: string; dashboardUrl?: string | null; externalId?: string | null } | null> {
+  const supabase = createAdminClient()
+  const cacheKey = generateCacheKey(params)
+  const { data, error } = await supabase
+    .from('exa_webset_cache')
+    .select('webset_id, exa_dashboard_url, exa_external_id, expires_at')
+    .eq('user_id', userId)
+    .eq('cache_key', cacheKey)
+    .gt('expires_at', new Date().toISOString())
+    .maybeSingle()
 
-  // Try to find reusable webset
-  const reusableWebsetId = await exaWebsetCache.findReusableWebset(params, exa)
-
-  if (reusableWebsetId) {
-    return { websetId: reusableWebsetId, isReused: true }
+  if (error) {
+    throw new Error(`Durable Exa cache lookup failed: ${error.message}`)
   }
 
-  // Create new webset if no reusable one found
-  logger.debug('[ExaCache] No reusable webset found, creating a new one')
+  if (!data?.webset_id) {
+    return null
+  }
 
-  // Convert params to Exa format (reuse existing function)
+  const webset = await exa.getWebset(data.webset_id)
+  const items = await exa.listItems(data.webset_id, {
+    limit: Math.min(params.targetCount, 100)
+  })
+  const status = String(webset.status)
+  const usable =
+    status === 'idle' ||
+    status === 'completed' ||
+    status === 'running' ||
+    status === 'pending' ||
+    status === 'processing'
+
+  if (!usable) {
+    throw new Error(`Cached Exa Webset ${data.webset_id} is not reusable. Status: ${status}.`)
+  }
+
+  if ((status === 'idle' || status === 'completed') && items.data.length < params.targetCount) {
+    logger.debug('[ExaCache] Durable cache entry is short on results; creating a new Webset.', {
+      websetId: data.webset_id,
+      currentResults: items.data.length,
+      requestedResults: params.targetCount
+    })
+    return null
+  }
+
+  const cacheStatus =
+    status === 'idle' || status === 'completed'
+      ? 'completed'
+      : 'running'
+
+  const { error: updateError } = await supabase
+    .from('exa_webset_cache')
+    .update({
+      last_used_at: new Date().toISOString(),
+      status: cacheStatus,
+      result_count: items.data.length,
+      exa_dashboard_url: (webset as any).dashboardUrl || data.exa_dashboard_url || null,
+      exa_external_id: (webset as any).externalId || data.exa_external_id || null
+    })
+    .eq('user_id', userId)
+    .eq('cache_key', cacheKey)
+
+  if (updateError) {
+    throw new Error(`Durable Exa cache update failed: ${updateError.message}`)
+  }
+
+  return {
+    websetId: data.webset_id,
+    dashboardUrl: (webset as any).dashboardUrl || data.exa_dashboard_url || null,
+    externalId: (webset as any).externalId || data.exa_external_id || null
+  }
+}
+
+async function persistDurableWebsetCache(
+  params: WebsetSearchParams,
+  webset: any,
+  userId: string
+) {
+  const supabase = createAdminClient()
+  const { error } = await supabase.from('exa_webset_cache').upsert(
+    {
+      user_id: userId,
+      cache_key: generateCacheKey(params),
+      webset_id: webset.id,
+      exa_external_id: webset.externalId || null,
+      exa_dashboard_url: webset.dashboardUrl || null,
+      status: webset.status === 'idle' ? 'completed' : 'active',
+      entity_type: params.entityType,
+      criteria: params.criteria,
+      enrichments: params.enrichments,
+      target_count: params.targetCount,
+      result_count: 0,
+      expires_at: new Date(Date.now() + 1000 * 60 * 60 * 2).toISOString(),
+      last_used_at: new Date().toISOString()
+    },
+    { onConflict: 'user_id,cache_key' }
+  )
+
+  if (error) {
+    throw new Error(`Durable Exa cache persist failed: ${error.message}`)
+  }
+}
+
+export async function createOrReuseWebset(
+  params: WebsetSearchParams,
+  exa: ExaWebsetsClient,
+  options: CreateOrReuseOptions = {}
+): Promise<{ websetId: string; isReused: boolean; webset?: any; dashboardUrl?: string | null; externalId?: string | null }> {
+  assertDurableCacheConfig(options.userId)
+  const userId = options.userId as string
+
+  const durable = await findDurableReusableWebset(params, exa, userId)
+  if (durable) {
+    logger.debug('[ExaCache] Reusing durable Webset', { websetId: durable.websetId })
+    return {
+      websetId: durable.websetId,
+      isReused: true,
+      dashboardUrl: durable.dashboardUrl,
+      externalId: durable.externalId
+    }
+  }
+
   const { buildWebsetEnrichments, createProspectSearchCriteria } = await import('./exa-websets')
-
   const searchCriteria = createProspectSearchCriteria({
     query: params.query,
     targetCount: params.targetCount,
@@ -220,42 +183,26 @@ export async function createOrReuseWebset(
     allCriteria: params.criteria,
     filters: {}
   })
-
   const enrichments = buildWebsetEnrichments(params.enrichments)
-
-  // Deterministic externalId for Exa to avoid duplicate websets across restarts
-  const normalizedCriteria = params.criteria
-    .map(c => `${c.type}:${c.value.toLowerCase()}`)
-    .sort()
-    .join('|')
-  const normalizedEnrichments = params.enrichments
-    .map(e => e.value.toLowerCase())
-    .sort()
-    .join('|')
-  const extKey = `${params.entityType}:${params.query.toLowerCase().trim()}:${normalizedCriteria}:${normalizedEnrichments}:${params.targetCount}`
-  let extHash = 0
-  for (let i = 0; i < extKey.length; i++) {
-    const ch = extKey.charCodeAt(i)
-    extHash = ((extHash << 5) - extHash) + ch
-    extHash |= 0
-  }
-  const externalId = `hermes:webset:${Math.abs(extHash).toString(36)}`
+  const externalId = deterministicExternalId(params)
 
   const webset = await exa.createWebset({
     externalId,
     search: searchCriteria,
-    enrichments
+    enrichments,
+    metadata: {
+      hermes_user_id: userId,
+      hermes_cache_key: generateCacheKey(params)
+    }
   })
 
-  // Cache the new webset
-  exaWebsetCache.cacheWebset(params, webset.id)
+  await persistDurableWebsetCache(params, webset, userId)
 
-  return { websetId: webset.id, isReused: false }
-}
-
-/**
- * Update webset status in cache
- */
-export function updateCachedWebsetStatus(websetId: string, status: 'active' | 'completed' | 'failed') {
-  exaWebsetCache.updateWebsetStatus(websetId, status)
+  return {
+    websetId: webset.id,
+    isReused: false,
+    webset,
+    dashboardUrl: (webset as any).dashboardUrl || null,
+    externalId: (webset as any).externalId || externalId
+  }
 }
