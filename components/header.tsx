@@ -3,6 +3,7 @@
 import { cn } from '@/lib/utils'
 import { User } from '@supabase/supabase-js'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import React, { useEffect, useState } from 'react'
 import { Button } from './ui/button'
 import UserMenu from './user-menu'
@@ -26,21 +27,22 @@ const LANDING_NAV_LINKS = [
 
 const APP_NAV_LINKS = [
   ['Campaigns', '/campaigns'],
-  ['Draft Studio', '/studio']
+  ['Studio', '/studio']
 ] as const
 
 function HermesMark() {
   return (
-    <svg className="h-8 w-8 text-[#0b1732]" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-      <path d="M7 4.5 25 13.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M7 10.5 22 18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M7 16.5 19 22.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M7 22.5 16 27" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
+    <span
+      className="flex h-8 w-8 items-center justify-center rounded-md border border-[#dfe4ee] bg-white text-[14px] font-semibold tracking-[-0.01em] text-[#071329] shadow-sm"
+      aria-hidden="true"
+    >
+      H
+    </span>
   )
 }
 
 export const Header: React.FC<HeaderProps> = ({ user }) => {
+  const pathname = usePathname()
   const [snapshot, setSnapshot] = useState<SubscriptionSnapshot>({
     status: 'none',
     trial_days_remaining: null
@@ -88,9 +90,9 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
       )}
     >
       <div className="mx-auto flex h-14 w-full max-w-[1180px] items-center justify-between px-5 md:px-8">
-        <Link href="/" className="flex items-center gap-4 text-[#0b1732]" aria-label="Hermes GTM home">
+        <Link href="/" className="flex items-center gap-3 text-[#0b1732]" aria-label="Hermes GTM home">
           <HermesMark />
-          <span className="text-[24px] font-semibold leading-none">
+          <span className="text-[23px] font-semibold leading-none tracking-[-0.02em]">
             Hermes <span className="text-[#8b8d96]">GTM</span>
           </span>
         </Link>
@@ -115,18 +117,17 @@ export const Header: React.FC<HeaderProps> = ({ user }) => {
               className="hidden items-center rounded-full border border-[#dfe2eb] bg-white/75 p-1 shadow-[0_10px_26px_rgba(5,18,47,0.05)] sm:flex"
               aria-label="Workspace navigation"
             >
-              {APP_NAV_LINKS.map(([label, href], index) => (
+              {APP_NAV_LINKS.map(([label, href]) => (
                 <Link
                   key={label}
                   href={href}
-                  className="group flex h-8 items-center gap-2 rounded-full px-3 text-[12px] font-semibold text-[#46506a] transition-colors hover:bg-[#f1f4ff] hover:text-[#071329]"
+                  className={cn(
+                    'flex h-8 items-center rounded-full px-3 text-[12px] font-semibold transition-colors',
+                    pathname === href
+                      ? 'bg-[#071329] text-white'
+                      : 'text-[#46506a] hover:bg-[#f1f4ff] hover:text-[#071329]'
+                  )}
                 >
-                  <span
-                    className={cn(
-                      'h-1.5 w-1.5 rounded-full transition-transform group-hover:scale-125',
-                      index === 0 ? 'bg-[#315dff]' : 'bg-[#d38a00]'
-                    )}
-                  />
                   {label}
                 </Link>
               ))}

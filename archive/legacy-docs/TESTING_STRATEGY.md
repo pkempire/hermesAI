@@ -150,7 +150,7 @@ Make sure these are set in `.env.local` (local) and Vercel (production):
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
 
 # Development bypasses
 SKIP_QUOTA_CHECK=true  # Only for local dev
@@ -227,4 +227,3 @@ In Supabase Dashboard → Authentication → Providers → Google:
 4. ⏭️ Test locally with fresh browser session
 5. ⏭️ Verify production deployment
 6. ⏭️ Monitor logs for any OAuth issues
-

@@ -109,8 +109,8 @@ AgentMail should be used for true agent-native inbox workflows:
 ## Near-Term Build Plan
 
 1. Keep Exa Websets as canonical discovery
-2. Add Apollo as optional enrichment after discovery
-3. Keep Hunter as verifier/fallback
+2. Keep Orangeslice as the default enrichment path
+3. Enable Apollo or Hunter only as explicit secondary providers per workspace
 4. Keep Gmail as the first real outbound execution path
 5. Add Instantly once higher-volume execution is needed
 6. Add AgentMail once Hermes starts handling reply loops and autonomous agent threads

@@ -213,7 +213,7 @@ Avoid:
 
 - guaranteed pipeline
 - fully autonomous sending
-- "honest claim"
+- meta copy about the claim itself
 - vague "AI copilot"
 - "saves 8 hours" unless measured inside Hermes
 - inflated response rates

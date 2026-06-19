@@ -334,7 +334,7 @@ export function ProspectGrid({
     return (
       <div className="rounded-lg border border-[#dfe4ee] bg-[#fbfcff] px-4 py-8 text-center">
         <p className="text-[14px] font-semibold text-[#071329]">No prospects yet</p>
-        <p className="mt-1 text-[12px] text-[#6a7283]">Results stream here as Hermes finds matches.</p>
+        <p className="mt-1 text-[12px] text-[#6a7283]">Matched accounts will appear here.</p>
       </div>
     )
   }

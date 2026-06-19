@@ -182,7 +182,7 @@ Use these in posts, landing copy, and voiceover:
 
 Avoid:
 
-- "honest claim"
+- meta copy about the claim itself
 - "AI SDR"
 - "fully autonomous outbound"
 - "replaces your sales team"

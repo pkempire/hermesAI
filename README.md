@@ -1,12 +1,12 @@
 # Hermes — AI Outbound Operator
 
 > Describe your ICP in one line. Hermes finds the right companies, resolves the
-> decision-maker, drafts pitches grounded in real evidence, and sends through
-> your Gmail. One operator instead of Apollo + Clay + Instantly + glue.
+> decision-maker, and drafts evidence-backed outreach for review. One operator
+> instead of Apollo + Clay + Instantly + glue.
 
 Hermes is an open-source, chat-first agent for B2B outbound. Tell it what you
-want; it runs the workflow. Built on Next.js 15, the Vercel AI SDK v5, Exa
-Websets for discovery, Orangeslice for enrichment, and Gmail for sending.
+want; it builds the workflow. Built on Next.js 15, the Vercel AI SDK v5, Exa
+Websets for discovery, Orangeslice for enrichment, and Gmail draft creation.
 
 ```
 You: Find 25 Bay Area private college counselors who specialize in STEM/Ivy
@@ -20,11 +20,11 @@ Hermes:
   → resolves the founder + verified email per firm via Orangeslice
   → enriches with: firm size, outcomes posted, service area, STEM evidence
   → drafts a personal pitch per prospect that cites real evidence
-  → opens a Gmail draft you approve, then sends
+  → opens a Gmail draft for review
 ```
 
-[Live demo](https://hermes-app.vercel.app) · [Architecture](./docs/SYSTEM_ARCHITECTURE.md) ·
-[Research log](./docs/RESEARCH_2026.md) · [Discord](https://discord.gg/hermes)
+[Live demo](https://gethermes.vercel.app) · [Architecture](./docs/SYSTEM_ARCHITECTURE.md) ·
+[Research log](./docs/RESEARCH_2026.md)
 
 ---
 
@@ -48,12 +48,12 @@ Hermes:
 | Semantic discovery (companies + people) | Exa Websets | `lib/clients/exa-websets.ts` |
 | Decision-maker resolution + verified email | Orangeslice | `lib/clients/orangeslice.ts` |
 | Site analysis (your offer / their offer) | Exa getContents | `lib/tools/scrape.ts` |
-| Web research per prospect | Tavily / SearXNG / Exa | `lib/tools/search/providers/` |
+| Background source checks | Exa search by default | `lib/tools/search.ts` |
 | Personalised email drafts grounded in evidence | OpenAI / Anthropic via AI SDK v5 | `lib/tools/email-drafter.ts` |
-| Gmail draft + send (with refresh token rotation) | Google APIs | `lib/clients/gmail.ts` |
+| Gmail draft creation, optional send | Google APIs | `lib/clients/gmail.ts` |
 | Quotas + billing | Stripe + Supabase | `lib/utils/quota.ts`, `app/api/stripe/` |
 
-Optional fallbacks: Apollo, Hunter (`lib/clients/`).
+Optional secondary providers: Apollo, Hunter, Apify (`lib/clients/`).
 
 ## Repo layout
 
@@ -104,12 +104,12 @@ hermesAI/
 
 Prerequisites:
 
-- Node.js >= 20 (Next.js 15 requires it)
+- Node.js 22.x
 - npm 10+ (the checked-in lockfile is `package-lock.json`)
 - [Bun](https://bun.sh) 1.2+ only if you run the local stdio MCP server
 - A Supabase project (auth + Postgres)
 - An Upstash Redis instance (or local Redis on `:6379`)
-- API keys for at least: OpenAI, Exa, and one of Tavily/SearXNG
+- API keys for at least: OpenAI, Exa, Orangeslice, Supabase, Google OAuth, and Stripe
 
 Quick start:
 
@@ -131,8 +131,9 @@ npx supabase db push                   # applies supabase/migrations/
 npm run dev                            # http://localhost:3000
 ```
 
-Common pitfall: running Next against Node 18 fails. Use `nvm use 20` (or
-`fnm use 20`) before running. The package's `engines` block requires Node 20+.
+Common pitfall: running against Node 18 or 20 can drift from production. Use
+`nvm use 22` or `fnm use 22` before running. The package's `engines` block
+requires Node 22.x.
 
 ## Required services
 
@@ -144,9 +145,9 @@ Common pitfall: running Next against Node 18 fails. Use `nvm use 20` (or
 | Supabase | Auth, Postgres, Storage | Generous free tier |
 | Upstash Redis | Cache, rate-limit, resumable stream store | Free tier |
 | Stripe | Billing | Test mode is free |
-| Google OAuth + Gmail API | User sign-in + outbound sending | Free |
+| Google OAuth + Gmail API | User sign-in + Gmail draft review | Free |
 
-Optional: Tavily (web search), SearXNG (self-hosted search), Apollo, Hunter.
+Optional: Apify for event/social scraping demos, and Apollo/Hunter only as explicit secondary enrichment providers.
 
 See `.env.example` for the full list and inline notes per variable.
 
@@ -191,9 +192,9 @@ Detailed: [docs/SYSTEM_ARCHITECTURE.md](./docs/SYSTEM_ARCHITECTURE.md).
 
 1. **Tools, not flows.** Every workflow primitive is a single `tool({…})`
    definition. The agent decides composition. No orchestration DAGs.
-2. **Streaming is non-negotiable.** Every long-running operation (Webset
-   creation, enrichment, drafting) streams via SSE through the AI SDK; no UI
-   polling.
+2. **Visible progress is non-negotiable.** Webset events, enrichment status,
+   and draft generation should update the campaign state quickly and clearly.
+   Silent empty fallbacks are bugs.
 3. **Evidence first.** No tool returns generic data. Every prospect gets
    citation-grade extractions; every email cites them.
 4. **Owner data.** Users must be able to export prospects, drafts, and
