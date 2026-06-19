@@ -97,7 +97,6 @@ hermesAI/
 │   ├── USE_CASE_TEMPLATES.md
 │   ├── design/                   # Design mocks
 │   └── campaigns/                # Real production campaign briefs (JSON)
-└── archive/                # Legacy + deprecated code, gitignored for new contributions
 ```
 
 ## Local development
