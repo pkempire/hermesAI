@@ -189,8 +189,8 @@ export async function POST(req: NextRequest) {
       },
       status: 'created',
       message: preview
-        ? 'Started preview run. Results stream from durable Exa webhook state.'
-        : `Started searching for ${effectiveTargetCount} prospects. Results stream from durable Exa webhook state.`,
+        ? 'Preview started. Matching accounts will appear as they are verified.'
+        : `Searching for ${effectiveTargetCount} prospects. Matching accounts will appear as they are verified.`,
       progress: {
         found: 0,
         analyzed: 0,

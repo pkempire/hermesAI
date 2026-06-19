@@ -15,6 +15,7 @@ SUPABASE_SERVICE_ROLE_KEY=
 
 OPENAI_API_KEY=
 EXA_API_KEY=
+EXA_WEBHOOK_SECRET=
 ORANGESLICE_API_KEY=
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
@@ -74,6 +75,26 @@ Then verify:
 - `http://localhost:3000/auth/oauth`
 - `http://localhost:3000/api/auth/gmail/callback`
 
+## Exa Webhook
+
+Create or update the Exa webhook for production:
+
+```text
+https://gethermes.vercel.app/api/webhooks/exa
+```
+
+Subscribe to:
+
+```text
+webset.search.updated
+webset.search.completed
+webset.item.created
+webset.item.enriched
+webset.idle
+```
+
+Set the returned webhook signing secret as `EXA_WEBHOOK_SECRET` in Vercel. This is separate from `EXA_API_KEY`.
+
 ## Stripe
 
 Set:
@@ -108,11 +129,12 @@ REDIS_TOKEN=
 
 ## Recommended launch stack
 
-- Discovery: Exa Websets + Apify + orangeslice
-- Enrichment: Apollo + Hunter
-- Sending: Gmail
-- Post-launch scale sending: Instantly
-- Agent inboxes and autonomous reply handling: AgentMail
+- Discovery: Exa Websets
+- Enrichment: Orangeslice
+- Draft review: Gmail
+- Event/social demos: Apify, behind a feature flag
+- Secondary enrichment: Apollo/Hunter only when keys and quotas are explicitly configured
+- Post-launch sending scale: Instantly or AgentMail after the review-first flow is reliable
 
 ## Post-deploy smoke test
 
@@ -120,8 +142,8 @@ REDIS_TOKEN=
 2. Confirm free credits are seeded
 3. Run a prospect search
 4. Confirm streamed results appear in the UI
-5. Draft emails
+5. Draft emails for review
 6. Connect Gmail
-7. Send a real test email from the connected Gmail account
+7. Create and review a real Gmail draft
 8. Trigger Stripe checkout
 9. Verify webhook updates subscription state

@@ -130,12 +130,9 @@ export function createSearchTool(fullModel: string) {
         if (process.env.NODE_ENV !== 'production') {
           console.error('Search API error:', error)
         }
-        searchResult = {
-          results: [],
-          query: filledQuery,
-          images: [],
-          number_of_results: 0
-        }
+        throw error instanceof Error
+          ? error
+          : new Error('Search provider failed')
       }
 
       if (process.env.NODE_ENV !== 'production') {

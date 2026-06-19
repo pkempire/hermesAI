@@ -1,10 +1,15 @@
-# Configuration Guide
+# Configuration
 
-This guide covers the runtime configuration for HermesAI.
+Hermes needs four systems to run the launch flow:
 
-## Core Environment Variables
+- Supabase for auth, user data, campaign state, and webhook-backed workflow state.
+- OpenAI or Anthropic for planning, scoring, and draft generation.
+- Exa Websets for live account discovery.
+- Orangeslice for company/person/contact enrichment.
 
-Set these before running Hermes locally or deploying it:
+Optional providers such as Apify, Apollo, Hunter, Instantly, and AgentMail should stay disabled until you are intentionally testing those paths.
+
+## Required
 
 ```bash
 # App URLs
@@ -17,252 +22,92 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 
-# Model and research providers
+# Models
 OPENAI_API_KEY=
 ANTHROPIC_API_KEY=
-EXA_API_KEY=
-ORANGESLICE_API_KEY=
-APIFY_API_TOKEN=
-HUNTER_API_KEY=
-APOLLO_API_KEY=
-INSTANTLY_API_KEY=
-AGENTMAIL_API_KEY=
 
-# Gmail / Google OAuth
+# Discovery
+EXA_API_KEY=
+EXA_WEBHOOK_SECRET=
+
+# Enrichment
+ORANGESLICE_API_KEY=
+
+# Google auth / Gmail drafts
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 
 # Billing
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
-NEXT_PUBLIC_STRIPE_CHECKOUT_URL=
+STRIPE_PRICE_ID=
+STRIPE_PRODUCT_ID=
+STRIPE_TRIAL_DAYS=30
+STRIPE_MONTHLY_QUOTA=1500
+```
 
-# Redis / rate limiting / cache
+`EXA_WEBHOOK_SECRET` is not the same thing as `EXA_API_KEY`. The API key lets Hermes create and read Websets. The webhook secret lets Hermes verify events that Exa sends back to `/api/webhooks/exa`.
+
+## Production URLs
+
+Set production URLs to the real domain:
+
+```bash
+NEXT_PUBLIC_SITE_URL=https://gethermes.vercel.app
+NEXT_PUBLIC_BASE_URL=https://gethermes.vercel.app
+NEXTAUTH_URL=https://gethermes.vercel.app
+```
+
+Keep localhost URLs only in `.env.local` and Supabase local/dev redirect settings.
+
+## Exa Webhook
+
+Create one webhook per deployed environment:
+
+- Production URL: `https://gethermes.vercel.app/api/webhooks/exa`
+- Preview URL, if you test previews: `https://<preview-domain>/api/webhooks/exa`
+- Local URL only if you expose localhost through a tunnel.
+
+Subscribe to:
+
+```text
+webset.search.updated
+webset.search.completed
+webset.item.created
+webset.item.enriched
+webset.idle
+```
+
+Save the secret returned by Exa as `EXA_WEBHOOK_SECRET` for that environment.
+
+## Optional
+
+```bash
+# Event/social scraping demos
+APIFY_API_TOKEN=
+
+# Explicit secondary enrichment providers only
+APOLLO_API_KEY=
+APOLLO_PHONE_WEBHOOK_URL=
+HUNTER_API_KEY=
+
+# Post-launch send volume / inbox automation
+INSTANTLY_API_KEY=
+AGENTMAIL_API_KEY=
+
+# Redis cache / rate limits
 UPSTASH_REDIS_REST_URL=
 UPSTASH_REDIS_REST_TOKEN=
 REDIS_URL=
 REDIS_TOKEN=
+```
 
-# Feature flags
+## Feature Flags
+
+```bash
 SKIP_QUOTA_CHECK=false
-NEXT_PUBLIC_ENABLE_SAVE_CHAT_HISTORY=false
-```
-
-## Table of Contents
-
-- [Chat History Storage](#chat-history-storage)
-- [Search Providers](#search-providers)
-- [Additional AI Providers](#additional-ai-providers)
-- [Other Features](#other-features)
-
-## Chat History Storage
-
-### Using Upstash Redis (Recommended for production)
-
-Follow the detailed setup guide at [Building your own RAG chatbot with Upstash](https://upstash.com/blog/rag-chatbot-upstash#setting-up-upstash-redis)
-
-1. Create a database at [Upstash Console](https://console.upstash.com/redis)
-2. Navigate to the Details tab and find the "Connect your database" section
-3. Copy the REST API credentials from the .env section
-4. Configure your `.env.local`:
-
-```bash
 NEXT_PUBLIC_ENABLE_SAVE_CHAT_HISTORY=true
-USE_LOCAL_REDIS=false
-UPSTASH_REDIS_REST_URL=[YOUR_UPSTASH_REDIS_REST_URL]
-UPSTASH_REDIS_REST_TOKEN=[YOUR_UPSTASH_REDIS_REST_TOKEN]
-```
-
-### Using Local Redis
-
-1. Ensure Redis is installed and running locally
-2. Configure your `.env.local`:
-
-```bash
-NEXT_PUBLIC_ENABLE_SAVE_CHAT_HISTORY=true
-USE_LOCAL_REDIS=true
-LOCAL_REDIS_URL=redis://localhost:6379
-```
-
-## Search Providers
-
-### SearXNG Configuration
-
-SearXNG can be used as an alternative search backend with advanced search capabilities.
-
-#### Basic Setup
-
-1. Set up SearXNG as your search provider:
-
-```bash
-SEARCH_API=searxng
-SEARXNG_API_URL=http://localhost:8080
-SEARXNG_SECRET=""  # generate with: openssl rand -base64 32
-```
-
-#### Docker Setup
-
-1. Ensure you have Docker and Docker Compose installed
-2. Two configuration files are provided in the root directory:
-   - `searxng-settings.yml`: Contains main configuration for SearXNG
-   - `searxng-limiter.toml`: Configures rate limiting and bot detection
-
-#### Advanced Configuration
-
-1. Configure environment variables in your `.env.local`:
-
-```bash
-# SearXNG Base Configuration
-SEARXNG_PORT=8080
-SEARXNG_BIND_ADDRESS=0.0.0.0
-SEARXNG_IMAGE_PROXY=true
-
-# Search Behavior
-SEARXNG_DEFAULT_DEPTH=basic  # Set to 'basic' or 'advanced'
-SEARXNG_MAX_RESULTS=50  # Maximum number of results to return
-SEARXNG_ENGINES=google,bing,duckduckgo,wikipedia  # Comma-separated list of search engines
-SEARXNG_TIME_RANGE=None  # Time range: day, week, month, year, or None
-SEARXNG_SAFESEARCH=0  # 0: off, 1: moderate, 2: strict
-
-# Rate Limiting
-SEARXNG_LIMITER=false  # Enable to limit requests per IP
-```
-
-#### Advanced Search Features
-
-- `SEARXNG_DEFAULT_DEPTH`: Controls search depth
-  - `basic`: Standard search
-  - `advanced`: Includes content crawling and relevance scoring
-- `SEARXNG_MAX_RESULTS`: Maximum results to return
-- `SEARXNG_CRAWL_MULTIPLIER`: In advanced mode, determines how many results to crawl
-  - Example: If `MAX_RESULTS=10` and `CRAWL_MULTIPLIER=4`, up to 40 results will be crawled
-
-#### Customizing SearXNG
-
-You can modify `searxng-settings.yml` to:
-
-- Enable/disable specific search engines
-- Change UI settings
-- Adjust server options
-
-Example of disabling specific engines:
-
-```yaml
-engines:
-  - name: wikidata
-    disabled: true
-```
-
-For detailed configuration options, refer to the [SearXNG documentation](https://docs.searxng.org/admin/settings/settings.html#settings-yml)
-
-#### Troubleshooting
-
-- If specific search engines aren't working, try disabling them in `searxng-settings.yml`
-- For rate limiting issues, adjust settings in `searxng-limiter.toml`
-- Check Docker logs for potential configuration errors:
-
-```bash
-docker-compose logs searxng
-```
-
-## Additional AI Providers
-
-Models are configured in `public/config/models.json`. Each model requires its corresponding API key to be set in the environment variables.
-
-### Model Configuration
-
-The `models.json` file contains an array of model configurations with the following structure:
-
-```json
-{
-  "models": [
-    {
-      "id": "model-id",
-      "name": "Model Name",
-      "provider": "Provider Name",
-      "providerId": "provider-id",
-      "enabled": true,
-      "toolCallType": "native|manual",
-      "toolCallModel": "tool-call-model-id" // optional, only needed if toolCallType is "manual" and you need to specify a different model for tool calls
-    }
-  ]
-}
-```
-
-### Provider API Keys
-
-### Google Generative AI
-
-```bash
-GOOGLE_GENERATIVE_AI_API_KEY=[YOUR_API_KEY]
-```
-
-### Anthropic
-
-```bash
-ANTHROPIC_API_KEY=[YOUR_API_KEY]
-```
-
-### Groq
-
-```bash
-GROQ_API_KEY=[YOUR_API_KEY]
-```
-
-### Ollama
-
-```bash
-OLLAMA_BASE_URL=http://localhost:11434
-```
-
-### Azure OpenAI
-
-```bash
-AZURE_API_KEY=[YOUR_API_KEY]
-AZURE_RESOURCE_NAME=[YOUR_RESOURCE_NAME]
-```
-
-### DeepSeek
-
-```bash
-DEEPSEEK_API_KEY=[YOUR_API_KEY]
-```
-
-### Fireworks
-
-```bash
-FIREWORKS_API_KEY=[YOUR_API_KEY]
-```
-
-### xAI
-
-```bash
-XAI_API_KEY=[YOUR_XAI_API_KEY]
-```
-
-### OpenAI Compatible Model
-
-```bash
-OPENAI_COMPATIBLE_API_KEY=[YOUR_API_KEY]
-OPENAI_COMPATIBLE_API_BASE_URL=[YOUR_API_BASE_URL]
-```
-
-## Other Features
-
-### Share Feature
-
-```bash
 NEXT_PUBLIC_ENABLE_SHARE=true
 ```
 
-### Video Search
-
-```bash
-SERPER_API_KEY=[YOUR_API_KEY]
-```
-
-### Alternative Retrieve Tool
-
-```bash
-JINA_API_KEY=[YOUR_API_KEY]
-```
+Do not enable `SKIP_QUOTA_CHECK` outside local development.

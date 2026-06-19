@@ -25,11 +25,10 @@ Hermes is a Next.js App Router application with a chat-first operator workflow.
 4. External intelligence layer
    - Exa Websets for discovery
    - orangeslice services for research/search
-   - Apollo as next enrichment layer
-   - Hunter as verification fallback
+   - Apollo/Hunter only when explicitly enabled as secondary enrichment providers
 
 5. Execution layer
-   - Gmail for launch sending
+   - Gmail draft creation and optional send
    - Stripe for billing
 
 ## Current Canonical Flow
@@ -40,7 +39,7 @@ Hermes is a Next.js App Router application with a chat-first operator workflow.
 4. Prospects are normalized and displayed
 5. Hermes drafts outreach
 6. User connects Gmail
-7. Hermes sends or prepares drafts
+7. Hermes creates drafts for review; sending is user-approved
 
 ## Main Repo Components
 

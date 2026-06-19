@@ -88,9 +88,9 @@ What is now aligned:
 
 What should change before high-volume production:
 
-- Use Exa events/webhooks (`webset.search.updated`, `webset.item.created`, `webset.item.enriched`, `webset.idle`) to update durable workflow state instead of relying only on a long-lived polling request.
+- Exa events/webhooks update durable workflow state.
 - Store Exa `dashboardUrl`, progress, external ids, and event ids on the campaign/workflow record.
-- Keep polling only as the browser-facing fallback when webhooks are not configured.
+- Browser streams should read durable state and fail loudly when webhook events are missing.
 
 ## Contact Enrichment Fix
 
@@ -113,13 +113,13 @@ Keep the TypeScript/Vercel backend for now. The slow path is not language runtim
 
 - Exa Websets creation/progress polling.
 - Orangeslice company/person/contact lookups.
-- Optional Apollo/Hunter fallback calls.
+- Optional Apollo/Hunter secondary provider calls when explicitly enabled.
 - Per-prospect Hermes take generation.
 
 The 2026-06-08 patch separated these phases:
 
 - Discovery stream: Exa item discovery + lightweight company enrichment.
-- Find Contacts: Orangeslice person lookup + contact lookup + Apollo/Hunter fallback + Hermes take.
+- Find Contacts: Orangeslice person lookup + contact lookup + optional secondary enrichment + Hermes take.
 
 Recommended launch architecture:
 
@@ -132,11 +132,8 @@ Recommended launch architecture:
 
 ## Near-Term Launch Blockers
 
-- Configure Supabase OAuth redirects for production and local development.
-  Production should point at `https://gethermes.vercel.app/**`. Localhost should
-  only exist in Supabase dashboard/dev config for local testing, not hard-coded
-  into production code.
-- Confirm production env has `EXA_API_KEY`, `ORANGESLICE_API_KEY`, Supabase vars, OpenAI/Anthropic vars, and Stripe/Gmail vars.
+- Configure `EXA_WEBHOOK_SECRET` and the Exa Websets webhook for production.
+- Confirm production env has `EXA_API_KEY`, `ORANGESLICE_API_KEY`, Supabase vars, OpenAI/Anthropic vars, Stripe/Gmail vars, and Redis vars.
 - Test one full campaign on production after deploy: scrape site, configure search, stream prospects, find contacts, save to Draft Studio, draft email.
-- Consider disabling Apollo/Hunter fallbacks unless keys are present and quotas are understood.
+- Leave Apollo/Hunter disabled unless keys, quotas, and UI disclosure are explicit.
 - Add durable queue/workflow before promising high-volume autonomous execution.

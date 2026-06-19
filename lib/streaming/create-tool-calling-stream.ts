@@ -89,7 +89,7 @@ function emitPipelineEventsForStep(step: any, writer: any) {
               stepNumber: 1,
               totalSteps: 5,
               percent: 20,
-              label: 'Configure Prospect Search'
+              label: 'Plan search'
             }
           })
         }

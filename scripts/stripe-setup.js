@@ -7,8 +7,7 @@
  * and prints the env vars to add to .env.local + Vercel.
  *
  * Usage:
- *   STRIPE_SECRET_KEY=sk_test_... node scripts/stripe-setup.js
- *   STRIPE_SECRET_KEY=sk_live_... node scripts/stripe-setup.js
+ *   STRIPE_SECRET_KEY=<stripe-secret-key> node scripts/stripe-setup.js
  *
  * Requires the `stripe` package, which is already a project dependency.
  * Re-run safely; finds existing product by metadata.hermes_plan = 'monthly'.
